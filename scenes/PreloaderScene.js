@@ -113,11 +113,11 @@ export default class PreloaderScene extends Phaser.Scene {
             { key: 'enemyBullet', color: '#ff0000', size: 8, shape: 'circle' },
           
             // 🆕 关卡背景纹理（占位符）
-            { key: 'city', color: '#2c3e50', size: 64, shape: 'square' },
-            { key: 'desert', color: '#d2691e', size: 64, shape: 'square' },
-            { key: 'forest', color: '#228b22', size: 64, shape: 'square' },
-            { key: 'ocean', color: '#191970', size: 64, shape: 'square' },
-            { key: 'space', color: '#000000', size: 64, shape: 'square' },
+            { key: 'city', color: '#e8f4f8', size: 64, shape: 'square' },
+            { key: 'desert', color: '#f4e4bc', size: 64, shape: 'square' },
+            { key: 'forest', color: '#d4f0d4', size: 64, shape: 'square' },
+            { key: 'ocean', color: '#e6f3ff', size: 64, shape: 'square' },
+            { key: 'space', color: '#f0f0f0', size: 64, shape: 'square' },
           
             // 🆕 敌人纹理
             { key: 'thug', color: '#8B0000', size: 32, shape: 'circle', border: '#ffffff' },

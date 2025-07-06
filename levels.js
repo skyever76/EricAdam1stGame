@@ -6,7 +6,7 @@ export const LEVELS_CONFIG = [
         name: "城市危机",
         description: "暴徒正在城市中肆虐，消灭他们！",
         background: "city",
-        bgColor: 0x2c3e50,
+        bgColor: 0xe8f4f8,
         playerSkin: "soldier",
         music: "city_theme",
         spawnRate: 2000, // 敌人生成间隔（毫秒）
@@ -23,7 +23,18 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: false,
                 shootRate: 0,
-                weight: 1.0 // 生成权重
+                weight: 0.8 // 生成权重
+            },
+            {
+                name: "枪手",
+                sprite: "thug",
+                hp: 60,
+                speed: 60,
+                score: 53,  // 35*1.5=52.5 向上取整
+                ai: "straight",
+                canShoot: true,
+                shootRate: 4000,
+                weight: 0.2
             }
         ],
         powerUps: ["health", "ammo"],
@@ -34,7 +45,7 @@ export const LEVELS_CONFIG = [
         name: "沙漠风暴",
         description: "沙漠蝎群来袭，小心它们的弧线攻击！",
         background: "desert",
-        bgColor: 0xd2691e,
+        bgColor: 0xf4e4bc,
         playerSkin: "tank",
         music: "desert_theme",
         spawnRate: 1800,
@@ -51,7 +62,7 @@ export const LEVELS_CONFIG = [
                 ai: "curve",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.8
+                weight: 0.4
             },
             {
                 name: "暴徒",
@@ -60,6 +71,28 @@ export const LEVELS_CONFIG = [
                 speed: 36,  // 🔧 降低60%：从90降到36
                 score: 45,  // 30*1.5=45
                 ai: "straight",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.15
+            },
+            {
+                name: "沙漠射手",
+                sprite: "scorpion",
+                hp: 70,
+                speed: 30,
+                score: 60,  // 40*1.5=60
+                ai: "straight",
+                canShoot: true,
+                shootRate: 3500,
+                weight: 0.25
+            },
+            {
+                name: "沙漠猎手",
+                sprite: "scorpion",
+                hp: 65,
+                speed: 60,  // 1.5倍速度：40*1.5=60
+                score: 75,  // 50*1.5=75
+                ai: "curve",
                 canShoot: false,
                 shootRate: 0,
                 weight: 0.2
@@ -73,7 +106,7 @@ export const LEVELS_CONFIG = [
         name: "森林迷雾",
         description: "在迷雾森林中，敌人变得更加狡猾！",
         background: "forest",
-        bgColor: 0x228b22,
+        bgColor: 0xd4f0d4,
         playerSkin: "elf",
         music: "forest_theme",
         spawnRate: 1600,
@@ -90,7 +123,7 @@ export const LEVELS_CONFIG = [
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.6
+                weight: 0.3
             },
             {
                 name: "弓箭手",
@@ -101,7 +134,29 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: true,
                 shootRate: 3000,
-                weight: 0.4
+                weight: 0.3
+            },
+            {
+                name: "森林守卫",
+                sprite: "wolf",
+                hp: 90,
+                speed: 60,
+                score: 83,  // 55*1.5=82.5 向上取整
+                ai: "zigzag",
+                canShoot: true,
+                shootRate: 2800,
+                weight: 0.15
+            },
+            {
+                name: "森林猎手",
+                sprite: "wolf",
+                hp: 85,
+                speed: 120,  // 1.5倍速度：80*1.5=120
+                score: 90,  // 60*1.5=90
+                ai: "zigzag",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.25
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed"],
@@ -112,7 +167,7 @@ export const LEVELS_CONFIG = [
         name: "海洋深渊",
         description: "深海怪物拥有智能，它们会主动追击！",
         background: "ocean",
-        bgColor: 0x191970,
+        bgColor: 0xe6f3ff,
         playerSkin: "diver",
         music: "ocean_theme",
         spawnRate: 1400,
@@ -129,7 +184,7 @@ export const LEVELS_CONFIG = [
                 ai: "chase",
                 canShoot: true,
                 shootRate: 2500,
-                weight: 0.5
+                weight: 0.3
             },
             {
                 name: "电鳗",
@@ -140,7 +195,7 @@ export const LEVELS_CONFIG = [
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.3
+                weight: 0.15
             },
             {
                 name: "海盗",
@@ -152,6 +207,28 @@ export const LEVELS_CONFIG = [
                 canShoot: true,
                 shootRate: 2000,
                 weight: 0.2
+            },
+            {
+                name: "深海狙击手",
+                sprite: "squid",
+                hp: 100,
+                speed: 100,
+                score: 98,  // 65*1.5=97.5 向上取整
+                ai: "smart",
+                canShoot: true,
+                shootRate: 1800,
+                weight: 0.1
+            },
+            {
+                name: "深海猎手",
+                sprite: "squid",
+                hp: 105,
+                speed: 210,  // 1.5倍速度：140*1.5=210
+                score: 105,  // 70*1.5=105
+                ai: "chase",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.25
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed", "shield"],
@@ -162,7 +239,7 @@ export const LEVELS_CONFIG = [
         name: "太空堡垒",
         description: "最终决战！面对太空中最强的敌人！",
         background: "space",
-        bgColor: 0x000000,
+        bgColor: 0xf0f0f0,
         playerSkin: "spaceship",
         music: "space_theme",
         spawnRate: 1000,
@@ -179,7 +256,7 @@ export const LEVELS_CONFIG = [
                 ai: "chase",
                 canShoot: true,
                 shootRate: 1500,
-                weight: 0.4
+                weight: 0.3
             },
             {
                 name: "机器人",
@@ -190,7 +267,7 @@ export const LEVELS_CONFIG = [
                 ai: "smart",
                 canShoot: true,
                 shootRate: 1800,
-                weight: 0.3
+                weight: 0.2
             },
             {
                 name: "飞碟",
@@ -201,7 +278,29 @@ export const LEVELS_CONFIG = [
                 ai: "curve",
                 canShoot: true,
                 shootRate: 2200,
-                weight: 0.2
+                weight: 0.15
+            },
+            {
+                name: "太空狙击手",
+                sprite: "alien",
+                hp: 130,
+                speed: 120,
+                score: 113,  // 75*1.5=112.5 向上取整
+                ai: "smart",
+                canShoot: true,
+                shootRate: 1200,
+                weight: 0.1
+            },
+            {
+                name: "太空猎手",
+                sprite: "alien",
+                hp: 140,
+                speed: 150,  // 1.5倍速度：100*1.5=150
+                score: 120,  // 80*1.5=120
+                ai: "chase",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.15
             },
             {
                 name: "BOSS",

@@ -19,7 +19,7 @@ export default class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
       
         // 设置外观
         this.setDisplaySize(8, 8);
-        this.setTint(0xff0000); // 红色敌人子弹
+        this.setTint(0x990000); // 深红色敌人子弹，在偏淡背景上更清晰
       
         // 自动销毁
         this.scene.time.delayedCall(4000, () => {

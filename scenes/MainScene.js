@@ -77,11 +77,19 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     // 销毁越界子弹
     preUpdate() {
         super.preUpdate();
-        if (!this.scene.cameras.main.worldView.contains(this.x, this.y)) {
+        
+        // 检查是否飞出边界
+        const worldView = this.scene.cameras.main.worldView;
+        const isOutOfBounds = !worldView.contains(this.x, this.y);
+        
+        if (isOutOfBounds) {
+            console.log(`子弹越界检测：${this.weaponType} 在位置 (${this.x}, ${this.y})，世界视图: (${worldView.x}, ${worldView.y}, ${worldView.width}, ${worldView.height})`);
+            
             // 🆕 导弹和核弹在边界爆炸
             if (this.weaponType === '导弹' || this.weaponType === '核弹') {
                 this.explodeAtBoundary();
             } else {
+                console.log(`普通子弹越界，直接销毁`);
                 this.destroy();
             }
         }
@@ -89,12 +97,20 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     
     // 🆕 在边界爆炸
     explodeAtBoundary() {
+        console.log(`边界爆炸触发：${this.weaponType} 在位置 (${this.x}, ${this.y})`);
+        
         if (this.weaponType === '导弹') {
             this.scene.executeMissileExplosion(this, { x: this.x, y: this.y });
         } else if (this.weaponType === '核弹') {
             this.scene.executeNuclearStrike(this, { x: this.x, y: this.y });
         }
-        this.destroy();
+        
+        // 延迟销毁子弹，确保爆炸效果完成
+        this.scene.time.delayedCall(100, () => {
+            if (this.active) {
+                this.destroy();
+            }
+        });
     }
 }
 
@@ -219,6 +235,10 @@ export default class MainScene extends Phaser.Scene {
 
         // 设置初始积分为5000
         this.score = 5000;
+
+        this.powerUpManager = new window.PowerUpManager(this);
+        // 玩家与道具碰撞检测
+        this.physics.add.overlap(this.player, this.powerUpManager.powerUps, this.collectPowerUp, null, this);
     }
 
     // 🆕 初始化武器系统
@@ -226,22 +246,22 @@ export default class MainScene extends Phaser.Scene {
         // 射击冷却时间初始化
         this.lastShootTime = 0;
         
-        // 定义6种武器及其特性
+        // 定义6种武器及其特性（调整颜色以适应偏淡背景）
         this.weapons = [
             // AK47 - 射速快，一次连续三发 (免费无限子弹)
-            new Weapon('AK47', 15, 200, 600, {width: 10, height: 5}, 0xffff00, 'ak47', 
-                3, 50, 0), // 3发连射，50ms间隔，免费
+            new Weapon('AK47', 15, 200, 600, {width: 10, height: 5}, 0xcc6600, 'ak47', 
+                3, 50, 0), // 深橙色，3发连射，50ms间隔，免费
             
             // 沙漠之鹰 - 射速快，伤害高，一发 (免费无限子弹)
-            new Weapon('沙漠之鹰', 60, 300, 800, {width: 12, height: 8}, 0xff6600, 'pistol', 
-                1, 0, 0), // 单发，免费
+            new Weapon('沙漠之鹰', 60, 300, 800, {width: 12, height: 8}, 0xcc3300, 'pistol', 
+                1, 0, 0), // 深红色，单发，免费
             
-            // 加特林 - 射速极快，一次20发，每次5秒冷却 (每次射击20积分)
-            new Weapon('加特林', 12, 100, 700, {width: 8, height: 4}, 0xff0000, 'gatling', 
-                20, 30, 20), // 20发连射，30ms间隔，每次射击20积分
+            // 加特林 - 射速极快，同时8发扇形散弹，每次5秒冷却 (每次射击20积分)
+            new Weapon('加特林', 12, 100, 700, {width: 8, height: 4}, 0x990000, 'gatling', 
+                8, 0, 20), // 深红色，8发同时发射，无间隔，每次射击20积分
             
             // 声波枪 - 射速快，伤害高，声波持续2秒 (每发10积分)
-            new Weapon('声波枪', 40, 150, 900, {width: 150, height: 4}, 0x00ffff, 'tesla', 
+            new Weapon('声波枪', 60, 150, 900, {width: 150, height: 4}, 0x0066cc, 'tesla', 
                 1, 0, 10, 
                 (bullet, x, y) => {
                     bullet.scene.tweens.add({
@@ -254,7 +274,7 @@ export default class MainScene extends Phaser.Scene {
                 }, true, 2000),
             
             // 导弹 - 射速慢，爆炸范围大 (每发20积分)
-            new Weapon('导弹', 300, 1000, 400, {width: 15, height: 10}, 0x00ff00, 'missile', 
+            new Weapon('导弹', 300, 1000, 400, {width: 15, height: 10}, 0x006600, 'missile', 
                 1, 0, 20, 
                 (bullet, x, y) => {
                     bullet.scene.tweens.add({
@@ -268,7 +288,7 @@ export default class MainScene extends Phaser.Scene {
                 }, false, 0, { damageRadius: 200 }),
             
             // 核弹 - 追踪型全屏武器 (每发50积分)
-            new Weapon('核弹', 999, 1000, 300, {width: 20, height: 15}, 0xff00ff, 'nuke', 
+            new Weapon('核弹', 999, 1000, 300, {width: 20, height: 15}, 0x660066, 'nuke', 
                 1, 0, 50,
                 (bullet, x, y) => {
                     bullet.scene.tweens.add({
@@ -419,8 +439,8 @@ export default class MainScene extends Phaser.Scene {
                 }
             }
         } else {
-            console.log('MainScene: background纹理不存在，使用纯色背景');
-            this.add.rectangle(640, 360, 1280, 720, 0x001122);
+            console.log('MainScene: background纹理不存在，使用偏淡背景');
+            this.add.rectangle(640, 360, 1280, 720, 0xe8f4f8); // 偏淡的蓝白色背景
         }
     }
 
@@ -800,6 +820,9 @@ export default class MainScene extends Phaser.Scene {
       
         // 更新血量条
         this.updateHealthBar();
+        if (this.powerUpManager) {
+            this.updatePowerUpHUD();
+        }
     }
 
     // 修改 update 方法
@@ -845,6 +868,9 @@ export default class MainScene extends Phaser.Scene {
         } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
             this.player.setVelocityY(this.playerSpeed);
         }
+        if (this.powerUpManager) {
+            this.powerUpManager.update();
+        }
     }
 
     // 🆕 修改玩家受伤逻辑
@@ -883,39 +909,77 @@ export default class MainScene extends Phaser.Scene {
     }
 
     handleBulletHit(bullet, enemy) {
-        if (!enemy.active) return;
+        if (!enemy.active) return; // 简化条件，移除 isDying 检查
+
+        console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
+
+        // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
+            console.log('MainScene: 执行导弹爆炸');
             this.executeMissileExplosion(bullet, enemy);
+            bullet.destroy();
+            return;
         } else if (bullet.weaponType === '核弹') {
+            console.log('MainScene: 执行核弹爆炸');
             this.executeNuclearStrike(bullet, enemy);
+            bullet.destroy();
+            return;
+        }
+
+        // 🔧 普通武器 - 处理敌人伤害
+        if (enemy.takeDamage) {
+            const isDead = enemy.takeDamage(bullet.damage);
+            if (isDead) {
+                // 敌人死亡，增加击杀数和分数
+                this.killCount++;
+                let baseScore = bullet.damage;
+                // 🆕 骑士伤害加成
+                if (this.selectedPlayer && this.selectedPlayer.damageMultiplier) {
+                    baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
+                }
+                const killBonus = 20; // 击杀奖励
+                const scoreGain = baseScore + killBonus;
+                this.score += scoreGain;
+                
+                console.log(`MainScene: 使用${bullet.weaponType}击毁敌人，伤害: ${bullet.damage}，得分 +${scoreGain}，击杀数: ${this.killCount}/${this.levelCompleteKills}，当前分数: ${this.score}`);
+            }
         } else {
+            // 兼容旧版敌人
             enemy.destroy();
+            this.killCount++;
+            let baseScore = bullet.damage;
+            // 🆕 骑士伤害加成
+            if (this.selectedPlayer && this.selectedPlayer.damageMultiplier) {
+                baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
+            }
+            const killBonus = 20; // 击杀奖励
+            const scoreGain = baseScore + killBonus;
+            this.score += scoreGain;
+          
             if (this.deathEmitter) {
                 this.deathEmitter.setPosition(enemy.x, enemy.y);
                 this.deathEmitter.start();
                 this.time.delayedCall(100, () => { if (this.deathEmitter) this.deathEmitter.stop(); });
             }
+            
+            console.log(`MainScene: 使用${bullet.weaponType}击毁敌人，伤害: ${bullet.damage}，得分 +${scoreGain}，击杀数: ${this.killCount}/${this.levelCompleteKills}，当前分数: ${this.score}`);
         }
-        if (bullet.weaponType !== '导弹' && bullet.weaponType !== '核弹') {
-            bullet.destroy();
-        }
-        // 🆕 根据武器伤害计算分数（增加击杀奖励）
-        let baseScore = bullet.damage;
-        // 🆕 骑士伤害加成
-        if (this.selectedPlayer && this.selectedPlayer.damageMultiplier && bullet.weaponType !== '导弹' && bullet.weaponType !== '核弹') {
-            baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
-        }
-        const killBonus = 20; // 击杀奖励
-        const scoreGain = baseScore + killBonus;
-        this.score += scoreGain;
-        this.killCount++;
-        
-        this.updateHUD();
       
-        console.log(`MainScene: 使用${bullet.weaponType}击毁敌人，伤害: ${bullet.damage}，得分 +${scoreGain}，击杀数: ${this.killCount}/${this.levelCompleteKills}，当前分数: ${this.score}`);
+        // 销毁子弹
+        bullet.destroy();
+        this.updateHUD();
+
+        console.log(`MainScene: 使用${bullet.weaponType}攻击完成`);
         
         // 🆕 检查是否达到击杀目标
         this.checkLevelComplete();
+        // 普通武器击杀时尝试掉落道具
+        if (bullet.weaponType !== '导弹' && bullet.weaponType !== '核弹') {
+            enemy.destroy();
+            const enemyType = enemy.enemyData ? enemy.enemyData.name : '小兵';
+            if (this.powerUpManager) this.powerUpManager.spawnPowerUp(enemy.x, enemy.y, enemyType);
+            // ... 其他击杀逻辑 ...
+        }
     }
 
     gameOver() {
@@ -933,11 +997,10 @@ export default class MainScene extends Phaser.Scene {
             this.enemySpawner = null;
         }
       
-        // 清除所有敌人
+        // 清除所有敌人和子弹
         this.enemies.clear(true, true);
-      
-        // 清除所有子弹
         this.bullets.clear(true, true);
+        this.enemyBullets.clear(true, true);
       
         // 显示游戏结束界面
         const gameOverBg = this.add.rectangle(640, 360, 400, 200, 0x000000, 0.8);
@@ -959,8 +1022,8 @@ export default class MainScene extends Phaser.Scene {
             fill: '#cccccc'
         }).setOrigin(0.5);
       
-        // 🆕 不暂停场景，保持输入监听器活跃
-        // this.scene.pause(); // 移除这行，避免输入监听器失效
+        // 🆕 暂停游戏逻辑但保持输入监听器活跃
+        this.scene.pause();
     }
 
     startEnemySpawner() {
@@ -1018,22 +1081,21 @@ export default class MainScene extends Phaser.Scene {
         
         // 🆕 加特林扇形散弹
         if (weapon.name === '加特林') {
-            const spreadAngle = Math.PI / 3; // 60度扇形（加大）
-            const bulletCount = weapon.burstCount;
+            const spreadAngle = Math.PI / 4; // 45度扇形
+            const bulletCount = 8; // 固定8发子弹
             const angleStep = spreadAngle / (bulletCount - 1);
             const startAngle = angle - spreadAngle / 2;
             
-            // 发射扇形散弹
+            // 🆕 同时发射8发扇形散弹
             for (let i = 0; i < bulletCount; i++) {
                 const bulletAngle = startAngle + angleStep * i;
-                this.time.delayedCall(weapon.burstDelay * i, () => {
-                    if (!this.isGameOver && this.player && this.player.active) {
-                        this.fireSingleBullet(startX, startY, bulletAngle, weapon);
-                    }
-                }, null, this);
+                // 移除延迟，所有子弹同时发射
+                if (!this.isGameOver && this.player && this.player.active) {
+                    this.fireSingleBullet(startX, startY, bulletAngle, weapon);
+                }
             }
             
-            console.log(`MainScene: 发射${weapon.name}，扇形散弹${bulletCount}发，角度范围${spreadAngle * 180 / Math.PI}度`);
+            console.log(`MainScene: 发射${weapon.name}，同时扇形散弹${bulletCount}发，角度范围${spreadAngle * 180 / Math.PI}度`);
         } else {
             // 其他武器的普通连发
             // 发射第一发
@@ -1136,73 +1198,90 @@ export default class MainScene extends Phaser.Scene {
     }
     
     // 🆕 核弹爆炸效果（改进版）
+    // 🆕 核弹爆炸效果（完全重写，增加全屏特效）
     executeNuclearStrike(bullet, hitEnemy) {
         const weapon = this.weapons.find(w => w.name === '核弹');
-        const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
-        const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? weapon.config.damageRadius : 400;
-        
-        console.log(`核弹爆炸：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
-        
+      
+        // 🔧 修复爆炸中心坐标计算
+        const explosionCenter = hitEnemy ? 
+            { x: hitEnemy.x, y: hitEnemy.y } : 
+            { x: bullet.x, y: bullet.y };
+      
+        const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? 
+            weapon.config.damageRadius : 400;
+      
+        console.log(`🔥 核弹爆炸开始：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
+      
+        // 🆕 立即开始全屏特效
+        this.createNuclearExplosionEffects(explosionCenter);
+      
         let killedEnemies = 0;
         const enemies = this.enemies.getChildren();
         const totalEnemies = enemies.filter(e => e.active).length;
-        
+      
         console.log(`核弹爆炸前总敌人数量：${totalEnemies}`);
-        
-        for (let enemy of enemies) {
-            if (enemy.active) {
-                const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
-                const enemyName = enemy.enemyData ? enemy.enemyData.name : 'Unknown';
-                console.log(`敌人${enemyName}位置(${enemy.x}, ${enemy.y})，距离爆炸中心：${distance.toFixed(2)}`);
-                
-                if (distance <= explosionRadius) {
-                    killedEnemies++;
-                    this.killCount++;
-                    const baseScore = 100;
-                    const distanceFactor = Math.max(0.5, 1 - distance / explosionRadius);
-                    const scoreGain = Math.floor(baseScore * distanceFactor);
-                    this.score += scoreGain;
-                    
-                    console.log(`✅ 核弹击杀：${enemyName}，距离${distance.toFixed(2)}，得分${scoreGain}`);
-                    
-                    if (this.deathEmitter) {
-                        this.deathEmitter.setPosition(enemy.x, enemy.y);
-                        this.deathEmitter.start();
-                        this.time.delayedCall(100, () => { if (this.deathEmitter) this.deathEmitter.stop(); });
+      
+        // 🆕 延迟爆炸伤害，配合视觉效果
+        this.time.delayedCall(300, () => {
+            for (let enemy of enemies) {
+                if (enemy.active) {
+                    const distance = Phaser.Math.Distance.Between(
+                        explosionCenter.x, explosionCenter.y, 
+                        enemy.x, enemy.y
+                    );
+                    const enemyName = enemy.enemyData ? enemy.enemyData.name : 'Unknown';
+                  
+                    if (distance <= explosionRadius) {
+                        killedEnemies++;
+                        this.killCount++;
+                      
+                        // 🆕 增加核弹特殊得分
+                        const baseScore = 150; // 核弹基础分数更高
+                        const distanceFactor = Math.max(0.3, 1 - distance / explosionRadius);
+                        const scoreGain = Math.floor(baseScore * distanceFactor);
+                        this.score += scoreGain;
+                      
+                        console.log(`☢️ 核弹击杀：${enemyName}，距离${distance.toFixed(2)}，得分${scoreGain}`);
+                      
+                        // 🆕 敌人消失特效
+                        this.createEnemyVaporizeEffect(enemy);
+                      
+                        enemy.destroy();
                     }
-                    enemy.destroy();
-                } else {
-                    console.log(`❌ 敌人${enemyName}在爆炸范围外，距离${distance.toFixed(2)} > ${explosionRadius}`);
                 }
             }
-        }
-        
-        const remainingEnemies = this.enemies.getChildren().filter(e => e.active).length;
-        console.log(`核弹爆炸完成：击杀${killedEnemies}/${totalEnemies}个敌人，剩余${remainingEnemies}个敌人`);
-        
-        if (this.explosionEmitter) {
-            this.explosionEmitter.setPosition(explosionCenter.x, explosionCenter.y);
-            this.explosionEmitter.start();
-            this.time.delayedCall(200, () => { if (this.explosionEmitter) this.explosionEmitter.stop(); });
-        }
-        
-        this.updateHUD();
+          
+            const remainingEnemies = this.enemies.getChildren().filter(e => e.active).length;
+            console.log(`☢️ 核弹爆炸完成：击杀${killedEnemies}/${totalEnemies}个敌人，剩余${remainingEnemies}个敌人`);
+          
+            this.updateHUD();
+        });
     }
     
-    // 🆕 导弹爆炸效果
+    // 🔧 修复导弹爆炸效果（也增强一下）
     executeMissileExplosion(bullet, hitEnemy) {
         const weapon = this.weapons.find(w => w.name === '导弹');
-        const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
-        const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? weapon.config.damageRadius : 200;
-        
-        console.log(`导弹爆炸：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
-        
+      
+        // 🔧 修复爆炸中心坐标计算
+        const explosionCenter = hitEnemy ? 
+            { x: hitEnemy.x, y: hitEnemy.y } : 
+            { x: bullet.x, y: bullet.y };
+      
+        const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? 
+            weapon.config.damageRadius : 200;
+      
+        console.log(`💥 导弹爆炸：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
+      
         let killedEnemies = 0;
         const enemies = this.enemies.getChildren();
-        
+      
         for (let enemy of enemies) {
             if (enemy.active) {
-                const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
+                const distance = Phaser.Math.Distance.Between(
+                    explosionCenter.x, explosionCenter.y, 
+                    enemy.x, enemy.y
+                );
+              
                 if (distance <= explosionRadius) {
                     killedEnemies++;
                     this.killCount++;
@@ -1210,21 +1289,78 @@ export default class MainScene extends Phaser.Scene {
                     const distanceFactor = Math.max(0.5, 1 - distance / explosionRadius);
                     const scoreGain = Math.floor(baseScore * distanceFactor);
                     this.score += scoreGain;
+                  
                     if (this.deathEmitter) {
                         this.deathEmitter.setPosition(enemy.x, enemy.y);
                         this.deathEmitter.start();
-                        this.time.delayedCall(100, () => { if (this.deathEmitter) this.deathEmitter.stop(); });
+                        this.time.delayedCall(100, () => { 
+                            if (this.deathEmitter) this.deathEmitter.stop(); 
+                        });
                     }
                     enemy.destroy();
                 }
             }
         }
-        if (this.explosionEmitter) {
-            this.explosionEmitter.setPosition(explosionCenter.x, explosionCenter.y);
-            this.explosionEmitter.start();
-            this.time.delayedCall(200, () => { if (this.explosionEmitter) this.explosionEmitter.stop(); });
-        }
+      
+        // 🆕 增强导弹爆炸特效
+        this.createMissileExplosionEffect(explosionCenter);
         this.updateHUD();
+        // 爆炸击杀的敌人也可能掉落道具
+        for (let enemy of enemies) {
+            if (enemy.active && distance <= explosionRadius) {
+                const enemyType = enemy.enemyData ? enemy.enemyData.name : '小兵';
+                if (Math.random() < 0.3) {
+                    if (this.powerUpManager) this.powerUpManager.spawnPowerUp(enemy.x, enemy.y, enemyType);
+                }
+                enemy.destroy();
+            }
+        }
+    }
+
+    // 🆕 增强导弹爆炸特效
+    createMissileExplosionEffect(center) {
+        // 爆炸火球
+        const fireball = this.add.circle(center.x, center.y, 10, 0xff4400, 0.8)
+            .setDepth(400);
+      
+        this.tweens.add({
+            targets: fireball,
+            scaleX: 6,
+            scaleY: 6,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => fireball.destroy()
+        });
+      
+        // 爆炸冲击波
+        const shockwave = this.add.graphics().setDepth(399);
+        this.tweens.add({
+            targets: shockwave,
+            duration: 600,
+            onUpdate: (tween) => {
+                const progress = tween.progress;
+                const radius = progress * 250;
+                const alpha = 1 - progress;
+              
+                shockwave.clear();
+                shockwave.lineStyle(4, 0xff6600, alpha);
+                shockwave.strokeCircle(center.x, center.y, radius);
+            },
+            onComplete: () => shockwave.destroy()
+        });
+      
+        // 屏幕震动
+        this.cameras.main.shake(300, 0.02);
+      
+        // 爆炸粒子
+        if (this.explosionEmitter) {
+            this.explosionEmitter.setPosition(center.x, center.y);
+            this.explosionEmitter.start();
+            this.time.delayedCall(300, () => { 
+                if (this.explosionEmitter) this.explosionEmitter.stop(); 
+            });
+        }
     }
     
     // 🆕 声波持续效果
@@ -1235,6 +1371,152 @@ export default class MainScene extends Phaser.Scene {
                 bullet.destroy();
             }
         }, null, this);
+    }
+
+    // 🆕 创建核弹爆炸全屏特效
+    createNuclearExplosionEffects(explosionCenter) {
+        console.log('🎆 开始核弹全屏特效');
+      
+        // 1. 🆕 全屏白光闪烁
+        const flashOverlay = this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.9)
+            .setDepth(999);
+      
+        this.tweens.add({
+            targets: flashOverlay,
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => flashOverlay.destroy()
+        });
+      
+        // 2. 🆕 核爆冲击波环
+        const shockwaveRings = [];
+        for (let i = 0; i < 3; i++) {
+            const ring = this.add.graphics()
+                .setDepth(500);
+          
+            this.time.delayedCall(i * 100, () => {
+                this.tweens.add({
+                    targets: ring,
+                    duration: 1000,
+                    ease: 'Power2',
+                    onUpdate: (tween) => {
+                        const progress = tween.progress;
+                        const radius = progress * 600;
+                        const alpha = 1 - progress;
+                      
+                        ring.clear();
+                        ring.lineStyle(8, 0xff6600, alpha);
+                        ring.strokeCircle(explosionCenter.x, explosionCenter.y, radius);
+                    },
+                    onComplete: () => ring.destroy()
+                });
+            });
+          
+            shockwaveRings.push(ring);
+        }
+      
+        // 3. 🆕 核爆蘑菇云效果
+        this.createMushroomCloudEffect(explosionCenter);
+      
+        // 4. 🆕 屏幕剧烈震动
+        this.cameras.main.shake(1000, 0.05);
+      
+        // 5. 🆕 全屏放射性粒子
+        this.createRadiationParticles(explosionCenter);
+      
+        // 6. 🆕 音效和时间减慢效果
+        this.createNuclearSoundEffect();
+        this.createTimeSlowEffect();
+    }
+
+    // 🆕 创建蘑菇云效果
+    createMushroomCloudEffect(center) {
+        // 创建多层蘑菇云
+        for (let i = 0; i < 5; i++) {
+            const cloud = this.add.circle(
+                center.x + Phaser.Math.Between(-50, 50),
+                center.y - i * 30,
+                20 + i * 10,
+                0xff4400,
+                0.7
+            ).setDepth(400);
+          
+            // 蘑菇云上升和扩散动画
+            this.tweens.add({
+                targets: cloud,
+                y: cloud.y - 100,
+                scaleX: 2 + i * 0.5,
+                scaleY: 1.5 + i * 0.3,
+                alpha: 0,
+                duration: 2000 + i * 200,
+                ease: 'Power2',
+                onComplete: () => cloud.destroy()
+            });
+        }
+    }
+
+    // 🆕 创建放射性粒子效果
+    createRadiationParticles(center) {
+        // 创建临时粒子发射器
+        const radiationEmitter = this.add.particles(center.x, center.y, 'bullet', {
+            speed: { min: 100, max: 400 },
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 0.8, end: 0 },
+            lifespan: 1500,
+            blendMode: 'ADD',
+            angle: { min: 0, max: 360 },
+            quantity: 3,
+            tint: [0xff0000, 0xff6600, 0xffff00, 0x00ff00]
+        }).setDepth(600);
+      
+        // 2秒后停止粒子效果
+        this.time.delayedCall(2000, () => {
+            radiationEmitter.destroy();
+        });
+    }
+
+    // 🆕 创建敌人蒸发效果
+    createEnemyVaporizeEffect(enemy) {
+        // 敌人蒸发粒子
+        const vaporize = this.add.particles(enemy.x, enemy.y, 'bullet', {
+            speed: { min: 50, max: 150 },
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 800,
+            blendMode: 'ADD',
+            angle: { min: 0, max: 360 },
+            quantity: 5,
+            tint: 0x00ff00
+        });
+      
+        this.time.delayedCall(1000, () => {
+            vaporize.destroy();
+        });
+    }
+
+    // 🆕 创建核弹音效
+    createNuclearSoundEffect() {
+        // 模拟音效（如果有音频资源可以播放真实音效）
+        console.log('🔊 播放核弹爆炸音效');
+      
+        // 可以在这里添加真实音效播放
+        // this.sound.play('nuclearExplosion');
+    }
+
+    // 🆕 创建时间减慢效果
+    createTimeSlowEffect() {
+        // 短暂减慢游戏时间
+        this.physics.world.timeScale = 0.3;
+        this.time.timeScale = 0.3;
+      
+        this.time.delayedCall(500, () => {
+            this.physics.world.timeScale = 1;
+            this.time.timeScale = 1;
+            console.log('⏰ 时间流速恢复正常');
+        });
+      
+        console.log('⏰ 时间减慢效果启动');
     }
     
     // 🆕 显示子弹不足提示
@@ -1291,9 +1573,11 @@ export default class MainScene extends Phaser.Scene {
     handleRestart() {
         if (this.isGameOver || this.isLevelCompleted) {
             console.log('MainScene: 检测到R键，重新开始游戏');
-            // 清理所有事件监听器
-            this.input.keyboard.off('keydown-R', this.handleRestart, this);
-            this.input.keyboard.off('keydown-N', this.nextLevel, this);
+            
+            // 如果场景被暂停，先恢复
+            if (this.scene.isPaused()) {
+                this.scene.resume();
+            }
             
             // 重新开始场景，保持当前关卡
             this.scene.restart({ 
@@ -1353,9 +1637,11 @@ export default class MainScene extends Phaser.Scene {
         
         const nextLevelIndex = this.currentLevelIndex + 1;
         if (nextLevelIndex < LEVELS_CONFIG.length) {
-            // 清理事件监听器
-            this.input.keyboard.off('keydown-N', this.nextLevel, this);
-          
+            // 如果场景被暂停，先恢复
+            if (this.scene.isPaused()) {
+                this.scene.resume();
+            }
+            
             // 启动下一关
             this.scene.restart({ 
                 player: this.selectedPlayer, 
@@ -1514,25 +1800,242 @@ export default class MainScene extends Phaser.Scene {
         console.log(`MainScene: 关卡系统初始化完成 - ${this.currentLevel.name}`);
     }
 
-    // 🆕 创建关卡背景
+    // 🆕 创建关卡背景（修正版，100% Phaser 兼容）
     createLevelBackground() {
-        // 设置背景颜色
         this.cameras.main.setBackgroundColor(this.currentLevel.bgColor);
-      
-        // 如果有背景纹理则使用，否则使用纯色
-        if (this.textures.exists(this.currentLevel.background)) {
-            console.log('MainScene: 使用关卡背景纹理:', this.currentLevel.background);
-            for (let x = 0; x < 1280; x += 64) {
-                for (let y = 0; y < 720; y += 64) {
-                    this.add.image(x, y, this.currentLevel.background).setOrigin(0, 0);
-                }
+        try {
+            const name = this.currentLevel.name;
+            if (name.includes('城市')) {
+                this.generateTechGridBackground();
+            } else if (name.includes('沙漠')) {
+                this.generateCloudBackground();
+            } else if (name.includes('森林')) {
+                this.generateCircuitBackground();
+            } else if (name.includes('海洋') || name.includes('深渊')) {
+                this.generateWaveBackground();
+            } else if (name.includes('太空') || name.includes('宇宙')) {
+                this.generateStarFieldBackground();
+            } else {
+                this.generateHexagonBackground();
             }
-        } else {
-            console.log('MainScene: 使用关卡背景颜色:', this.currentLevel.bgColor);
+        } catch (error) {
+            console.warn('背景生成失败，使用简化背景:', error);
+            this.generateSimpleBackground();
         }
-      
-        // 🆕 添加环境效果
         this.addEnvironmentEffects();
+    }
+
+    // 1. 科技网格背景（修正版）
+    generateTechGridBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xe6f3ff);
+        graphics.fillRect(0, 0, 1280, 720);
+        for (let i = 0; i < 10; i++) {
+            const alpha = 0.1 - (i * 0.01);
+            graphics.fillStyle(0xccddff, alpha);
+            graphics.fillRect(0, i * 72, 1280, 72);
+        }
+        graphics.lineStyle(1, 0x99ccff, 0.3);
+        const gridSize = 40;
+        for (let x = 0; x <= 1280; x += gridSize) {
+            graphics.beginPath();
+            graphics.moveTo(x, 0);
+            graphics.lineTo(x, 720);
+            graphics.strokePath();
+        }
+        for (let y = 0; y <= 720; y += gridSize) {
+            graphics.beginPath();
+            graphics.moveTo(0, y);
+            graphics.lineTo(1280, y);
+            graphics.strokePath();
+        }
+        graphics.fillStyle(0x6699ff, 0.4);
+        for (let i = 0; i < 20; i++) {
+            const x = Phaser.Math.Between(0, 1280);
+            const y = Phaser.Math.Between(0, 720);
+            graphics.fillCircle(x, y, 2);
+            graphics.lineStyle(1, 0x6699ff, 0.3);
+            graphics.beginPath();
+            graphics.moveTo(x - 5, y);
+            graphics.lineTo(x + 5, y);
+            graphics.moveTo(x, y - 5);
+            graphics.lineTo(x, y + 5);
+            graphics.strokePath();
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 2. 云朵背景（修正版）
+    generateCloudBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf0f8ff);
+        graphics.fillRect(0, 0, 1280, 720);
+        for (let i = 0; i < 20; i++) {
+            const alpha = 0.05 - (i * 0.002);
+            graphics.fillStyle(0xe0e6ff, alpha);
+            graphics.fillRect(0, i * 36, 1280, 36);
+        }
+        graphics.fillStyle(0xffffff, 0.6);
+        for (let i = 0; i < 15; i++) {
+            const cloudX = Phaser.Math.Between(0, 1280);
+            const cloudY = Phaser.Math.Between(50, 400);
+            const cloudSize = Phaser.Math.Between(30, 80);
+            this.drawCloud(graphics, cloudX, cloudY, cloudSize);
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 3. 电路板背景（修正版）
+    generateCircuitBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf0fff0);
+        graphics.fillRect(0, 0, 1280, 720);
+        graphics.lineStyle(2, 0x90ee90, 0.6);
+        for (let i = 0; i < 30; i++) {
+            const startX = Phaser.Math.Between(0, 1280);
+            const startY = Phaser.Math.Between(0, 720);
+            const endX = startX + Phaser.Math.Between(-200, 200);
+            const endY = startY + Phaser.Math.Between(-200, 200);
+            graphics.beginPath();
+            graphics.moveTo(startX, startY);
+            graphics.lineTo(endX, startY);
+            graphics.lineTo(endX, endY);
+            graphics.strokePath();
+            graphics.fillStyle(0x32cd32, 0.8);
+            graphics.fillCircle(startX, startY, 3);
+            graphics.fillCircle(endX, startY, 3);
+            graphics.fillCircle(endX, endY, 3);
+        }
+        graphics.fillStyle(0x98fb98, 0.4);
+        graphics.lineStyle(1, 0x32cd32, 0.8);
+        for (let i = 0; i < 10; i++) {
+            const rectX = Phaser.Math.Between(50, 1200);
+            const rectY = Phaser.Math.Between(50, 650);
+            const rectW = Phaser.Math.Between(20, 60);
+            const rectH = Phaser.Math.Between(15, 40);
+            graphics.fillRect(rectX, rectY, rectW, rectH);
+            graphics.strokeRect(rectX, rectY, rectW, rectH);
+            for (let j = 0; j < 4; j++) {
+                graphics.fillStyle(0x32cd32, 1);
+                graphics.fillRect(rectX - 5, rectY + (j + 1) * (rectH / 5), 10, 2);
+                graphics.fillRect(rectX + rectW - 5, rectY + (j + 1) * (rectH / 5), 10, 2);
+            }
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 4. 星空背景（修正版）
+    generateStarFieldBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf8f8ff);
+        graphics.fillRect(0, 0, 1280, 720);
+        for (let radius = 500; radius > 0; radius -= 50) {
+            const alpha = (500 - radius) / 500 * 0.1;
+            graphics.fillStyle(0xe6e6fa, alpha);
+            graphics.fillCircle(640, 360, radius);
+        }
+        for (let i = 0; i < 100; i++) {
+            const x = Phaser.Math.Between(0, 1280);
+            const y = Phaser.Math.Between(0, 720);
+            const size = Phaser.Math.Between(1, 3);
+            const alpha = Math.random() * 0.8 + 0.2;
+            graphics.fillStyle(0xdda0dd, alpha);
+            graphics.fillCircle(x, y, size);
+            if (size >= 2) {
+                graphics.lineStyle(1, 0xdda0dd, alpha * 0.5);
+                graphics.beginPath();
+                graphics.moveTo(x - size * 2, y);
+                graphics.lineTo(x + size * 2, y);
+                graphics.moveTo(x, y - size * 2);
+                graphics.lineTo(x, y + size * 2);
+                graphics.strokePath();
+            }
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 5. 六角形科技背景（保持不变）
+    generateHexagonBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf5f5f5);
+        graphics.fillRect(0, 0, 1280, 720);
+        const hexSize = 30;
+        const hexWidth = hexSize * Math.sqrt(3);
+        const hexHeight = hexSize * 2;
+        graphics.lineStyle(1, 0xd3d3d3, 0.8);
+        for (let row = 0; row < Math.ceil(720 / (hexHeight * 0.75)) + 1; row++) {
+            for (let col = 0; col < Math.ceil(1280 / hexWidth) + 1; col++) {
+                const x = col * hexWidth + (row % 2) * (hexWidth / 2);
+                const y = row * hexHeight * 0.75;
+                this.drawHexagon(graphics, x, y, hexSize);
+            }
+        }
+        graphics.fillStyle(0xe0e0e0, 0.5);
+        for (let i = 0; i < 20; i++) {
+            const randomRow = Phaser.Math.Between(0, Math.ceil(720 / (hexHeight * 0.75)));
+            const randomCol = Phaser.Math.Between(0, Math.ceil(1280 / hexWidth));
+            const x = randomCol * hexWidth + (randomRow % 2) * (hexWidth / 2);
+            const y = randomRow * hexHeight * 0.75;
+            this.fillHexagon(graphics, x, y, hexSize);
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 6. 波浪背景（修正版）
+    generateWaveBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf0ffff);
+        graphics.fillRect(0, 0, 1280, 720);
+        for (let i = 0; i < 15; i++) {
+            const alpha = 0.08 - (i * 0.005);
+            graphics.fillStyle(0xe0f6ff, alpha);
+            graphics.fillRect(0, i * 48, 1280, 48);
+        }
+        const waveColors = [0xb0e0e6, 0x87ceeb, 0x87cefa];
+        const waveAlphas = [0.3, 0.2, 0.1];
+        for (let layer = 0; layer < 3; layer++) {
+            graphics.fillStyle(waveColors[layer], waveAlphas[layer]);
+            const amplitude = 30 + layer * 20;
+            const frequency = 0.01 + layer * 0.005;
+            const yOffset = 200 + layer * 150;
+            graphics.beginPath();
+            graphics.moveTo(0, yOffset);
+            for (let x = 0; x <= 1280; x += 5) {
+                const y = yOffset + Math.sin(x * frequency) * amplitude;
+                graphics.lineTo(x, y);
+            }
+            graphics.lineTo(1280, 720);
+            graphics.lineTo(0, 720);
+            graphics.closePath();
+            graphics.fillPath();
+        }
+        graphics.setDepth(-100);
+    }
+
+    // 简化版背景（降级方案）
+    generateSimpleBackground() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xf0f8ff);
+        graphics.fillRect(0, 0, 1280, 720);
+        graphics.fillStyle(0xb0c4de, 0.3);
+        for (let i = 0; i < 50; i++) {
+            const x = Phaser.Math.Between(0, 1280);
+            const y = Phaser.Math.Between(0, 720);
+            const size = Phaser.Math.Between(2, 8);
+            graphics.fillCircle(x, y, size);
+        }
+        graphics.lineStyle(1, 0xb0c4de, 0.2);
+        for (let i = 0; i < 20; i++) {
+            const x1 = Phaser.Math.Between(0, 1280);
+            const y1 = Phaser.Math.Between(0, 720);
+            const x2 = x1 + Phaser.Math.Between(-100, 100);
+            const y2 = y1 + Phaser.Math.Between(-100, 100);
+            graphics.beginPath();
+            graphics.moveTo(x1, y1);
+            graphics.lineTo(x2, y2);
+            graphics.strokePath();
+        }
+        graphics.setDepth(-100);
     }
 
     // 🆕 添加环境效果
@@ -1717,33 +2220,7 @@ export default class MainScene extends Phaser.Scene {
         }
     }
   
-    // 🆕 修改子弹击中敌人的处理
-    handleBulletHit(bullet, enemy) {
-        if (!enemy.active || enemy.isDying) return;
-      
-        console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
-      
-        // 🔧 特殊武器处理（导弹、核弹）
-        if (bullet.weaponType === '导弹') {
-            console.log('MainScene: 执行导弹爆炸');
-            this.executeMissileExplosion(bullet, enemy);
-            bullet.destroy();
-            return;
-        } else if (bullet.weaponType === '核弹') {
-            console.log('MainScene: 执行核弹爆炸');
-            this.executeNuclearStrike(bullet, enemy);
-            bullet.destroy();
-            return;
-        }
-      
-        // 🔧 普通武器 - 让敌人处理伤害
-        const isDead = enemy.takeDamage(bullet.damage);
-      
-        // 销毁子弹
-        bullet.destroy();
-      
-        console.log(`MainScene: 使用${bullet.weaponType}攻击${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
-    }
+
 
     // 🆕 修改关卡完成检查
     checkLevelComplete() {
@@ -1842,12 +2319,31 @@ export default class MainScene extends Phaser.Scene {
             font: '16px Arial',
             fill: '#cccccc'
         }).setOrigin(0.5);
+        
+        // 确保R键监听器已设置
+        this.input.keyboard.on('keydown-R', this.handleRestart, this);
     }
 
     // 🔧 在场景销毁时清理事件监听器
     destroy() {
+        // 清理自定义事件监听器
         this.events.off('enemyDied', this.handleEnemyDeath, this);
         this.events.off('enemyEscaped', this.handleEnemyEscape, this);
+        
+        // 清理键盘事件监听器
+        this.input.keyboard.off('keydown-R', this.handleRestart, this);
+        this.input.keyboard.off('keydown-N', this.nextLevel, this);
+        
+        // 清理其他事件监听器
+        this.input.keyboard.off('keydown-SPACE', this.shoot, this);
+        this.input.keyboard.off('keydown-P', this.togglePause, this);
+        this.input.keyboard.off('keydown-ONE', () => this.switchWeapon(0), this);
+        this.input.keyboard.off('keydown-TWO', () => this.switchWeapon(1), this);
+        this.input.keyboard.off('keydown-THREE', () => this.switchWeapon(2), this);
+        this.input.keyboard.off('keydown-FOUR', () => this.switchWeapon(3), this);
+        this.input.keyboard.off('keydown-FIVE', () => this.switchWeapon(4), this);
+        this.input.keyboard.off('keydown-SIX', () => this.switchWeapon(5), this);
+        
         super.destroy();
     }
 
@@ -1870,5 +2366,41 @@ export default class MainScene extends Phaser.Scene {
     createStarsEffect() {
         // 星空效果实现
         console.log('MainScene: 创建星空效果');
+    }
+
+    collectPowerUp(player, powerUp) {
+        if (powerUp.collect) {
+            powerUp.collect();
+        }
+    }
+
+    updatePowerUpHUD() {
+        if (this.powerUpHUDGroup) {
+            this.powerUpHUDGroup.clear(true);
+        } else {
+            this.powerUpHUDGroup = this.add.group();
+        }
+        const activeBonuses = this.powerUpManager.getActiveBonuses();
+        activeBonuses.forEach((bonus, index) => {
+            const x = 50;
+            const y = 150 + index * 40;
+            const remainingTime = Math.max(0, bonus.endTime - Date.now());
+            const seconds = Math.ceil(remainingTime / 1000);
+            const bg = this.add.rectangle(x, y, 200, 30, 0x000000, 0.6)
+                .setOrigin(0, 0.5)
+                .setStroke(0xffffff, 1);
+            const text = this.add.text(x + 10, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
+                fontSize: '14px',
+                fill: '#ffffff'
+            }).setOrigin(0, 0.5);
+            const progressWidth = 180;
+            const progress = remainingTime / bonus.effect.duration;
+            const progressBg = this.add.rectangle(x + 10, y + 12, progressWidth, 4, 0x333333)
+                .setOrigin(0, 0.5);
+            const progressBar = this.add.rectangle(x + 10, y + 12, progressWidth * progress, 4, 0x00ff00)
+                .setOrigin(0, 0.5);
+            this.powerUpHUDGroup.addMultiple([bg, text, progressBg, progressBar]);
+        });
+        this.powerUpHUDGroup.setDepth(1000);
     }
 } 
