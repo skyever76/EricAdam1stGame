@@ -229,6 +229,17 @@ export const LEVELS_CONFIG = [
                 canShoot: false,
                 shootRate: 0,
                 weight: 0.25
+            },
+            {
+                name: "高速追击者",
+                sprite: "shark",
+                hp: 80,
+                speed: 200,  // 比普通敌人快2倍
+                score: 75,
+                ai: "fast_chase",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.2
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed", "shield"],
@@ -312,6 +323,17 @@ export const LEVELS_CONFIG = [
                 canShoot: true,
                 shootRate: 800,
                 weight: 0.1
+            },
+            {
+                name: "极速猎手",
+                sprite: "alien",
+                hp: 120,
+                speed: 300,  // 比普通敌人快3倍
+                score: 120,
+                ai: "lightning_hunt",
+                canShoot: false,
+                shootRate: 0,
+                weight: 0.1  // 稀有敌人
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed", "shield", "multishot"],
@@ -462,6 +484,94 @@ export const AI_BEHAVIORS = {
                 enemy.aiData.movePattern = (enemy.aiData.movePattern + 1) % 2;
                 enemy.aiData.phaseTimer = 0;
             }
+        }
+    },
+    fast_chase: {
+        name: "高速追击",
+        update: (enemy) => {
+            if (!enemy.scene.player || !enemy.scene.player.active) return;
+          
+            const player = enemy.scene.player;
+            const angle = Phaser.Math.Angle.Between(
+                enemy.x, enemy.y, 
+                player.x, player.y
+            );
+          
+            // 使用完整速度进行追击
+            const speed = enemy.enemyData.speed;
+            enemy.scene.physics.velocityFromRotation(angle, speed, enemy.body.velocity);
+          
+            // 添加冲刺效果
+            if (!enemy.aiData) {
+                enemy.aiData = { rushCooldown: 0 };
+            }
+          
+            // 每3秒进行一次冲刺加速
+            if (enemy.scene.time.now > enemy.aiData.rushCooldown) {
+                const rushSpeed = speed * 1.5;
+                enemy.scene.physics.velocityFromRotation(angle, rushSpeed, enemy.body.velocity);
+                enemy.aiData.rushCooldown = enemy.scene.time.now + 3000;
+            }
+        }
+    },
+    lightning_hunt: {
+        name: "闪电猎杀",
+        update: (enemy) => {
+            if (!enemy.scene.player || !enemy.scene.player.active) return;
+          
+            if (!enemy.aiData) {
+                enemy.aiData = {
+                    strategy: 0, // 0: 预判追击, 1: 绕后包抄
+                    changeTime: enemy.scene.time.now + 2000,
+                    lastPlayerPos: { x: 0, y: 0 }
+                };
+            }
+          
+            const player = enemy.scene.player;
+            const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+          
+            // 策略切换
+            if (enemy.scene.time.now > enemy.aiData.changeTime) {
+                enemy.aiData.strategy = Phaser.Math.Between(0, 1);
+                enemy.aiData.changeTime = enemy.scene.time.now + Phaser.Math.Between(1500, 2500);
+            }
+          
+            let targetX, targetY;
+            const speed = enemy.enemyData.speed;
+          
+            switch (enemy.aiData.strategy) {
+                case 0: // 预判追击 - 预测玩家位置
+                    const playerVelX = player.body.velocity.x || 0;
+                    const playerVelY = player.body.velocity.y || 0;
+                    const predictionTime = distance / speed; // 预判时间
+                  
+                    targetX = player.x + playerVelX * predictionTime;
+                    targetY = player.y + playerVelY * predictionTime;
+                    break;
+                  
+                case 1: // 绕后包抄
+                    if (distance > 150) {
+                        // 距离远时直接追击
+                        targetX = player.x;
+                        targetY = player.y;
+                    } else {
+                        // 距离近时绕到玩家背后
+                        const playerAngle = Math.atan2(player.body.velocity.y, player.body.velocity.x);
+                        const behindDistance = 100;
+                        targetX = player.x - Math.cos(playerAngle) * behindDistance;
+                        targetY = player.y - Math.sin(playerAngle) * behindDistance;
+                    }
+                    break;
+            }
+          
+            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, targetX, targetY);
+          
+            // 使用更高的速度倍数
+            const finalSpeed = distance < 200 ? speed * 1.2 : speed;
+            enemy.scene.physics.velocityFromRotation(angle, finalSpeed, enemy.body.velocity);
+          
+            // 记录玩家位置用于预判
+            enemy.aiData.lastPlayerPos = { x: player.x, y: player.y };
         }
     }
 }; 

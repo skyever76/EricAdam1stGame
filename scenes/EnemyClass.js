@@ -25,6 +25,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         // 视觉效果
         this.healthBar = null;
         this.damageIndicator = null;
+        this.speedEffect = null; // 🆕 速度特效
       
         // 🔧 死亡处理标记
         this.isDying = false;
@@ -48,6 +49,9 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.canShoot) {
             this.setupShooting();
         }
+      
+        // 🆕 为高速敌人添加视觉特效
+        this.setupSpeedEffect();
       
         const enemyName = this.enemyData ? this.enemyData.name : 'Unknown';
         console.log(`Enemy created: ${enemyName}, HP: ${this.currentHp}, AI: ${this.aiType}`);
@@ -97,6 +101,59 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             callbackScope: this,
             loop: true
         });
+    }
+  
+    // 🆕 设置速度特效
+    setupSpeedEffect() {
+        if (!this.enemyData || !this.scene) return;
+      
+        // 为高速敌人添加特效
+        if (this.enemyData.ai === 'fast_chase' || this.enemyData.ai === 'lightning_hunt') {
+            // 创建速度线条特效
+            this.speedEffect = this.scene.add.graphics();
+            this.speedEffect.setDepth(this.depth - 1);
+          
+            // 设置特效颜色
+            const effectColor = this.enemyData.ai === 'fast_chase' ? 0x00ff00 : 0xff6600;
+            this.speedEffect.lineStyle(2, effectColor, 0.6);
+          
+            // 创建速度线条动画
+            this.speedEffectTimer = this.scene.time.addEvent({
+                delay: 100,
+                callback: this.updateSpeedEffect,
+                callbackScope: this,
+                loop: true
+            });
+        }
+    }
+  
+    // 🆕 更新速度特效
+    updateSpeedEffect() {
+        if (!this.speedEffect || !this.active) return;
+      
+        this.speedEffect.clear();
+      
+        // 根据AI类型设置特效颜色
+        const effectColor = this.enemyData.ai === 'fast_chase' ? 0x00ff00 : 0xff6600;
+        this.speedEffect.lineStyle(2, effectColor, 0.6);
+      
+        // 绘制速度线条
+        const lineLength = 20;
+        const angle = Math.atan2(this.body.velocity.y, this.body.velocity.x);
+        const startX = this.x - Math.cos(angle) * lineLength;
+        const startY = this.y - Math.sin(angle) * lineLength;
+        const endX = this.x;
+        const endY = this.y;
+      
+        this.speedEffect.moveTo(startX, startY);
+        this.speedEffect.lineTo(endX, endY);
+      
+        // 为极速猎手添加额外的闪电效果
+        if (this.enemyData.ai === 'lightning_hunt') {
+            this.speedEffect.lineStyle(1, 0xffff00, 0.8);
+            this.speedEffect.moveTo(startX + 5, startY + 5);
+            this.speedEffect.lineTo(endX + 5, endY + 5);
+        }
     }
   
     tryShoot() {
@@ -228,6 +285,11 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         // 更新血量条位置
         this.updateHealthBar();
       
+        // 🆕 更新速度特效
+        if (this.speedEffect && this.speedEffectTimer) {
+            this.updateSpeedEffect();
+        }
+      
         // 检查边界
         this.checkBounds();
     }
@@ -255,6 +317,16 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.shootTimer) {
             this.shootTimer.destroy();
             this.shootTimer = null;
+        }
+      
+        // 🆕 清理速度特效
+        if (this.speedEffect) {
+            this.speedEffect.destroy();
+            this.speedEffect = null;
+        }
+        if (this.speedEffectTimer) {
+            this.speedEffectTimer.destroy();
+            this.speedEffectTimer = null;
         }
     }
   
