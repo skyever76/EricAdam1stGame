@@ -1,6 +1,7 @@
-import { LEVELS_CONFIG } from '../levels.js';
+// 🆕 使用全局变量，因为文件已通过script标签加载
+const LEVELS_CONFIG = window.LEVELS_CONFIG;
 
-export default class PlayerSelectScene extends Phaser.Scene {
+class PlayerSelectScene extends Phaser.Scene {
     constructor() {
         super('PlayerSelectScene');
         this.selectedPlayer = null;
@@ -225,6 +226,7 @@ export default class PlayerSelectScene extends Phaser.Scene {
         const savedPoints = localStorage.getItem('gamePoints');
         return savedPoints ? parseInt(savedPoints) : 0;
     }
+}
 
-
-} 
+// 🆕 导出到全局作用域
+window.PlayerSelectScene = PlayerSelectScene; 

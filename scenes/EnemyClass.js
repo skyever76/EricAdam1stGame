@@ -354,4 +354,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.cleanup();
         super.destroy();
     }
-} 
+}
+
+// 🆕 导出到全局作用域
+window.Enemy = Enemy; 

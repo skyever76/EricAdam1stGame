@@ -35,4 +35,7 @@ export default class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
             this.destroy();
         }
     }
-} 
+}
+
+// 🆕 导出到全局作用域
+window.EnemyBullet = EnemyBullet; 

@@ -1,4 +1,4 @@
-export default class PreloaderScene extends Phaser.Scene {
+class PreloaderScene extends Phaser.Scene {
     constructor() {
         super('PreloaderScene');
     }
@@ -263,3 +263,6 @@ export default class PreloaderScene extends Phaser.Scene {
         // 所有逻辑都在 preload() 中处理了
     }
 }
+
+// 🆕 导出到全局作用域
+window.PreloaderScene = PreloaderScene;

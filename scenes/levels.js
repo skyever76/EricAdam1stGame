@@ -341,6 +341,9 @@ export const LEVELS_CONFIG = [
     }
 ];
 
+// 🆕 导出到全局作用域
+window.LEVELS_CONFIG = LEVELS_CONFIG;
+
 // 🆕 AI行为配置
 export const AI_BEHAVIORS = {
     straight: {
@@ -574,4 +577,7 @@ export const AI_BEHAVIORS = {
             enemy.aiData.lastPlayerPos = { x: player.x, y: player.y };
         }
     }
-}; 
+};
+
+// 🆕 导出AI行为到全局作用域
+window.AI_BEHAVIORS = AI_BEHAVIORS; 

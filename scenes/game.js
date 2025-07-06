@@ -1,8 +1,9 @@
 // game.js - 更新配置支持iPad
 
-import PreloaderScene from './PreloaderScene.js';
-import PlayerSelectScene from './PlayerSelectScene.js';
-import MainScene from './MainScene.js';
+// 🆕 使用全局变量，因为文件已通过script标签加载
+const PreloaderScene = window.PreloaderScene;
+const PlayerSelectScene = window.PlayerSelectScene;
+const MainScene = window.MainScene;
 
 console.log('开始初始化游戏配置...');
 

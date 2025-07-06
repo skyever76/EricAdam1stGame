@@ -1,8 +1,9 @@
 // scenes/MainScene.js - 关卡系统集成
 
-import { LEVELS_CONFIG } from './levels.js';
-import Enemy from './EnemyClass.js';
-import EnemyBullet from './EnemyBullet.js';
+// 🆕 使用全局变量，因为文件已通过script标签加载
+const LEVELS_CONFIG = window.LEVELS_CONFIG;
+const Enemy = window.Enemy;
+const EnemyBullet = window.EnemyBullet;
 
 // 🆕 武器系统类
 class Weapon {
@@ -114,7 +115,7 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     }
 }
 
-export default class MainScene extends Phaser.Scene {
+class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
     }
@@ -2541,4 +2542,7 @@ export default class MainScene extends Phaser.Scene {
         
         // ... 其他关卡切换逻辑 ...
     }
-} 
+}
+
+// 🆕 导出到全局作用域
+window.MainScene = MainScene; 
