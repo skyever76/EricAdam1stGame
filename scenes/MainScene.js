@@ -176,6 +176,10 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.collider(this.player, this.enemies, this.handlePlayerHit, null, this);
         this.physics.add.overlap(this.player, this.enemyBullets, this.handleEnemyBulletHit, null, this);
   
+        // 🆕 初始化触摸控制系统
+        this.touchControls = new TouchControls(this);
+        this.touchControls.create();
+
         // 输入控制
         this.cursors = this.input.keyboard.createCursorKeys();
         
@@ -359,6 +363,11 @@ export default class MainScene extends Phaser.Scene {
             this.currentWeaponIndex = index;
             this.currentWeapon = targetWeapon;
             console.log(`MainScene: 切换到武器: ${this.currentWeapon.name}，剩余子弹: ${this.currentWeapon.bulletCount}`);
+            
+            // 🆕 如果是触摸控制，更新UI高亮
+            if (this.touchControls && this.touchControls.isMobile) {
+                this.touchControls.highlightWeaponButton(index);
+            }
             
             // 显示武器切换提示
             this.showWeaponSwitchMessage();
@@ -575,6 +584,43 @@ export default class MainScene extends Phaser.Scene {
 
       
         console.log('MainScene: HUD创建完成');
+        
+        // 🆕 如果是移动设备，调整HUD位置
+        if (this.touchControls && this.touchControls.isMobile) {
+            this.adjustHUDForMobile();
+        }
+    }
+    
+    // 🆕 为移动设备调整HUD位置
+    adjustHUDForMobile() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+      
+        // 调整分数显示位置（避免与触摸控制重叠）
+        if (this.scoreText) {
+            this.scoreText.setPosition(width / 2 - 100, 20);
+        }
+      
+        // 调整血量显示位置
+        if (this.healthText) {
+            this.healthText.setPosition(width / 2 - 100, 50);
+        }
+      
+        // 调整血量条位置
+        if (this.healthBarBg) {
+            this.healthBarBg.setPosition(width / 2 - 100, 85);
+        }
+      
+        // 调整武器信息位置
+        if (this.weaponText) {
+            this.weaponText.setPosition(width / 2 - 100, 110);
+        }
+      
+        if (this.bulletCountText) {
+            this.bulletCountText.setPosition(width / 2 - 100, 140);
+        }
+      
+        console.log('📱 HUD已针对移动设备调整');
     }
 
     // 🆕 创建粒子效果系统
@@ -887,6 +933,11 @@ export default class MainScene extends Phaser.Scene {
             return;
         }
       
+        // 🆕 更新触摸控制
+        if (this.touchControls) {
+            this.touchControls.update();
+        }
+      
         // 🆕 更新所有敌人AI
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active && enemy.update) {
@@ -903,21 +954,24 @@ export default class MainScene extends Phaser.Scene {
         // 🆕 更新HUD（包括时间显示）
         this.updateHUD();
       
-        // 玩家移动
-        this.player.setVelocity(0);
-      
-        // 水平移动 (左右方向键 或 A/D键)
-        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-            this.player.setVelocityX(-this.playerSpeed);
-        } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-            this.player.setVelocityX(this.playerSpeed);
-        }
-      
-        // 垂直移动 (上下方向键 或 W/S键)
-        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-            this.player.setVelocityY(-this.playerSpeed);
-        } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-            this.player.setVelocityY(this.playerSpeed);
+        // 🆕 如果不是触摸设备，使用键盘控制
+        if (!this.touchControls || !this.touchControls.isMobile) {
+            // 玩家移动
+            this.player.setVelocity(0);
+          
+            // 水平移动 (左右方向键 或 A/D键)
+            if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+                this.player.setVelocityX(-this.playerSpeed);
+            } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+                this.player.setVelocityX(this.playerSpeed);
+            }
+          
+            // 垂直移动 (上下方向键 或 W/S键)
+            if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+                this.player.setVelocityY(-this.playerSpeed);
+            } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+                this.player.setVelocityY(this.playerSpeed);
+            }
         }
         if (this.powerUpManager) {
             this.powerUpManager.update();
@@ -1103,7 +1157,7 @@ export default class MainScene extends Phaser.Scene {
         console.log('MainScene: 敌人生成器已创建');
     }
 
-    shoot() {
+    shoot(angle = null) {
         if (this.isGameOver || this.scene.isPaused()) return; // 游戏状态检查
         const currentTime = this.time.now;
         // 🆕 检查子弹是否足够
@@ -1126,23 +1180,25 @@ export default class MainScene extends Phaser.Scene {
             console.log(`MainScene: 消耗1发${this.currentWeapon.name}子弹，剩余${this.currentWeapon.bulletCount}发`);
         }
         this.lastShootTime = currentTime;
-        // 🆕 执行连发射击
-        this.executeBurstFire();
+        // 🆕 执行连发射击，传递射击角度
+        this.executeBurstFire(angle);
     }
     
     // 🆕 执行连发射击
-    executeBurstFire() {
+    executeBurstFire(angle = null) {
         const weapon = this.currentWeapon;
         const offsetX = this.playerSize / 2;
         const startX = this.player.x + offsetX;
         const startY = this.player.y;
         
-        // 计算射击角度
-        const angle = Phaser.Math.Angle.Between(
-            startX, startY,
-            this.input.activePointer.worldX,
-            this.input.activePointer.worldY
-        );
+        // 🆕 如果提供了角度（来自触摸控制），使用它；否则计算鼠标角度
+        if (angle === null) {
+            angle = Phaser.Math.Angle.Between(
+                startX, startY,
+                this.input.activePointer.worldX,
+                this.input.activePointer.worldY
+            );
+        }
         
         // 🆕 加特林扇形散弹
         if (weapon.name === '加特林') {
@@ -2391,6 +2447,11 @@ export default class MainScene extends Phaser.Scene {
 
     // 🔧 在场景销毁时清理事件监听器
     destroy() {
+        // 清理触摸控制
+        if (this.touchControls) {
+            this.touchControls.destroy();
+        }
+        
         // 清理自定义事件监听器
         this.events.off('enemyDied', this.handleEnemyDeath, this);
         this.events.off('enemyEscaped', this.handleEnemyEscape, this);
