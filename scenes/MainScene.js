@@ -1,7 +1,6 @@
 // scenes/MainScene.js - 关卡系统集成
 
 // 🆕 使用全局变量，因为文件已通过script标签加载
-const LEVELS_CONFIG = window.LEVELS_CONFIG;
 const Enemy = window.Enemy;
 const EnemyBullet = window.EnemyBullet;
 

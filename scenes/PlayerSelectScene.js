@@ -1,6 +1,4 @@
 // 🆕 使用全局变量，因为文件已通过script标签加载
-const LEVELS_CONFIG = window.LEVELS_CONFIG;
-
 class PlayerSelectScene extends Phaser.Scene {
     constructor() {
         super('PlayerSelectScene');
