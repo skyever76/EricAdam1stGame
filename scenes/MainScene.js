@@ -199,6 +199,18 @@ export default class MainScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-FIVE', () => this.switchWeapon(4), this);
         this.input.keyboard.on('keydown-SIX', () => this.switchWeapon(5), this);
         
+        // 🌍 初始化高级场景系统
+        this.advancedSceneManager = new AdvancedSceneManager(this);
+        
+        // 🌍 初始化场景切换器
+        this.sceneSwitcher = new SceneSwitcher(this);
+        
+        // 🌍 添加场景切换快捷键
+        this.sceneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+        
+        // 🌍 默认加载第一个场景
+        this.advancedSceneManager.loadScene('inside_golem');
+        
         // 全局R键监听器（用于重新开始游戏）
         this.input.keyboard.on('keydown-R', this.handleRestart, this);
         
@@ -538,6 +550,17 @@ export default class MainScene extends Phaser.Scene {
         
         // 🆕 障碍物状态显示（右上角）
         this.obstacleText = this.add.text(1280 - 20, 80, '🪨 障碍物: 0/0', rightHudStyle).setOrigin(1, 0);
+        
+        // 🌍 场景信息显示（右上角）
+        this.sceneText = this.add.text(1280 - 20, 110, '🌍 场景: 巨型机械内部', rightHudStyle).setOrigin(1, 0);
+        
+        // 🌍 场景切换提示（右上角）
+        this.sceneHintText = this.add.text(1280 - 20, 140, '按 M 键切换场景', {
+            font: '14px Arial',
+            fill: '#00ff00',
+            backgroundColor: '#000000',
+            padding: { x: 6, y: 3 }
+        }).setOrigin(1, 0);
       
         // 控制说明
         const controlStyle = {
@@ -838,6 +861,19 @@ export default class MainScene extends Phaser.Scene {
                 this.obstacleText.setText(`🪨 障碍物: ${obstacleStatus.count}/${obstacleStatus.maxCount}`);
             }
         }
+        
+        // 🌍 显示当前场景信息
+        if (this.advancedSceneManager) {
+            const sceneStatus = this.advancedSceneManager.getSceneStatus();
+            if (this.sceneText) {
+                this.sceneText.setText(`🌍 场景: ${sceneStatus.currentScene}`);
+            }
+        }
+        
+        // 🌍 显示场景切换提示
+        if (this.sceneHintText) {
+            this.sceneHintText.setText(`按 M 键切换场景`);
+        }
     }
 
     // 修改 update 方法
@@ -889,6 +925,16 @@ export default class MainScene extends Phaser.Scene {
         // 🆕 更新障碍物系统
         if (this.obstacleManager) {
             this.obstacleManager.update(this.time.now, this.game.loop.delta);
+        }
+        
+        // 🌍 更新高级场景
+        if (this.advancedSceneManager) {
+            this.advancedSceneManager.update(this.time.now, this.game.loop.delta);
+        }
+        
+        // 🌍 检查场景切换快捷键
+        if (Phaser.Input.Keyboard.JustDown(this.sceneKey)) {
+            this.sceneSwitcher.toggle();
         }
     }
 
