@@ -58,8 +58,8 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
         this.setDisplaySize(weapon.bulletSize.width, weapon.bulletSize.height);
         this.setTint(weapon.bulletColor);
         
-        // 🆕 特斯拉枪特殊旋转处理
-        if (weapon.name === '特斯拉枪') {
+        // 🆕 声波枪特殊旋转处理
+        if (weapon.name === '声波枪') {
             this.setRotation(angle + Math.PI / 2);
         }
 
@@ -240,8 +240,8 @@ export default class MainScene extends Phaser.Scene {
             new Weapon('加特林', 12, 100, 700, {width: 8, height: 4}, 0xff0000, 'gatling', 
                 20, 30, 20), // 20发连射，30ms间隔，每次射击20积分
             
-            // 特斯拉枪 - 射速快，伤害高，光线持续2秒 (每发10积分)
-            new Weapon('特斯拉枪', 40, 150, 900, {width: 150, height: 4}, 0x00ffff, 'tesla', 
+            // 声波枪 - 射速快，伤害高，声波持续2秒 (每发10积分)
+            new Weapon('声波枪', 40, 150, 900, {width: 150, height: 4}, 0x00ffff, 'tesla', 
                 1, 0, 10, 
                 (bullet, x, y) => {
                     bullet.scene.tweens.add({
@@ -1018,7 +1018,7 @@ export default class MainScene extends Phaser.Scene {
         
         // 🆕 加特林扇形散弹
         if (weapon.name === '加特林') {
-            const spreadAngle = Math.PI / 6; // 30度扇形
+            const spreadAngle = Math.PI / 3; // 60度扇形（加大）
             const bulletCount = weapon.burstCount;
             const angleStep = spreadAngle / (bulletCount - 1);
             const startAngle = angle - spreadAngle / 2;
@@ -1068,7 +1068,7 @@ export default class MainScene extends Phaser.Scene {
             });
             
             // 🆕 特殊武器效果
-            if (weapon.name === '特斯拉枪' && weapon.isContinuous) {
+            if (weapon.name === '声波枪' && weapon.isContinuous) {
                 this.executeTeslaBeam(bullet);
             }
             
@@ -1081,6 +1081,8 @@ export default class MainScene extends Phaser.Scene {
     
         // 🆕 核弹追踪功能
     setupNuclearHoming(bullet) {
+        console.log('设置核弹追踪功能');
+        
         // 设置核弹追踪最近的敌人
         bullet.update = () => {
             if (!bullet.active) return;
@@ -1108,7 +1110,7 @@ export default class MainScene extends Phaser.Scene {
                 // 平滑追踪：逐渐调整方向而不是瞬间改变
                 const currentAngle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x);
                 const angleDiff = Phaser.Math.Angle.Wrap(angle - currentAngle);
-                const maxTurnRate = 0.1; // 最大转向速率
+                const maxTurnRate = 0.15; // 增加转向速率
                 const turnRate = Phaser.Math.Clamp(angleDiff, -maxTurnRate, maxTurnRate);
                 const newAngle = currentAngle + turnRate;
                 
@@ -1118,7 +1120,7 @@ export default class MainScene extends Phaser.Scene {
                 bullet.setRotation(newAngle);
                 
                 // 添加追踪轨迹效果
-                if (Math.random() < 0.3) { // 30%概率产生轨迹
+                if (Math.random() < 0.5) { // 增加轨迹概率
                     this.add.particles('nuke').createEmitter({
                         x: bullet.x,
                         y: bullet.y,
@@ -1189,11 +1191,15 @@ export default class MainScene extends Phaser.Scene {
     
     // 🆕 导弹爆炸效果
     executeMissileExplosion(bullet, hitEnemy) {
-        const weapon = this.weapons.find(w => w.name === bullet.weaponType) || bullet.weaponType === '导弹' ? bullet.weapon : null;
+        const weapon = this.weapons.find(w => w.name === '导弹');
         const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
         const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? weapon.config.damageRadius : 200;
+        
+        console.log(`导弹爆炸：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
+        
         let killedEnemies = 0;
         const enemies = this.enemies.getChildren();
+        
         for (let enemy of enemies) {
             if (enemy.active) {
                 const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
@@ -1221,9 +1227,9 @@ export default class MainScene extends Phaser.Scene {
         this.updateHUD();
     }
     
-    // 🆕 特斯拉光线持续效果
+    // 🆕 声波持续效果
     executeTeslaBeam(bullet) {
-        // 特斯拉光线持续2秒
+        // 声波持续2秒
         this.time.delayedCall(this.currentWeapon.duration, () => {
             if (bullet && bullet.active) {
                 bullet.destroy();
@@ -1715,12 +1721,16 @@ export default class MainScene extends Phaser.Scene {
     handleBulletHit(bullet, enemy) {
         if (!enemy.active || enemy.isDying) return;
       
+        console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
+      
         // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
+            console.log('MainScene: 执行导弹爆炸');
             this.executeMissileExplosion(bullet, enemy);
             bullet.destroy();
             return;
         } else if (bullet.weaponType === '核弹') {
+            console.log('MainScene: 执行核弹爆炸');
             this.executeNuclearStrike(bullet, enemy);
             bullet.destroy();
             return;
