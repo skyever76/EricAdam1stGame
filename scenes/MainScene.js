@@ -52,6 +52,11 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
       
         this.setDisplaySize(weapon.bulletSize.width, weapon.bulletSize.height);
         this.setTint(weapon.bulletColor);
+        
+        // 🆕 特斯拉枪特殊旋转处理
+        if (weapon.name === '特斯拉枪') {
+            this.setRotation(angle); // 光线沿射击方向
+        }
 
         // 🆕 特殊武器效果
         if (weapon.specialEffect) {
@@ -233,7 +238,7 @@ export default class MainScene extends Phaser.Scene {
             ),
             
             // 核弹 - 射速慢，全屏消灭敌人 (每发50积分)
-            new Weapon('核弹', 200, 3000, 300, {width: 20, height: 15}, 0xff00ff, 'nuke', 
+            new Weapon('核弹', 999, 3000, 300, {width: 20, height: 15}, 0xff00ff, 'nuke', 
                 1, 0, 50,
                 (bullet, x, y) => {
                     // 核弹发光效果
@@ -266,12 +271,6 @@ export default class MainScene extends Phaser.Scene {
         
         // 🆕 武器冷却时间
         this.weaponCooldowns = [0, 0, 0, 0, 0, 0]; // 每种武器的冷却时间
-        
-        // 🆕 加特林特殊冷却
-        this.gatlingLastUseTime = 0;
-        this.gatlingCooldown = 5000; // 5秒使用时间
-        this.gatlingRestCooldown = 2000; // 2秒休息时间
-        this.gatlingIsResting = false; // 是否在休息状态
         
         // 当前武器索引
         this.currentWeaponIndex = 0;
@@ -441,7 +440,7 @@ export default class MainScene extends Phaser.Scene {
         console.log('MainScene: 创建游戏HUD');
       
         // 游戏状态初始化
-        this.score = 0;
+        this.score = (this.selectedPlayer && this.selectedPlayer.initPoints) ? this.selectedPlayer.initPoints : 0;
         this.level = 1;
       
         // 🆕 统一的HUD文本样式（与右上角保持一致）
@@ -886,7 +885,11 @@ export default class MainScene extends Phaser.Scene {
         bullet.destroy();
       
         // 🆕 根据武器伤害计算分数（增加击杀奖励）
-        const baseScore = bullet.damage;
+        let baseScore = bullet.damage;
+        // 🆕 骑士伤害加成
+        if (this.selectedPlayer && this.selectedPlayer.damageMultiplier && bullet.weaponType !== '导弹' && bullet.weaponType !== '核弹') {
+            baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
+        }
         const killBonus = 20; // 击杀奖励
         const scoreGain = baseScore + killBonus;
         this.score += scoreGain;
@@ -959,69 +962,27 @@ export default class MainScene extends Phaser.Scene {
 
     shoot() {
         if (this.isGameOver || this.scene.isPaused()) return; // 游戏状态检查
-      
         const currentTime = this.time.now;
-        
         // 🆕 检查子弹是否足够
         if (this.currentWeapon.bulletCost > 0 && this.currentWeapon.bulletCount <= 0) {
             this.showNoBulletsMessage();
             return;
         }
-        
-        // 🆕 检查加特林特殊冷却
-        if (this.currentWeapon.name === '加特林') {
-            const timeSinceLastUse = currentTime - this.gatlingLastUseTime;
-            
-            // 如果正在休息状态
-            if (this.gatlingIsResting) {
-                if (timeSinceLastUse < this.gatlingCooldown + this.gatlingRestCooldown) {
-                    const remainingRestTime = Math.ceil((this.gatlingCooldown + this.gatlingRestCooldown - timeSinceLastUse) / 1000);
-                    this.showWeaponCooldownMessage(remainingRestTime, '休息');
-                    return;
-                } else {
-                    // 休息结束，重置状态
-                    this.gatlingIsResting = false;
-                    this.gatlingLastUseTime = currentTime;
-                }
-            } else {
-                // 检查是否超过5秒使用时间，需要进入休息状态
-                if (timeSinceLastUse >= this.gatlingCooldown) {
-                    this.gatlingIsResting = true;
-                    this.gatlingLastUseTime = currentTime;
-                    const remainingRestTime = Math.ceil(this.gatlingRestCooldown / 1000);
-                    this.showWeaponCooldownMessage(remainingRestTime, '休息');
-                    return;
-                }
-            }
-        }
-        
         // 🆕 检查普通射击冷却
         if (currentTime - this.lastShootTime < this.currentWeapon.fireRate) {
             console.log('MainScene: 射击冷却中');
             return; // 冷却时间未到
         }
-      
         if (!this.player || !this.player.active) {
             console.log('MainScene: 玩家不存在或未激活');
             return;
         }
-      
         // 🆕 消耗子弹
         if (this.currentWeapon.bulletCost > 0) {
             this.currentWeapon.bulletCount--;
             console.log(`MainScene: 消耗1发${this.currentWeapon.name}子弹，剩余${this.currentWeapon.bulletCount}发`);
         }
-        
         this.lastShootTime = currentTime;
-        
-        // 🆕 加特林特殊处理
-        if (this.currentWeapon.name === '加特林') {
-            // 只在非休息状态时更新使用时间
-            if (!this.gatlingIsResting) {
-                this.gatlingLastUseTime = currentTime;
-            }
-        }
-      
         // 🆕 执行连发射击
         this.executeBurstFire();
     }
@@ -1040,21 +1001,42 @@ export default class MainScene extends Phaser.Scene {
             this.input.activePointer.worldY
         );
         
-        // 发射第一发
-        this.fireSingleBullet(startX, startY, angle, weapon);
-        
-        // 如果有连发，继续发射
-        if (weapon.burstCount > 1) {
-            for (let i = 1; i < weapon.burstCount; i++) {
+        // 🆕 加特林扇形散弹
+        if (weapon.name === '加特林') {
+            const spreadAngle = Math.PI / 6; // 30度扇形
+            const bulletCount = weapon.burstCount;
+            const angleStep = spreadAngle / (bulletCount - 1);
+            const startAngle = angle - spreadAngle / 2;
+            
+            // 发射扇形散弹
+            for (let i = 0; i < bulletCount; i++) {
+                const bulletAngle = startAngle + angleStep * i;
                 this.time.delayedCall(weapon.burstDelay * i, () => {
                     if (!this.isGameOver && this.player && this.player.active) {
-                        this.fireSingleBullet(startX, startY, angle, weapon);
+                        this.fireSingleBullet(startX, startY, bulletAngle, weapon);
                     }
                 }, null, this);
             }
+            
+            console.log(`MainScene: 发射${weapon.name}，扇形散弹${bulletCount}发，角度范围${spreadAngle * 180 / Math.PI}度`);
+        } else {
+            // 其他武器的普通连发
+            // 发射第一发
+            this.fireSingleBullet(startX, startY, angle, weapon);
+            
+            // 如果有连发，继续发射
+            if (weapon.burstCount > 1) {
+                for (let i = 1; i < weapon.burstCount; i++) {
+                    this.time.delayedCall(weapon.burstDelay * i, () => {
+                        if (!this.isGameOver && this.player && this.player.active) {
+                            this.fireSingleBullet(startX, startY, angle, weapon);
+                        }
+                    }, null, this);
+                }
+            }
+            
+            console.log(`MainScene: 发射${weapon.name}，连发${weapon.burstCount}发`);
         }
-        
-        console.log(`MainScene: 发射${weapon.name}，连发${weapon.burstCount}发`);
     }
     
     // 🆕 发射单发子弹
@@ -1077,55 +1059,55 @@ export default class MainScene extends Phaser.Scene {
         }
     }
     
-    // 🆕 核弹爆炸效果
+        // 🆕 核弹爆炸效果
     executeNuclearStrike(bullet, hitEnemy) {
-        // 使用被击中的敌人或边界位置作为爆炸中心
-        const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
+        // 🆕 全屏闪光效果
+        const flashOverlay = this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.8);
+        this.tweens.add({
+            targets: flashOverlay,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => flashOverlay.destroy()
+        });
         
-        // 核弹大范围爆炸攻击
-        const explosionRadius = 300;
+        // 🆕 全屏消灭所有敌人
+        let totalKills = 0;
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active) {
-                const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
-                                if (distance <= explosionRadius) {
-                    // 🆕 计算爆炸击杀积分
-                    const baseScore = 30; // 爆炸基础伤害
-                    const killBonus = 20; // 击杀奖励
-                    const scoreGain = baseScore + killBonus;
-                    this.score += scoreGain;
-                    this.killCount++;
-                    
-                    enemy.destroy();
-                    
-                    // 🆕 敌人死亡粒子效果
-                    this.deathEmitter.setPosition(enemy.x, enemy.y);
-                    this.deathEmitter.start();
-                    this.time.delayedCall(200, () => {
-                        this.deathEmitter.stop();
-                    });
-                }
+                // 🆕 计算核弹击杀积分
+                const baseScore = 50; // 核弹基础伤害
+                const killBonus = 20; // 击杀奖励
+                const scoreGain = baseScore + killBonus;
+                this.score += scoreGain;
+                this.killCount++;
+                totalKills++;
+                
+                // 🆕 敌人死亡粒子效果
+                this.deathEmitter.setPosition(enemy.x, enemy.y);
+                this.deathEmitter.start();
+                this.time.delayedCall(100, () => {
+                    this.deathEmitter.stop();
+                });
+                
+                enemy.destroy();
             }
         });
         
-        // 🆕 核弹爆炸粒子效果
-        this.explosionEmitter.setPosition(explosionCenter.x, explosionCenter.y);
-        this.explosionEmitter.start();
-        this.time.delayedCall(300, () => {
-            this.explosionEmitter.stop();
-        });
+        // 🆕 屏幕震动效果
+        this.cameras.main.shake(800, 0.05);
         
-        // 核弹爆炸效果
-        const explosion = this.add.circle(explosionCenter.x, explosionCenter.y, explosionRadius, 0xff0000, 0.3);
-        this.tweens.add({
-            targets: explosion,
-            scaleX: 1.5,
-            scaleY: 1.5,
-            alpha: 0,
-            duration: 1000,
-            onComplete: () => explosion.destroy()
-        });
+        // 🆕 全屏爆炸粒子效果
+        for (let i = 0; i < 5; i++) {
+            const x = Phaser.Math.Between(100, 1180);
+            const y = Phaser.Math.Between(100, 620);
+            this.explosionEmitter.setPosition(x, y);
+            this.explosionEmitter.start();
+            this.time.delayedCall(200 + i * 100, () => {
+                this.explosionEmitter.stop();
+            });
+        }
         
-        console.log('MainScene: 核弹爆炸攻击！');
+        console.log(`MainScene: 核弹全屏攻击！消灭了${totalKills}个敌人`);
     }
     
     // 🆕 导弹爆炸效果

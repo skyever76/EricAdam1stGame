@@ -3,11 +3,10 @@ export default class PlayerSelectScene extends Phaser.Scene {
         super('PlayerSelectScene');
         this.selectedPlayer = null;
         this.players = [
-            { key: 'elf', name: '精灵', description: '敏捷型，移动速度快', speed: 450, health: 80 },
             { key: 'soldier', name: '士兵', description: '平衡型，攻防兼备', speed: 400, health: 100 },
-            { key: 'diver', name: '潜水员', description: '防御型，生命值高', speed: 350, health: 120 },
-            { key: 'tank', name: '坦克', description: '攻击型，伤害高', speed: 300, health: 90 },
-            { key: 'spaceship', name: '飞船', description: '特殊型，技能独特', speed: 500, health: 70 }
+            { key: 'diver', name: '坦克', description: '防御型，生命值高', speed: 350, health: 200 },
+            { key: 'tank', name: '骑士', description: '攻击型，伤害高', speed: 300, health: 90, damageMultiplier: 1.5 },
+            { key: 'spaceship', name: '战机', description: '特殊型，技能独特', speed: 500, health: 70, initPoints: 500 }
         ];
     }
 
@@ -17,66 +16,61 @@ export default class PlayerSelectScene extends Phaser.Scene {
         
         // 标题
         this.add.text(this.cameras.main.width / 2, 60, '选择你的角色', { 
-            font: '48px Arial', 
+            font: '54px Arial', 
             fill: '#fff',
             stroke: '#000',
-            strokeThickness: 4
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         // 显示保存的积分
         const savedPoints = this.getSavedPoints();
-        this.add.text(this.cameras.main.width / 2, 100, `保存的积分: ${savedPoints}`, { 
-            font: '24px Arial', 
+        this.add.text(this.cameras.main.width / 2, 120, `保存的积分: ${savedPoints}`, { 
+            font: '32px Arial', 
             fill: '#ffff00',
             stroke: '#000',
-            strokeThickness: 2
+            strokeThickness: 3
         }).setOrigin(0.5);
 
+        // 角色区更紧凑排列，整体更靠左
         const playerButtons = [];
-        const columns = 3;
-        const startX = 300;
-        const startY = 200;
-        const spacingX = 350;
-        const spacingY = 250;
+        const columns = 2;
+        const startX = 120; // 更靠左
+        const startY = 180; // 与说明区顶部对齐
+        const spacingX = 260; // 更紧凑
+        const spacingY = 220; // 更紧凑
+        const avatarBgColors = [0x3e2723, 0x1565c0, 0x616161, 0x90caf9];
 
         this.players.forEach((player, index) => {
             const x = startX + (index % columns) * spacingX;
             const y = startY + Math.floor(index / columns) * spacingY;
-        
+            // 头像底色
+            this.add.circle(x, y - 40, 48, avatarBgColors[index], 0.18);
             // 检查纹理是否存在
             const textureKey = this.textures.exists(player.key) ? player.key : 'player';
             console.log(`PlayerSelectScene: 角色 ${player.name} 使用纹理: ${textureKey}`);
           
             // 创建可交互的玩家图片
             const playerImage = this.add.image(x, y - 40, textureKey)
-                .setScale(1.2)
+                .setScale(1.3)
                 .setInteractive()
                 .setData('player', player);
               
             // 玩家名称
-            this.add.text(x, y + 20, player.name, { 
-                font: '28px Arial', 
+            this.add.text(x, y + 30, player.name, { 
+                font: '32px Arial', 
                 fill: '#ffffff',
                 stroke: '#000',
-                strokeThickness: 2
+                strokeThickness: 3
             }).setOrigin(0.5);
         
             // 玩家描述
-            this.add.text(x, y + 50, player.description, { 
-                font: '16px Arial', 
+            this.add.text(x, y + 70, player.description, { 
+                font: '20px Arial', 
                 fill: '#cccccc',
                 stroke: '#000',
                 strokeThickness: 1
             }).setOrigin(0.5);
 
-            // 玩家属性
-            this.add.text(x, y + 80, `速度: ${player.speed} | 生命: ${player.health}`, { 
-                font: '14px Arial', 
-                fill: '#00ff00',
-                stroke: '#000',
-                strokeThickness: 1
-            }).setOrigin(0.5);
-        
             playerButtons.push(playerImage);
 
             playerImage.on('pointerdown', () => {
@@ -89,9 +83,9 @@ export default class PlayerSelectScene extends Phaser.Scene {
                     btn.clearTint();
                     if (btn.getData('player').key === this.selectedPlayer.key) {
                         btn.setTint(0x00ff00); // 选中玩家高亮
-                        btn.setScale(1.4);
+                        btn.setScale(1.5);
                     } else {
-                        btn.setScale(1.2);
+                        btn.setScale(1.3);
                     }
                 });
               
@@ -101,18 +95,97 @@ export default class PlayerSelectScene extends Phaser.Scene {
             });
         });
 
-        // 创建开始按钮 - 修复交互性问题
-        this.startButton = this.add.text(this.cameras.main.width / 2, 650, '开始游戏', { 
-            font: '40px Arial', 
-            fill: '#4CAF50', 
-            backgroundColor: '#fff', 
-            padding: { x: 20, y: 10 },
+        // 游戏操控和游戏玩法左右并排显示
+        const explainBaseY = 180;
+        const explainLeftX = 650;
+        const explainRightX = 950;
+        const explainAlign = 0; // 左对齐
+        // 游戏操控
+        this.add.text(explainLeftX, explainBaseY, '游戏操控', { 
+            font: '32px Arial', 
+            fill: '#ffff00',
             stroke: '#000',
-            strokeThickness: 2
+            strokeThickness: 3,
+            underline: true
+        }).setOrigin(explainAlign, 0.5);
+        this.add.rectangle(explainLeftX, explainBaseY + 20, 180, 3, 0xffff00, 0.5).setOrigin(explainAlign, 0.5);
+        const controlsText = [
+            '移动控制:',
+            '  方向键 或 WASD',
+            '',
+            '射击控制:',
+            '  鼠标点击 或 空格键',
+            '',
+            '武器切换:',
+            '  数字键 1-6',
+            '',
+            '游戏控制:',
+            '  P键: 暂停/恢复',
+            '  R键: 重新开始',
+            '  N键: 下一关'
+        ];
+        controlsText.forEach((text, index) => {
+            this.add.text(explainLeftX, explainBaseY + 40 + index * 25, text, { 
+                font: '16px Arial', 
+                fill: '#ffffff',
+                stroke: '#000',
+                strokeThickness: 1
+            }).setOrigin(explainAlign, 0.5);
+        });
+        // 游戏玩法
+        this.add.text(explainRightX, explainBaseY, '游戏玩法', { 
+            font: '32px Arial', 
+            fill: '#00ffff',
+            stroke: '#000',
+            strokeThickness: 3,
+            underline: true
+        }).setOrigin(explainAlign, 0.5);
+        this.add.rectangle(explainRightX, explainBaseY + 20, 180, 3, 0x00ffff, 0.5).setOrigin(explainAlign, 0.5);
+        const gameplayText = [
+            '游戏目标:',
+            '  生存90秒 或',
+            '  击杀30个敌人',
+            '',
+            '武器系统:',
+            '  AK47/沙漠之鹰: 免费',
+            '  其他武器: 需要积分',
+            '',
+            '积分系统:',
+            '  击杀敌人获得积分',
+            '  用于购买高级子弹',
+            '',
+            '特殊效果:',
+            '  核弹: 全屏消灭',
+            '  导弹: 范围爆炸',
+            '  特斯拉: 持续光线'
+        ];
+        gameplayText.forEach((text, index) => {
+            this.add.text(explainRightX, explainBaseY + 40 + index * 20, text, { 
+                font: '14px Arial', 
+                fill: '#cccccc',
+                stroke: '#000',
+                strokeThickness: 1
+            }).setOrigin(explainAlign, 0.5);
+        });
+
+        // 创建开始按钮 - 居中，按钮上方留白，亮绿色，悬停高亮，按钮往上移
+        this.startButton = this.add.text(this.cameras.main.width / 2, 600, '开始游戏', { 
+            font: '48px Arial', 
+            fill: '#00e676', 
+            backgroundColor: '#fff', 
+            padding: { x: 30, y: 16 },
+            stroke: '#000',
+            strokeThickness: 3
         })
         .setOrigin(0.5)
         .setAlpha(0.5)
         .setInteractive({ useHandCursor: true });
+        this.startButton.on('pointerover', () => {
+            this.startButton.setStyle({ fill: '#1de9b6', backgroundColor: '#e0f2f1' });
+        });
+        this.startButton.on('pointerout', () => {
+            this.startButton.setStyle({ fill: '#00e676', backgroundColor: '#fff' });
+        });
 
         // 修复开始按钮点击事件
         this.startButton.on('pointerdown', () => {
