@@ -3133,6 +3133,40 @@ class MainScene extends Phaser.Scene {
             this.audioManager.destroy();
         }
         
+        // 🕐 清理所有定时器
+        if (this.enemySpawner) {
+            this.enemySpawner.destroy();
+        }
+        
+        // 💥 清理所有粒子系统
+        if (this.shootEmitter) {
+            this.shootEmitter.destroy();
+        }
+        if (this.explosionEmitter) {
+            this.explosionEmitter.destroy();
+        }
+        if (this.damageEmitter) {
+            this.damageEmitter.destroy();
+        }
+        if (this.deathEmitter) {
+            this.deathEmitter.destroy();
+        }
+        
+        // 🎁 清理道具管理器
+        if (this.powerUpManager) {
+            this.powerUpManager.destroy();
+        }
+        
+        // 🏗️ 清理障碍物管理器
+        if (this.obstacleManager) {
+            this.obstacleManager.destroy();
+        }
+        
+        // 📊 清理统计系统
+        if (window.StatsManager) {
+            window.StatsManager.saveStats();
+        }
+        
         // 清理自定义事件监听器
         this.events.off('enemyDied', this.handleEnemyDeath, this);
         this.events.off('enemyEscaped', this.handleEnemyEscape, this);
@@ -3161,6 +3195,45 @@ class MainScene extends Phaser.Scene {
     }
 
     createFogEffect() {
+        // 迷雾效果实现
+        console.log('MainScene: 创建迷雾效果');
+    }
+
+    // 🎨 添加缺失的辅助绘制方法
+    drawCloud(graphics, cloudX, cloudY, cloudSize) {
+        // 绘制云朵的具体实现
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.random() - 0.5) * cloudSize;
+            const offsetY = (Math.random() - 0.5) * cloudSize * 0.5;
+            graphics.fillCircle(cloudX + offsetX, cloudY + offsetY, cloudSize * 0.3);
+        }
+    }
+
+    drawHexagon(graphics, x, y, size) {
+        graphics.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const hx = x + Math.cos(angle) * size;
+            const hy = y + Math.sin(angle) * size;
+            if (i === 0) graphics.moveTo(hx, hy);
+            else graphics.lineTo(hx, hy);
+        }
+        graphics.closePath();
+        graphics.strokePath();
+    }
+
+    fillHexagon(graphics, x, y, size) {
+        graphics.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const hx = x + Math.cos(angle) * size;
+            const hy = y + Math.sin(angle) * size;
+            if (i === 0) graphics.moveTo(hx, hy);
+            else graphics.lineTo(hx, hy);
+        }
+        graphics.closePath();
+        graphics.fillPath();
+    }
         // 雾气效果实现
         console.log('MainScene: 创建雾气效果');
     }

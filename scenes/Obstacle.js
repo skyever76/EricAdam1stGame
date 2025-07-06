@@ -407,7 +407,7 @@ class Obstacle extends Phaser.GameObjects.Container {
                 this.scene.time.delayedCall(index * 150, () => {
                     const powerUpData = POWER_UP_TYPES[powerUpType];
                     if (powerUpData) {
-                        this.scene.powerUpManager.createPowerUp(x, y, powerUpData);
+                        this.scene.powerUpManager.spawnPowerUp(x, y, powerUpType);
                     }
                 });
             });

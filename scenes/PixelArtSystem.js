@@ -475,16 +475,43 @@ class PixelArtSystem {
 
     // 🎨 创建像素纹理
     createPixelTexture(key, drawFunction, width = 32, height = 32) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.ctx.clearRect(0, 0, width, height);
-        
-        // 调用绘制函数
-        drawFunction(this.ctx, width/2, height/2);
-        
-        // 创建Phaser纹理
-        this.scene.textures.addCanvas(key, this.canvas);
-        return key;
+        try {
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.ctx.clearRect(0, 0, width, height);
+            
+            // 调用绘制函数
+            drawFunction(this.ctx, width/2, height/2);
+            
+            // 创建Phaser纹理
+            this.scene.textures.addCanvas(key, this.canvas);
+            return key;
+        } catch (error) {
+            console.error(`创建纹理 ${key} 失败:`, error);
+            // 创建备用纹理
+            return this.createFallbackTexture(key, width, height);
+        }
+    }
+    
+    createFallbackTexture(key, width = 32, height = 32) {
+        try {
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.ctx.clearRect(0, 0, width, height);
+            
+            // 创建简单的备用纹理
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.fillRect(0, 0, width, height);
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillRect(2, 2, width - 4, height - 4);
+            
+            this.scene.textures.addCanvas(key, this.canvas);
+            console.log(`创建备用纹理: ${key}`);
+            return key;
+        } catch (error) {
+            console.error(`创建备用纹理 ${key} 也失败:`, error);
+            return null;
+        }
     }
 
     // 🎭 创建角色纹理
