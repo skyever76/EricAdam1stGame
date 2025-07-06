@@ -517,10 +517,10 @@ class MainScene extends Phaser.Scene {
         };
       
         // 分数显示
-        this.scoreText = this.add.text(20, 20, '分数: 0', hudStyle);
+        this.scoreText = this.add.text(20, 20, '分数: 0', hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 🆕 血量显示（替换生命值显示）
-        this.healthText = this.add.text(20, 50, `血量: ${this.currentHealth}/${this.maxHealth}`, hudStyle);
+        this.healthText = this.add.text(20, 50, `血量: ${this.currentHealth}/${this.maxHealth}`, hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 🆕 血量条
         this.createHealthBar();
@@ -534,7 +534,7 @@ class MainScene extends Phaser.Scene {
                 backgroundColor: '#000000',
                 padding: { x: 8, y: 4 }
             }
-        ).setOrigin(0.5, 0);
+        ).setOrigin(0.5, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🆕 横版卷轴：距离进度显示
         this.distanceText = this.add.text(640, 50, '距离: 0/4000', {
@@ -542,13 +542,13 @@ class MainScene extends Phaser.Scene {
             fill: '#00ffff',
             backgroundColor: '#000000',
             padding: { x: 6, y: 3 }
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🆕 横版卷轴：距离进度条
         this.createDistanceProgressBar();
         
         // 🆕 当前武器显示
-        this.weaponText = this.add.text(20, 140, '武器: AK47', hudStyle);
+        this.weaponText = this.add.text(20, 140, '武器: AK47', hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🆕 子弹数量显示
         this.bulletCountText = this.add.text(20, 170, '子弹: 无限', {
@@ -556,7 +556,7 @@ class MainScene extends Phaser.Scene {
             fill: '#00ff00',
             backgroundColor: '#000000',
             padding: { x: 6, y: 2 }
-        });
+        }).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🆕 右上角显示时间和击杀数
         const rightHudStyle = {
@@ -567,16 +567,16 @@ class MainScene extends Phaser.Scene {
         };
         
         // 时间显示（右上角）
-        this.timeText = this.add.text(1280 - 20, 20, '时间: 00:00', rightHudStyle).setOrigin(1, 0);
+        this.timeText = this.add.text(1280 - 20, 20, '时间: 00:00', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 击杀数显示（右上角）
-        this.killText = this.add.text(1280 - 20, 50, '击杀: 0/30', rightHudStyle).setOrigin(1, 0);
+        this.killText = this.add.text(1280 - 20, 50, '击杀: 0/30', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🆕 障碍物状态显示（右上角）
-        this.obstacleText = this.add.text(1280 - 20, 80, '🪨 障碍物: 0/0', rightHudStyle).setOrigin(1, 0);
+        this.obstacleText = this.add.text(1280 - 20, 80, '🪨 障碍物: 0/0', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🌍 场景信息显示（右上角）
-        this.sceneText = this.add.text(1280 - 20, 110, '🌍 场景: 巨型机械内部', rightHudStyle).setOrigin(1, 0);
+        this.sceneText = this.add.text(1280 - 20, 110, '🌍 场景: 巨型机械内部', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         // 🌍 场景切换提示（右上角）
         this.sceneHintText = this.add.text(1280 - 20, 140, '按 M 键切换场景', {
@@ -584,7 +584,7 @@ class MainScene extends Phaser.Scene {
             fill: '#00ff00',
             backgroundColor: '#000000',
             padding: { x: 6, y: 3 }
-        }).setOrigin(1, 0);
+        }).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 控制说明
         const controlStyle = {
@@ -699,9 +699,11 @@ class MainScene extends Phaser.Scene {
         this.healthBarBg.fillRect(barX, barY, barWidth, barHeight);
         this.healthBarBg.lineStyle(2, 0xffffff);
         this.healthBarBg.strokeRect(barX, barY, barWidth, barHeight);
+        this.healthBarBg.setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 血量条前景
         this.healthBar = this.add.graphics();
+        this.healthBar.setScrollFactor(0); // 🆕 横版卷轴：固定显示
         this.updateHealthBar();
     }
     
@@ -718,9 +720,11 @@ class MainScene extends Phaser.Scene {
         this.distanceBarBg.fillRect(barX, barY, barWidth, barHeight);
         this.distanceBarBg.lineStyle(1, 0x00ffff);
         this.distanceBarBg.strokeRect(barX, barY, barWidth, barHeight);
+        this.distanceBarBg.setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 距离进度条前景
         this.distanceBar = this.add.graphics();
+        this.distanceBar.setScrollFactor(0); // 🆕 横版卷轴：固定显示
         this.updateDistanceProgressBar();
     }
 

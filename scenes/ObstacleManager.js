@@ -62,24 +62,24 @@ class ObstacleManager {
   
     // 📍 寻找有效生成位置
     findValidSpawnPosition() {
-        const mapWidth = 2000;
-        const mapHeight = 2000;
+        // 🆕 横版卷轴：使用扩展的世界尺寸
+        const mapWidth = 4000;
+        const mapHeight = 720;
         const player = this.scene.player;
-        const playerX = player ? player.x : mapWidth / 2;
+        const playerX = player ? player.x : 100;
         const playerY = player ? player.y : mapHeight / 2;
       
         const minDistance = this.spawnPattern.minDistance;
         const maxDistance = this.spawnPattern.maxDistance;
       
         for (let i = 0; i < 20; i++) {
+            // 🆕 横版卷轴：在玩家前方生成障碍物
             const distance = Phaser.Math.FloatBetween(minDistance, maxDistance);
-            const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-          
-            const x = playerX + Math.cos(angle) * distance;
-            const y = playerY + Math.sin(angle) * distance;
+            const x = playerX + distance; // 在玩家右侧生成
+            const y = Phaser.Math.FloatBetween(100, mapHeight - 100);
           
             // 检查边界
-            if (x < 100 || x > mapWidth - 100 || y < 100 || y > mapHeight - 100) {
+            if (x < playerX + 200 || x > mapWidth - 100 || y < 100 || y > mapHeight - 100) {
                 continue;
             }
           

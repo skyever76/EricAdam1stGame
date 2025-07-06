@@ -87,6 +87,15 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             this.label.setPosition(this.x, this.y - 40);
         }
         this.checkMagnetEffect();
+        
+        // 🆕 横版卷轴：检查是否移出摄像机左侧
+        if (this.scene && this.scene.cameras) {
+            const cameraLeft = this.scene.cameras.main.scrollX;
+            if (this.x < cameraLeft - 100) {
+                console.log(`⏰ 道具移出视野，自动销毁: ${this.powerUpData.name}`);
+                this.destroy();
+            }
+        }
     }
     checkMagnetEffect() {
         if (!this.scene.player) return;

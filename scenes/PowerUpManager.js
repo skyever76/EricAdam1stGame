@@ -14,9 +14,14 @@ class PowerUpManager {
         }
         const powerUpType = this.selectPowerUpType(enemyType);
         if (!powerUpType) return null;
-        const powerUp = new PowerUp(this.scene, x, y, powerUpType);
+        
+        // 🆕 横版卷轴：确保道具在世界坐标范围内
+        const clampedX = Phaser.Math.Clamp(x, 0, 4000);
+        const clampedY = Phaser.Math.Clamp(y, 50, 670);
+        
+        const powerUp = new PowerUp(this.scene, clampedX, clampedY, powerUpType);
         this.powerUps.add(powerUp);
-        console.log(`✅ 道具掉落成功: ${powerUpType.name}，掉落率: ${(dropRate * 100).toFixed(1)}%`);
+        console.log(`✅ 道具掉落成功: ${powerUpType.name}，位置: (${clampedX}, ${clampedY})，掉落率: ${(dropRate * 100).toFixed(1)}%`);
         return powerUp;
     }
     selectPowerUpType(enemyType) {
