@@ -1,6 +1,6 @@
 // levels.js - 关卡配置系统
 
-export const LEVELS_CONFIG = [
+const LEVELS_CONFIG = [
     {
         id: 1,
         name: "城市危机",

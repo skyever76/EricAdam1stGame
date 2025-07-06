@@ -1,8 +1,9 @@
 // EnemyClass.js - 敌人类重构
 
-import { AI_BEHAVIORS } from '../levels.js';
+// 🆕 使用全局变量，因为文件已通过script标签加载
+const AI_BEHAVIORS = window.AI_BEHAVIORS;
 
-export default class Enemy extends Phaser.Physics.Arcade.Sprite {
+class Enemy extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, texture) {
         super(scene, x, y, texture);
       

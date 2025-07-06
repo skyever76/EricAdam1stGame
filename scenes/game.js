@@ -1,9 +1,9 @@
 // game.js - 更新配置支持iPad
 
 // 🆕 使用全局变量，因为文件已通过script标签加载
-const PreloaderScene = window.PreloaderScene;
-const PlayerSelectScene = window.PlayerSelectScene;
-const MainScene = window.MainScene;
+var PreloaderScene = window.PreloaderScene;
+var PlayerSelectScene = window.PlayerSelectScene;
+var MainScene = window.MainScene;
 
 console.log('开始初始化游戏配置...');
 

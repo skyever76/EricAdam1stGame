@@ -1,6 +1,6 @@
 // EnemyBullet.js - 敌人子弹类
 
-export default class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
+class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
         super(scene, x, y, 'enemyBullet');
         this.speed = 300;
