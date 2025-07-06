@@ -19,7 +19,7 @@ export const LEVELS_CONFIG = [
                 sprite: "thug",
                 hp: 50,
                 speed: 80,
-                score: 25,  // 🔧 提高积分：从15增加到25
+                score: 38,  // 25*1.5=37.5 向上取整
                 ai: "straight",
                 canShoot: false,
                 shootRate: 0,
@@ -47,7 +47,7 @@ export const LEVELS_CONFIG = [
                 sprite: "scorpion",
                 hp: 80,
                 speed: 40,  // 🔧 降低60%：从100降到40
-                score: 35,  // 🔧 提高积分：从20增加到35
+                score: 53,  // 35*1.5=52.5 向上取整
                 ai: "curve",
                 canShoot: false,
                 shootRate: 0,
@@ -58,7 +58,7 @@ export const LEVELS_CONFIG = [
                 sprite: "thug",
                 hp: 60,
                 speed: 36,  // 🔧 降低60%：从90降到36
-                score: 30,  // 🔧 提高积分：从15增加到30
+                score: 45,  // 30*1.5=45
                 ai: "straight",
                 canShoot: false,
                 shootRate: 0,
@@ -86,7 +86,7 @@ export const LEVELS_CONFIG = [
                 sprite: "wolf",
                 hp: 100,
                 speed: 80,  // 🔧 降低速度：从120降到80
-                score: 45,  // 🔧 提高积分：从25增加到45
+                score: 68,  // 45*1.5=67.5 向上取整
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
@@ -97,7 +97,7 @@ export const LEVELS_CONFIG = [
                 sprite: "archer",
                 hp: 70,
                 speed: 40,  // 🔧 降低速度：从60降到40
-                score: 50,  // 🔧 提高积分：从30增加到50
+                score: 75,  // 50*1.5=75
                 ai: "straight",
                 canShoot: true,
                 shootRate: 3000,
@@ -125,7 +125,7 @@ export const LEVELS_CONFIG = [
                 sprite: "squid",
                 hp: 120,
                 speed: 140,
-                score: 55,  // 🔧 提高积分：从30增加到55
+                score: 83,  // 55*1.5=82.5 向上取整
                 ai: "chase",
                 canShoot: true,
                 shootRate: 2500,
@@ -136,7 +136,7 @@ export const LEVELS_CONFIG = [
                 sprite: "eel",
                 hp: 90,
                 speed: 160,
-                score: 45,  // 🔧 提高积分：从25增加到45
+                score: 68,  // 45*1.5=67.5 向上取整
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
@@ -147,7 +147,7 @@ export const LEVELS_CONFIG = [
                 sprite: "pirate",
                 hp: 110,
                 speed: 80,
-                score: 60,  // 🔧 提高积分：从35增加到60
+                score: 90,  // 60*1.5=90
                 ai: "straight",
                 canShoot: true,
                 shootRate: 2000,
@@ -175,7 +175,7 @@ export const LEVELS_CONFIG = [
                 sprite: "alien",
                 hp: 150,
                 speed: 100,
-                score: 70,  // 🔧 提高积分：从40增加到70
+                score: 105,  // 70*1.5=105
                 ai: "chase",
                 canShoot: true,
                 shootRate: 1500,
@@ -186,7 +186,7 @@ export const LEVELS_CONFIG = [
                 sprite: "robot",
                 hp: 200,
                 speed: 80,
-                score: 80,  // 🔧 提高积分：从50增加到80
+                score: 120,  // 80*1.5=120
                 ai: "smart",
                 canShoot: true,
                 shootRate: 1800,
@@ -197,7 +197,7 @@ export const LEVELS_CONFIG = [
                 sprite: "ufo",
                 hp: 120,
                 speed: 180,
-                score: 65,  // 🔧 提高积分：从35增加到65
+                score: 98,  // 65*1.5=97.5 向上取整
                 ai: "curve",
                 canShoot: true,
                 shootRate: 2200,
@@ -208,7 +208,7 @@ export const LEVELS_CONFIG = [
                 sprite: "boss",
                 hp: 500,
                 speed: 60,
-                score: 300,  // 🔧 提高积分：从200增加到300
+                score: 450,  // 300*1.5=450
                 ai: "boss",
                 canShoot: true,
                 shootRate: 800,
