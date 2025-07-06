@@ -131,6 +131,21 @@ class MainScene extends Phaser.Scene {
     create() {
         console.log('MainScene: 创建场景开始');
       
+        // 📊 初始化统计系统
+        if (window.StatsManager) {
+            window.StatsManager.init();
+        }
+        
+        // 🏆 初始化成就系统
+        if (window.AchievementManager) {
+            window.AchievementManager.init();
+        }
+        
+        // 💾 加载游戏数据
+        if (window.SaveManager) {
+            window.SaveManager.loadAll();
+        }
+      
         // 🎨 初始化像素艺术系统
         this.pixelArtSystem = new PixelArtSystem(this);
         this.pixelArtSystem.initAllTextures();
@@ -598,6 +613,9 @@ class MainScene extends Phaser.Scene {
         
         // 🔊 音效控制UI（右上角）
         this.createAudioControls();
+        
+        // 📊 统计按钮
+        this.createStatsButton();
       
         // 控制说明
         const controlStyle = {
@@ -693,6 +711,222 @@ class MainScene extends Phaser.Scene {
         });
         
         console.log('🔊 音效控制UI创建完成');
+    }
+    
+    // 📊 创建统计按钮
+    createStatsButton() {
+        const width = this.cameras.main.width;
+        const statsX = width - 20;
+        const statsY = 250;
+        
+        // 统计按钮
+        this.statsButton = this.add.text(statsX, statsY, '📊 统计', {
+            font: '16px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
+        
+        // 统计按钮交互
+        this.statsButton.on('pointerdown', () => {
+            this.showStatsDialog();
+        });
+        
+        // 成就按钮
+        this.achievementButton = this.add.text(statsX, statsY + 40, '🏆 成就', {
+            font: '16px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
+        
+        // 成就按钮交互
+        this.achievementButton.on('pointerdown', () => {
+            this.showAchievementDialog();
+        });
+        
+        // 数据管理按钮
+        this.dataButton = this.add.text(statsX, statsY + 80, '💾 数据', {
+            font: '16px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
+        
+        // 数据管理按钮交互
+        this.dataButton.on('pointerdown', () => {
+            this.showDataDialog();
+        });
+        
+        console.log('📊 统计按钮创建完成');
+    }
+    
+    // 📊 显示统计对话框
+    showStatsDialog() {
+        if (!window.StatsManager) return;
+        
+        const stats = window.StatsManager.getStats();
+        const dialog = this.add.rectangle(640, 360, 500, 400, 0x000000, 0.9);
+        
+        this.add.text(640, 200, '📊 游戏统计', {
+            font: '32px Arial',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        
+        const statsText = [
+            `总击杀数: ${stats.totalKills}`,
+            `最高分数: ${stats.highestScore}`,
+            `游戏次数: ${stats.gamesPlayed}`,
+            `平均分数: ${stats.avgScore}`,
+            `击杀死亡比: ${stats.killDeathRatio}`,
+            `最长生存: ${Math.round(stats.longestSurvival / 1000)}秒`
+        ];
+        
+        statsText.forEach((text, index) => {
+            this.add.text(640, 250 + index * 30, text, {
+                font: '18px Arial',
+                fill: '#00ff00'
+            }).setOrigin(0.5);
+        });
+        
+        // 关闭按钮
+        const closeButton = this.add.text(640, 450, '关闭', {
+            font: '20px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setInteractive();
+        
+        closeButton.on('pointerdown', () => {
+            dialog.destroy();
+            closeButton.destroy();
+            // 清理所有统计文本
+            this.children.list.forEach(child => {
+                if (child.type === 'Text' && child !== closeButton) {
+                    child.destroy();
+                }
+            });
+        });
+    }
+    
+    // 🏆 显示成就对话框
+    showAchievementDialog() {
+        if (!window.AchievementManager) return;
+        
+        const achievements = window.AchievementManager.achievements;
+        const dialog = this.add.rectangle(640, 360, 500, 400, 0x000000, 0.9);
+        
+        this.add.text(640, 200, '🏆 成就系统', {
+            font: '32px Arial',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        
+        let yPos = 250;
+        Object.values(achievements).forEach(achievement => {
+            const color = achievement.unlocked ? '#00ff00' : '#666666';
+            const icon = achievement.unlocked ? '✅' : '❌';
+            
+            this.add.text(640, yPos, `${icon} ${achievement.name}`, {
+                font: '16px Arial',
+                fill: color
+            }).setOrigin(0.5);
+            
+            this.add.text(640, yPos + 20, achievement.desc, {
+                font: '12px Arial',
+                fill: '#cccccc'
+            }).setOrigin(0.5);
+            
+            yPos += 50;
+        });
+        
+        // 关闭按钮
+        const closeButton = this.add.text(640, 450, '关闭', {
+            font: '20px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setInteractive();
+        
+        closeButton.on('pointerdown', () => {
+            dialog.destroy();
+            closeButton.destroy();
+            // 清理所有成就文本
+            this.children.list.forEach(child => {
+                if (child.type === 'Text' && child !== closeButton) {
+                    child.destroy();
+                }
+            });
+        });
+    }
+    
+    // 💾 显示数据管理对话框
+    showDataDialog() {
+        if (!window.SaveManager) return;
+        
+        const dialog = this.add.rectangle(640, 360, 400, 300, 0x000000, 0.9);
+        
+        this.add.text(640, 200, '💾 数据管理', {
+            font: '32px Arial',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        
+        // 保存按钮
+        const saveButton = this.add.text(640, 250, '保存数据', {
+            font: '18px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#4CAF50',
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5).setInteractive();
+        
+        saveButton.on('pointerdown', () => {
+            window.SaveManager.saveAll();
+        });
+        
+        // 导出按钮
+        const exportButton = this.add.text(640, 290, '导出数据', {
+            font: '18px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#2196F3',
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5).setInteractive();
+        
+        exportButton.on('pointerdown', () => {
+            window.SaveManager.exportData();
+        });
+        
+        // 重置按钮
+        const resetButton = this.add.text(640, 330, '重置数据', {
+            font: '18px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#f44336',
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5).setInteractive();
+        
+        resetButton.on('pointerdown', () => {
+            window.SaveManager.resetAll();
+        });
+        
+        // 关闭按钮
+        const closeButton = this.add.text(640, 370, '关闭', {
+            font: '18px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 15, y: 8 }
+        }).setOrigin(0.5).setInteractive();
+        
+        closeButton.on('pointerdown', () => {
+            dialog.destroy();
+            saveButton.destroy();
+            exportButton.destroy();
+            resetButton.destroy();
+            closeButton.destroy();
+            // 清理标题文本
+            this.children.list.forEach(child => {
+                if (child.type === 'Text' && child !== closeButton && child !== saveButton && child !== exportButton && child !== resetButton) {
+                    child.destroy();
+                }
+            });
+        });
     }
     
     // 🆕 为移动设备调整HUD位置
@@ -1366,6 +1600,12 @@ class MainScene extends Phaser.Scene {
       
         console.log('MainScene: 游戏结束 - 血量耗尽');
         this.isGameOver = true;
+        
+        // 📊 记录游戏结束统计
+        if (window.StatsManager) {
+            const survivalTime = this.time.now - this.gameStartTime;
+            window.StatsManager.gameEnd(this.score, survivalTime);
+        }
         
         // 🔊 播放游戏结束音效
         if (this.audioManager) {
@@ -2718,6 +2958,17 @@ class MainScene extends Phaser.Scene {
         this.score += deathData.score;
         this.killCount++;
         this.currentEnemyCount--;
+      
+        // 📊 记录统计
+        if (window.StatsManager) {
+            window.StatsManager.addKill();
+            window.StatsManager.addScore(deathData.score);
+        }
+        
+        // 🏆 检查成就
+        if (window.AchievementManager) {
+            window.AchievementManager.checkAchievements();
+        }
       
         // 更新HUD
         this.updateHUD();
