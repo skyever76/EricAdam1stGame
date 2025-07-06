@@ -135,6 +135,9 @@ class MainScene extends Phaser.Scene {
         this.pixelArtSystem = new PixelArtSystem(this);
         this.pixelArtSystem.initAllTextures();
       
+        // 🔊 初始化音效系统
+        this.audioManager = new AudioManager(this);
+      
         // 🆕 加载当前关卡配置
         this.loadLevelConfig();
       
@@ -592,6 +595,9 @@ class MainScene extends Phaser.Scene {
             backgroundColor: '#000000',
             padding: { x: 6, y: 3 }
         }).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
+        
+        // 🔊 音效控制UI（右上角）
+        this.createAudioControls();
       
         // 控制说明
         const controlStyle = {
@@ -611,6 +617,82 @@ class MainScene extends Phaser.Scene {
         if (this.touchControls && this.touchControls.isMobile) {
             this.adjustHUDForMobile();
         }
+    }
+    
+    // 🔊 创建音效控制UI
+    createAudioControls() {
+        const width = this.cameras.main.width;
+        const audioX = width - 20;
+        const audioY = 170;
+        
+        // 音效标题
+        this.audioTitleText = this.add.text(audioX, audioY, '🔊 音效', {
+            font: '14px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 6, y: 3 }
+        }).setOrigin(1, 0).setScrollFactor(0);
+        
+        // 音量显示
+        this.volumeText = this.add.text(audioX, audioY + 25, '音量: 50%', {
+            font: '12px Arial',
+            fill: '#00ff00',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 2 }
+        }).setOrigin(1, 0).setScrollFactor(0);
+        
+        // 静音按钮
+        this.muteButton = this.add.text(audioX, audioY + 50, '🔊', {
+            font: '20px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 8, y: 4 }
+        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
+        
+        // 静音按钮交互
+        this.muteButton.on('pointerdown', () => {
+            const isMuted = this.audioManager.toggleMute();
+            this.muteButton.setText(isMuted ? '🔇' : '🔊');
+            this.volumeText.setText(isMuted ? '音量: 静音' : `音量: ${Math.round(this.audioManager.getVolume() * 100)}%`);
+        });
+        
+        // 音量滑块背景
+        this.volumeSliderBg = this.add.graphics();
+        this.volumeSliderBg.fillStyle(0x333333);
+        this.volumeSliderBg.fillRect(audioX - 110, audioY + 80, 100, 8);
+        this.volumeSliderBg.setScrollFactor(0);
+        
+        // 音量滑块
+        this.volumeSlider = this.add.graphics();
+        this.volumeSlider.fillStyle(0x00ff00);
+        this.volumeSlider.fillRect(audioX - 110, audioY + 80, 50, 8);
+        this.volumeSlider.setScrollFactor(0).setInteractive();
+        
+        // 音量滑块交互
+        this.volumeSlider.on('pointerdown', (pointer) => {
+            this.isDraggingVolume = true;
+        });
+        
+        this.input.on('pointerup', () => {
+            this.isDraggingVolume = false;
+        });
+        
+        this.input.on('pointermove', (pointer) => {
+            if (this.isDraggingVolume) {
+                const sliderX = audioX - 110;
+                const sliderWidth = 100;
+                const relativeX = Math.max(0, Math.min(sliderWidth, pointer.x - sliderX));
+                const volume = relativeX / sliderWidth;
+                
+                this.audioManager.setVolume(volume);
+                this.volumeSlider.clear();
+                this.volumeSlider.fillStyle(0x00ff00);
+                this.volumeSlider.fillRect(audioX - 110, audioY + 80, relativeX, 8);
+                this.volumeText.setText(`音量: ${Math.round(volume * 100)}%`);
+            }
+        });
+        
+        console.log('🔊 音效控制UI创建完成');
     }
     
     // 🆕 为移动设备调整HUD位置
@@ -1176,6 +1258,11 @@ class MainScene extends Phaser.Scene {
       
         console.log(`MainScene: 玩家被撞击扣血 ${collisionDamage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
       
+        // 🔊 播放受伤音效
+        if (this.audioManager) {
+            this.audioManager.play('hurt');
+        }
+      
         // 显示受伤效果
         this.showDamageEffect(this.collisionDamage, 'collision');
         this.updateHUD();
@@ -1199,6 +1286,11 @@ class MainScene extends Phaser.Scene {
         if (!enemy.active) return; // 简化条件，移除 isDying 检查
 
         console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
+
+        // 🔊 播放击中音效
+        if (this.audioManager) {
+            this.audioManager.play('hit');
+        }
 
         // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
@@ -1274,6 +1366,11 @@ class MainScene extends Phaser.Scene {
       
         console.log('MainScene: 游戏结束 - 血量耗尽');
         this.isGameOver = true;
+        
+        // 🔊 播放游戏结束音效
+        if (this.audioManager) {
+            this.audioManager.play('gameOver');
+        }
         
         // 🆕 记录游戏结束时间
         this.levelEndTime = this.time.now;
@@ -1410,6 +1507,11 @@ class MainScene extends Phaser.Scene {
         const bullet = this.bullets.get();
         if (bullet) {
             bullet.fire(x, y, weapon);
+            
+            // 🔊 播放射击音效
+            if (this.audioManager) {
+                this.audioManager.play('shoot');
+            }
             
             // 🆕 射击粒子效果
             this.shootEmitter.setPosition(x, y);
@@ -2773,6 +2875,11 @@ class MainScene extends Phaser.Scene {
         // 🎨 清理像素艺术动画定时器
         if (this.player && this.player.animationTimer) {
             this.player.animationTimer.destroy();
+        }
+        
+        // 🔊 清理音效系统
+        if (this.audioManager) {
+            this.audioManager.destroy();
         }
         
         // 清理自定义事件监听器

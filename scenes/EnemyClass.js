@@ -247,6 +247,11 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
         const scene = this.scene;
         const scoreValue = this.scoreValue;
       
+        // 🔊 播放爆炸音效
+        if (scene && scene.audioManager) {
+            scene.audioManager.play('explosion');
+        }
+      
         // 死亡粒子效果
         if (scene && scene.deathEmitter) {
             scene.deathEmitter.setPosition(this.x, this.y);

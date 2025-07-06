@@ -128,6 +128,12 @@ class PowerUp extends Phaser.GameObjects.Sprite {
         if (this.collected) return false;
         this.collected = true;
         console.log(`🎁 收集道具: ${this.powerUpData.name}`);
+        
+        // 🔊 播放道具收集音效
+        if (this.scene && this.scene.audioManager) {
+            this.scene.audioManager.play('powerup');
+        }
+        
         this.createCollectEffect();
         this.applyEffect();
         if (this.lifeTimer) this.lifeTimer.destroy();

@@ -345,7 +345,7 @@ const LEVELS_CONFIG = [
 window.LEVELS_CONFIG = LEVELS_CONFIG;
 
 // 🆕 AI行为配置
-export const AI_BEHAVIORS = {
+window.AI_BEHAVIORS = {
     straight: {
         name: "直线移动",
         update: (enemy) => {
