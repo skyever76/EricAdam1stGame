@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏日志查看器</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.danger {
+            background: #f44336;
+        }
+        
+        button.danger:hover {
+            background: #da190b;
+        }
+        
+        button.warning {
+            background: #ff9800;
+        }
+        
+        button.warning:hover {
+            background: #e68900;
+        }
+        
+        .log-container {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            height: 70vh;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 2px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.error {
+            color: #ff4444;
+        }
+        
+        .log-entry.warn {
+            color: #ffaa44;
+        }
+        
+        .log-entry.info {
+            color: #44aaff;
+        }
+        
+        .log-entry.log {
+            color: #ffffff;
+        }
+        
+        .timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        .level {
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 50px;
+            display: inline-block;
+        }
+        
+        .stats {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .stats span {
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>游戏日志查看器</h1>
+        <div class="controls">
+            <button onclick="refreshLogs()">刷新</button>
+            <button onclick="exportLogs()">导出日志</button>
+            <button class="warning" onclick="clearLogs()">清空日志</button>
+            <button onclick="window.location.href='index.html'">返回游戏</button>
+        </div>
+    </div>
+    
+    <div class="stats" id="stats">
+        <span>总日志数: <span id="total-logs">0</span></span>
+        <span>错误数: <span id="error-count">0</span></span>
+        <span>警告数: <span id="warn-count">0</span></span>
+        <span>信息数: <span id="info-count">0</span></span>
+    </div>
+    
+    <div class="log-container" id="log-container">
+        <div class="log-entry">正在加载日志...</div>
+    </div>
+
+    <script>
+        // 日志查看器功能
+        function loadLogs() {
+            const savedLogs = localStorage.getItem('gameLogs');
+            const logs = savedLogs ? JSON.parse(savedLogs) : [];
+            
+            const container = document.getElementById('log-container');
+            const stats = {
+                total: logs.length,
+                error: 0,
+                warn: 0,
+                info: 0,
+                log: 0
+            };
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="log-entry">暂无日志记录</div>';
+                updateStats(stats);
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => {
+                stats[log.level]++;
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                return `
+                    <div class="log-entry ${log.level}">
+                        <span class="timestamp">[${timestamp}]</span>
+                        <span class="level">${log.level.toUpperCase()}</span>
+                        <span class="message">${log.message}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            updateStats(stats);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('total-logs').textContent = stats.total;
+            document.getElementById('error-count').textContent = stats.error;
+            document.getElementById('warn-count').textContent = stats.warn;
+            document.getElementById('info-count').textContent = stats.info;
+        }
+        
+        function refreshLogs() {
+            loadLogs();
+        }
+        
+        function exportLogs() {
+            const savedLogs = localStorage.getItem('gameLogs');
+            const logs = savedLogs ? JSON.parse(savedLogs) : [];
+            
+            const logText = logs.map(log => 
+                `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `game-logs-${new Date().toISOString().slice(0, 19)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function clearLogs() {
+            if (confirm('确定要清空所有日志吗？')) {
+                localStorage.removeItem('gameLogs');
+                loadLogs();
+            }
+        }
+        
+        // 页面加载时显示日志
+        document.addEventListener('DOMContentLoaded', loadLogs);
+        
+        // 自动刷新（每5秒）
+        setInterval(loadLogs, 5000);
+    </script>
+</body>
+</html> 
