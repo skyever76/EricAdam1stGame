@@ -101,7 +101,13 @@ export default class PreloaderScene extends Phaser.Scene {
             { key: 'soldier', color: '#8B4513', size: 40, shape: 'circle', border: '#ffffff' },
             { key: 'diver', color: '#4169E1', size: 40, shape: 'circle', border: '#ffffff' },
             { key: 'tank', color: '#696969', size: 40, shape: 'square', border: '#ffffff' },
-            { key: 'spaceship', color: '#C0C0C0', size: 40, shape: 'triangle', border: '#ffffff' }
+            { key: 'spaceship', color: '#C0C0C0', size: 40, shape: 'triangle', border: '#ffffff' },
+            
+            // 🆕 粒子效果纹理
+            { key: 'shoot', color: '#ffff00', size: 4, shape: 'circle' },
+            { key: 'explosion', color: '#ff6600', size: 6, shape: 'circle' },
+            { key: 'damage', color: '#ff0000', size: 3, shape: 'circle' },
+            { key: 'death', color: '#ff00ff', size: 5, shape: 'circle' }
         ];
 
         // 创建每个纹理

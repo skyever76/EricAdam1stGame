@@ -68,8 +68,23 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
     preUpdate() {
         super.preUpdate();
         if (!this.scene.cameras.main.worldView.contains(this.x, this.y)) {
-            this.destroy();
+            // 🆕 导弹和核弹在边界爆炸
+            if (this.weaponType === '导弹' || this.weaponType === '核弹') {
+                this.explodeAtBoundary();
+            } else {
+                this.destroy();
+            }
         }
+    }
+    
+    // 🆕 在边界爆炸
+    explodeAtBoundary() {
+        if (this.weaponType === '导弹') {
+            this.scene.executeMissileExplosion(this, { x: this.x, y: this.y });
+        } else if (this.weaponType === '核弹') {
+            this.scene.executeNuclearStrike(this, { x: this.x, y: this.y });
+        }
+        this.destroy();
     }
 }
 
@@ -119,6 +134,9 @@ export default class MainScene extends Phaser.Scene {
         });
     
         this.enemies = this.physics.add.group();
+        
+        // 🆕 创建粒子效果系统
+        this.createParticleSystems();
         
         console.log('MainScene: 游戏对象组创建完成');
         console.log('MainScene: 子弹组已创建');
@@ -230,14 +248,15 @@ export default class MainScene extends Phaser.Scene {
             ),
             
             // 特斯拉枪 - 射速快，伤害高，光线持续2秒 (每发15积分)
-            new Weapon('特斯拉枪', 35, 150, 900, {width: 6, height: 100}, 0x00ffff, 'tesla', 
+            new Weapon('特斯拉枪', 35, 150, 900, {width: 4, height: 150}, 0x00ffff, 'tesla', 
                 1, 0, 15, 
                 (bullet, x, y) => {
-                    // 电击效果
+                    // 光剑效果 - 发光和闪烁
                     bullet.scene.tweens.add({
                         targets: bullet,
-                        rotation: Math.PI * 2,
-                        duration: 100,
+                        alpha: 0.7,
+                        duration: 200,
+                        yoyo: true,
                         repeat: -1
                     });
                 },
@@ -485,6 +504,54 @@ export default class MainScene extends Phaser.Scene {
         console.log('MainScene: HUD创建完成');
     }
 
+    // 🆕 创建粒子效果系统
+    createParticleSystems() {
+        // 射击粒子效果
+        this.shootEmitter = this.add.particles(0, 0, 'shoot', {
+            speed: { min: 50, max: 150 },
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 300,
+            frequency: 50,
+            blendMode: 'ADD'
+        });
+        
+        // 爆炸粒子效果
+        this.explosionEmitter = this.add.particles(0, 0, 'explosion', {
+            speed: { min: 100, max: 300 },
+            scale: { start: 1, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 500,
+            frequency: 20,
+            blendMode: 'ADD',
+            angle: { min: 0, max: 360 }
+        });
+        
+        // 受伤粒子效果
+        this.damageEmitter = this.add.particles(0, 0, 'damage', {
+            speed: { min: 30, max: 80 },
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 400,
+            frequency: 30,
+            blendMode: 'ADD',
+            angle: { min: -30, max: 30 }
+        });
+        
+        // 敌人死亡粒子效果
+        this.deathEmitter = this.add.particles(0, 0, 'death', {
+            speed: { min: 80, max: 200 },
+            scale: { start: 0.8, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 600,
+            frequency: 25,
+            blendMode: 'ADD',
+            angle: { min: 0, max: 360 }
+        });
+        
+        console.log('MainScene: 粒子效果系统创建完成');
+    }
+
     // 🆕 创建血量条
     createHealthBar() {
         const barWidth = 200;
@@ -608,6 +675,13 @@ export default class MainScene extends Phaser.Scene {
 
     // 🆕 显示受伤效果
     showDamageEffect(damageAmount, damageType = 'escape') {
+        // 🆕 受伤粒子效果
+        this.damageEmitter.setPosition(this.player.x, this.player.y);
+        this.damageEmitter.start();
+        this.time.delayedCall(150, () => {
+            this.damageEmitter.stop();
+        });
+        
         // 屏幕红色闪烁效果
         const damageOverlay = this.add.rectangle(640, 360, 1280, 720, 0xff0000, 0.3);
       
@@ -800,12 +874,21 @@ export default class MainScene extends Phaser.Scene {
         } else {
             // 普通武器直接销毁敌人
             enemy.destroy();
+            
+            // 🆕 普通武器敌人死亡粒子效果
+            this.deathEmitter.setPosition(enemy.x, enemy.y);
+            this.deathEmitter.start();
+            this.time.delayedCall(100, () => {
+                this.deathEmitter.stop();
+            });
         }
         
         bullet.destroy();
       
-        // 🆕 根据武器伤害计算分数
-        const scoreGain = bullet.damage;
+        // 🆕 根据武器伤害计算分数（增加击杀奖励）
+        const baseScore = bullet.damage;
+        const killBonus = 20; // 击杀奖励
+        const scoreGain = baseScore + killBonus;
         this.score += scoreGain;
         this.killCount++;
         
@@ -980,6 +1063,13 @@ export default class MainScene extends Phaser.Scene {
         if (bullet) {
             bullet.fire(x, y, weapon);
             
+            // 🆕 射击粒子效果
+            this.shootEmitter.setPosition(x, y);
+            this.shootEmitter.start();
+            this.time.delayedCall(100, () => {
+                this.shootEmitter.stop();
+            });
+            
             // 🆕 特殊武器效果（只有特斯拉枪在发射时有效果）
             if (weapon.name === '特斯拉枪' && weapon.isContinuous) {
                 this.executeTeslaBeam(bullet);
@@ -989,19 +1079,39 @@ export default class MainScene extends Phaser.Scene {
     
     // 🆕 核弹爆炸效果
     executeNuclearStrike(bullet, hitEnemy) {
-        // 使用被击中的敌人作为爆炸中心
-        const explosionCenter = hitEnemy;
+        // 使用被击中的敌人或边界位置作为爆炸中心
+        const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
         
         // 核弹大范围爆炸攻击
         const explosionRadius = 300;
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active) {
                 const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
-                if (distance <= explosionRadius) {
-                    enemy.destroy();
+                                if (distance <= explosionRadius) {
+                    // 🆕 计算爆炸击杀积分
+                    const baseScore = 30; // 爆炸基础伤害
+                    const killBonus = 20; // 击杀奖励
+                    const scoreGain = baseScore + killBonus;
+                    this.score += scoreGain;
                     this.killCount++;
+                    
+                    enemy.destroy();
+                    
+                    // 🆕 敌人死亡粒子效果
+                    this.deathEmitter.setPosition(enemy.x, enemy.y);
+                    this.deathEmitter.start();
+                    this.time.delayedCall(200, () => {
+                        this.deathEmitter.stop();
+                    });
                 }
             }
+        });
+        
+        // 🆕 核弹爆炸粒子效果
+        this.explosionEmitter.setPosition(explosionCenter.x, explosionCenter.y);
+        this.explosionEmitter.start();
+        this.time.delayedCall(300, () => {
+            this.explosionEmitter.stop();
         });
         
         // 核弹爆炸效果
@@ -1020,8 +1130,8 @@ export default class MainScene extends Phaser.Scene {
     
     // 🆕 导弹爆炸效果
     executeMissileExplosion(bullet, hitEnemy) {
-        // 使用被击中的敌人作为爆炸中心
-        const explosionCenter = hitEnemy;
+        // 使用被击中的敌人或边界位置作为爆炸中心
+        const explosionCenter = hitEnemy || { x: bullet.x, y: bullet.y };
         
         // 导弹爆炸范围攻击
         const explosionRadius = 150;
@@ -1029,10 +1139,30 @@ export default class MainScene extends Phaser.Scene {
             if (enemy.active) {
                 const distance = Phaser.Math.Distance.Between(explosionCenter.x, explosionCenter.y, enemy.x, enemy.y);
                 if (distance <= explosionRadius) {
-                    enemy.destroy();
+                    // 🆕 计算爆炸击杀积分
+                    const baseScore = 25; // 导弹爆炸基础伤害
+                    const killBonus = 20; // 击杀奖励
+                    const scoreGain = baseScore + killBonus;
+                    this.score += scoreGain;
                     this.killCount++;
+                    
+                    enemy.destroy();
+                    
+                    // 🆕 敌人死亡粒子效果
+                    this.deathEmitter.setPosition(enemy.x, enemy.y);
+                    this.deathEmitter.start();
+                    this.time.delayedCall(150, () => {
+                        this.deathEmitter.stop();
+                    });
                 }
             }
+        });
+        
+        // 🆕 导弹爆炸粒子效果
+        this.explosionEmitter.setPosition(explosionCenter.x, explosionCenter.y);
+        this.explosionEmitter.start();
+        this.time.delayedCall(200, () => {
+            this.explosionEmitter.stop();
         });
         
         // 爆炸视觉效果
