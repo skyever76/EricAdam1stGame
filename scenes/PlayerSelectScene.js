@@ -1,7 +1,10 @@
+import { LEVELS_CONFIG } from '../levels.js';
+
 export default class PlayerSelectScene extends Phaser.Scene {
     constructor() {
         super('PlayerSelectScene');
         this.selectedPlayer = null;
+
         this.players = [
             { key: 'soldier', name: '士兵', description: '平衡型，攻防兼备', speed: 400, health: 100 },
             { key: 'diver', name: '坦克', description: '防御型，生命值高', speed: 350, health: 200 },
@@ -168,6 +171,8 @@ export default class PlayerSelectScene extends Phaser.Scene {
             }).setOrigin(explainAlign, 0.5);
         });
 
+
+
         // 创建开始按钮 - 居中，按钮上方留白，亮绿色，悬停高亮，按钮往上移
         this.startButton = this.add.text(this.cameras.main.width / 2, 600, '开始游戏', { 
             font: '48px Arial', 
@@ -194,11 +199,14 @@ export default class PlayerSelectScene extends Phaser.Scene {
           
             if (this.selectedPlayer) {
                 console.log('启动主场景，传递玩家数据:', this.selectedPlayer);
-                this.scene.start('MainScene', { player: this.selectedPlayer });
+                this.scene.start('MainScene', { 
+                    player: this.selectedPlayer,
+                    level: 0 // 固定从第一关开始
+                });
             } else {
-                console.error('没有选中玩家，无法开始游戏');
+                console.error('请选择角色');
                 // 添加视觉提示
-                this.add.text(this.cameras.main.width / 2, 620, '请先选择角色', {
+                this.add.text(this.cameras.main.width / 2, 570, '请先选择角色', {
                     font: '24px Arial',
                     fill: '#ff0000',
                     stroke: '#000',
@@ -217,4 +225,6 @@ export default class PlayerSelectScene extends Phaser.Scene {
         const savedPoints = localStorage.getItem('gamePoints');
         return savedPoints ? parseInt(savedPoints) : 0;
     }
+
+
 } 

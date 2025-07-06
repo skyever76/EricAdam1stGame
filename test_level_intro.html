@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>关卡介绍测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .test-info {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .test-info h2 {
+            color: #00ff00;
+            margin-top: 0;
+        }
+        .test-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .test-info li {
+            margin: 5px 0;
+        }
+        .game-container {
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .controls {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .controls h3 {
+            color: #00ffff;
+            margin-top: 0;
+        }
+        .key {
+            background: #555;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .level-info {
+            background: #444;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .level-info h4 {
+            color: #ffff00;
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>🎮 关卡介绍测试</h2>
+        <p>测试关卡介绍的显示功能：</p>
+        <ul>
+            <li><strong>关卡名称</strong>：大字体显示当前关卡名称</li>
+            <li><strong>关卡描述</strong>：显示关卡的背景故事</li>
+            <li><strong>关卡目标</strong>：显示生存时间和击杀目标</li>
+            <li><strong>倒计时</strong>：3秒倒计时后开始游戏</li>
+            <li><strong>层级管理</strong>：确保介绍界面在最顶层显示</li>
+        </ul>
+    </div>
+
+    <div class="level-info">
+        <h4>📋 当前关卡信息</h4>
+        <p><strong>关卡1：城市危机</strong> - 暴徒正在城市中肆虐，消灭他们！</p>
+        <p><strong>目标：</strong>生存90秒 或 击杀20个敌人</p>
+        <p><strong>背景：</strong>城市背景，士兵角色</p>
+    </div>
+
+    <div class="game-container">
+        <iframe src="index.html" width="1280" height="720" frameborder="0"></iframe>
+    </div>
+
+    <div class="controls">
+        <h3>🎯 测试步骤</h3>
+        <ol>
+            <li>点击开始游戏</li>
+            <li>选择任意角色</li>
+            <li>观察关卡介绍是否正常显示</li>
+            <li>检查倒计时是否正常工作</li>
+            <li>确认3秒后游戏正常开始</li>
+        </ol>
+        
+        <h3>🔍 检查要点</h3>
+        <ul>
+            <li>关卡介绍背景是否半透明黑色</li>
+            <li>文字是否清晰可见</li>
+            <li>倒计时是否从3开始倒数</li>
+            <li>介绍结束后是否自动消失</li>
+            <li>游戏是否正常开始（敌人生成）</li>
+        </ul>
+        
+        <h3>🐛 常见问题</h3>
+        <ul>
+            <li><strong>介绍不显示</strong>：检查控制台是否有错误</li>
+            <li><strong>文字被遮挡</strong>：检查深度设置</li>
+            <li><strong>倒计时不工作</strong>：检查时间事件</li>
+            <li><strong>游戏不开始</strong>：检查敌人生成器</li>
+        </ul>
+    </div>
+
+    <script>
+        // 自动打开控制台提示
+        setTimeout(() => {
+            console.log('🎮 关卡介绍测试已启动');
+            console.log('📋 请按F12打开控制台查看详细日志');
+            console.log('🎯 测试关卡介绍的显示和倒计时功能');
+        }, 1000);
+    </script>
+</body>
+</html> 
