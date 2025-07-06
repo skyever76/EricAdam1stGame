@@ -3561,4 +3561,5 @@ class MainScene extends Phaser.Scene {
 }
 
 // 🆕 导出到全局作用域
-window.MainScene = MainScene; 
+window.MainScene = MainScene;
+console.log('✅ MainScene.js 已加载'); 

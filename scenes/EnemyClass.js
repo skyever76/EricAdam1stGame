@@ -366,4 +366,5 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
 }
 
 // 🆕 导出到全局作用域
-window.Enemy = Enemy; 
+window.Enemy = Enemy;
+console.log('✅ EnemyClass.js 已加载'); 

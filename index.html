@@ -8,29 +8,43 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <title>Phaser 3 射击游戏 - iPad版</title>
+    <!-- 添加 favicon 避免 404 错误 -->
+    <link rel="icon" href="data:,">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    
+    <!-- 1. 基础配置和工具类 -->
+    <script src="scenes/levels.js"></script>
+    <script src="scenes/powerUps.js"></script>
+    <script src="scenes/obstacleTypes.js"></script>
+    
+    <!-- 2. 管理器类 -->
     <script src="scenes/StatsManager.js"></script>
     <script src="scenes/AchievementManager.js"></script>
     <script src="scenes/SaveManager.js"></script>
-    <script src="scenes/levels.js"></script>
+    <script src="scenes/AudioManager.js"></script>
+    <script src="scenes/PowerUpManager.js"></script>
+    <script src="scenes/ObstacleManager.js"></script>
+    
+    <!-- 3. 游戏对象类 -->
     <script src="scenes/EnemyClass.js"></script>
     <script src="scenes/EnemyBullet.js"></script>
+    <script src="scenes/PowerUp.js"></script>
+    <script src="scenes/Obstacle.js"></script>
+    
+    <!-- 4. 系统类 -->
     <script src="scenes/PixelArtSystem.js"></script>
-    <script src="scenes/AudioManager.js"></script>
+    <script src="scenes/TouchControls.js"></script>
+    
+    <!-- 5. 场景类 -->
     <script src="scenes/PreloaderScene.js"></script>
     <script src="scenes/PlayerSelectScene.js"></script>
     <script src="scenes/MainScene.js"></script>
-    <script src="scenes/PowerUp.js"></script>
-    <script src="scenes/PowerUpManager.js"></script>
-    <script src="scenes/powerUps.js"></script>
-    <script src="scenes/Obstacle.js"></script>
-    <script src="scenes/ObstacleManager.js"></script>
-    <script src="scenes/obstacleTypes.js"></script>
+    
+    <!-- 6. 高级功能类 -->
     <script src="scenes/advancedScenes.js"></script>
     <script src="scenes/AdvancedSceneManager.js"></script>
     <script src="scenes/SceneSwitcher.js"></script>
     <script src="scenes/advancedEnemies.js"></script>
-    <script src="scenes/TouchControls.js"></script>
     <style>
         body {
             margin: 0;

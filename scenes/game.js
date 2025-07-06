@@ -4,6 +4,22 @@
 
 console.log('开始初始化游戏配置...');
 
+// 🧹 清理可能的重复定义
+(function() {
+    'use strict';
+    
+    const classesToClear = ['Enemy', 'EnemyBullet', 'PowerUp', 'Obstacle', 'MainScene', 'PreloaderScene', 'PlayerSelectScene'];
+    
+    classesToClear.forEach(className => {
+        if (window[className] && window[className].__cleaned) {
+            console.warn(`🔄 清理重复的类定义: ${className}`);
+            delete window[className];
+        }
+    });
+    
+    console.log('🧹 类定义清理完成');
+})();
+
 // 🆕 检测设备并设置合适的分辨率
 function getGameConfig() {
     const isIPad = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -60,28 +76,41 @@ const config = getGameConfig();
 
 console.log('游戏配置:', config);
 
-// 检查场景是否正确加载
-function validateScenes() {
-    const scenes = [
+// 检查所有必要的类是否已定义
+function validateClasses() {
+    const requiredClasses = [
         { name: 'PreloaderScene', class: window.PreloaderScene },
         { name: 'PlayerSelectScene', class: window.PlayerSelectScene },
-        { name: 'MainScene', class: window.MainScene }
+        { name: 'MainScene', class: window.MainScene },
+        { name: 'Enemy', class: window.Enemy },
+        { name: 'EnemyBullet', class: window.EnemyBullet },
+        { name: 'PowerUp', class: window.PowerUp },
+        { name: 'Obstacle', class: window.Obstacle },
+        { name: 'StatsManager', class: window.StatsManager },
+        { name: 'AchievementManager', class: window.AchievementManager },
+        { name: 'SaveManager', class: window.SaveManager },
+        { name: 'AudioManager', class: window.AudioManager },
+        { name: 'PowerUpManager', class: window.PowerUpManager },
+        { name: 'ObstacleManager', class: window.ObstacleManager },
+        { name: 'PixelArtSystem', class: window.PixelArtSystem },
+        { name: 'TouchControls', class: window.TouchControls }
     ];
   
-    const missingScenes = scenes.filter(scene => !scene.class);
+    const missingClasses = requiredClasses.filter(item => !item.class);
   
-    if (missingScenes.length > 0) {
-        console.error('❌ 缺失的场景类:', missingScenes.map(s => s.name));
+    if (missingClasses.length > 0) {
+        console.error('❌ 缺失的类:', missingClasses.map(item => item.name));
+        console.error('请检查脚本加载顺序和类定义');
         return false;
     }
   
-    console.log('✅ 所有场景类加载成功');
+    console.log('✅ 所有必要的类都已正确加载');
     return true;
 }
 
-// 验证场景
-if (!validateScenes()) {
-    throw new Error('场景类未正确加载，请检查脚本加载顺序');
+// 验证所有类
+if (!validateClasses()) {
+    throw new Error('必要的类未正确加载，请检查脚本加载顺序');
 }
 
 console.log('场景列表:', config.scene.map(scene => 
