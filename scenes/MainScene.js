@@ -239,6 +239,9 @@ export default class MainScene extends Phaser.Scene {
         this.powerUpManager = new window.PowerUpManager(this);
         // 玩家与道具碰撞检测
         this.physics.add.overlap(this.player, this.powerUpManager.powerUps, this.collectPowerUp, null, this);
+
+        this.obstacleManager = new window.ObstacleManager(this);
+        this.obstacleManager.generateLevelObstacles('forest', 2000, 2000);
     }
 
     // 🆕 初始化武器系统
@@ -823,6 +826,10 @@ export default class MainScene extends Phaser.Scene {
         if (this.powerUpManager) {
             this.updatePowerUpHUD();
         }
+        if (this.obstacleManager) {
+            const stats = this.obstacleManager.getStats();
+            this.hudText += `\n障碍物: ${stats.total} (可破坏: ${stats.destructible})`;
+        }
     }
 
     // 修改 update 方法
@@ -870,6 +877,9 @@ export default class MainScene extends Phaser.Scene {
         }
         if (this.powerUpManager) {
             this.powerUpManager.update();
+        }
+        if (this.obstacleManager) {
+            this.obstacleManager.update();
         }
     }
 
@@ -2402,5 +2412,13 @@ export default class MainScene extends Phaser.Scene {
             this.powerUpHUDGroup.addMultiple([bg, text, progressBg, progressBar]);
         });
         this.powerUpHUDGroup.setDepth(1000);
+    }
+
+    switchLevel(levelType) {
+        console.log(`🌍 切换到 ${levelType} 关卡`);
+        if (this.obstacleManager) {
+            this.obstacleManager.generateLevelObstacles(levelType, 2000, 2000);
+        }
+        // ... 其他关卡切换逻辑 ...
     }
 } 
