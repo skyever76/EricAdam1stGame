@@ -1,10 +1,17 @@
 // PowerUp.js - 道具类
 class PowerUp extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, powerUpData) {
-        super(scene, x, y, 'bullet'); // 临时使用bullet纹理，后面可以换
+        // 🎨 使用像素艺术道具纹理
+        const powerUpType = this.mapPowerUpType(powerUpData.type);
+        const textureKey = `${powerUpType}_0`; // 使用第一帧
+        
+        super(scene, x, y, textureKey);
         this.scene = scene;
         this.powerUpData = powerUpData;
         this.powerUpType = powerUpData.type;
+        this.pixelType = powerUpType;
+        this.animationFrame = 0;
+        
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.body.setSize(30, 30);
@@ -12,28 +19,53 @@ class PowerUp extends Phaser.GameObjects.Sprite {
         this.body.setBounce(0.3);
         this.body.setDrag(100);
         this.setScale(0.8);
-        this.setTint(powerUpData.color);
         this.setDepth(100);
         this.lifeTime = powerUpData.lifeTime || 15000;
         this.collected = false;
         this.magnetRange = 80;
+        
+        // 🎨 设置道具动画
+        this.animationTimer = this.scene.time.addEvent({
+            delay: 200,
+            callback: this.updateAnimation,
+            callbackScope: this,
+            loop: true
+        });
+        
         this.setupAppearance();
         this.setupAnimations();
         this.setupLifeTimer();
-        console.log(`🎁 生成道具: ${powerUpData.name} 在位置 (${x}, ${y})`);
+        console.log(`🎁 生成像素风道具: ${powerUpData.name} 在位置 (${x}, ${y})`);
+    }
+
+    // 🎨 映射道具类型到像素艺术类型
+    mapPowerUpType(type) {
+        const typeMap = {
+            'HEALTH_PACK': 'health',
+            'POWER_PILL': 'ammo',
+            'SHIELD': 'shield',
+            'RAPID_FIRE': 'speed'
+        };
+        return typeMap[type] || 'health';
+    }
+
+    // 🎨 更新道具动画
+    updateAnimation() {
+        if (!this.active) return;
+        
+        this.animationFrame = (this.animationFrame + 1) % 8;
+        const newTexture = `${this.pixelType}_${this.animationFrame}`;
+        
+        if (this.scene.textures.exists(newTexture)) {
+            this.setTexture(newTexture);
+        }
     }
     setupAppearance() {
-        this.glowEffect = this.scene.add.circle(this.x, this.y, 20, this.powerUpData.color, 0.3)
-            .setDepth(this.depth - 1);
-        this.label = this.scene.add.text(this.x, this.y - 40, this.powerUpData.symbol, {
-            fontSize: '16px',
-            fill: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(this.depth + 1);
+        // 🎨 像素艺术纹理已经包含发光效果和符号，不需要额外的视觉效果
+        // 只保留简单的悬停动画
     }
     setupAnimations() {
+        // 🎨 简单的悬停动画
         this.scene.tweens.add({
             targets: this,
             y: this.y - 10,
@@ -41,23 +73,6 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
-        });
-        this.scene.tweens.add({
-            targets: this.glowEffect,
-            scaleX: 1.2,
-            scaleY: 1.2,
-            alpha: 0.6,
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-        this.scene.tweens.add({
-            targets: this,
-            rotation: Math.PI * 2,
-            duration: 3000,
-            repeat: -1,
-            ease: 'Linear'
         });
     }
     setupLifeTimer() {
@@ -70,7 +85,7 @@ class PowerUp extends Phaser.GameObjects.Sprite {
     }
     startWarningBlink() {
         this.scene.tweens.add({
-            targets: [this, this.glowEffect, this.label],
+            targets: this,
             alpha: 0.3,
             duration: 200,
             yoyo: true,
@@ -80,12 +95,6 @@ class PowerUp extends Phaser.GameObjects.Sprite {
     }
     update() {
         if (this.collected) return;
-        if (this.glowEffect) {
-            this.glowEffect.setPosition(this.x, this.y);
-        }
-        if (this.label) {
-            this.label.setPosition(this.x, this.y - 40);
-        }
         this.checkMagnetEffect();
         
         // 🆕 横版卷轴：检查是否移出摄像机左侧
@@ -127,6 +136,10 @@ class PowerUp extends Phaser.GameObjects.Sprite {
         return true;
     }
     createCollectEffect() {
+        // 🎨 使用像素艺术道具的发光颜色
+        const design = POWERUP_DESIGNS[this.pixelType];
+        const glowColor = design ? design.glow : 0x00ff00;
+        
         const collectEffect = this.scene.add.particles(this.x, this.y, 'bullet', {
             speed: { min: 50, max: 150 },
             scale: { start: 0.5, end: 0 },
@@ -135,7 +148,7 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             blendMode: 'ADD',
             angle: { min: 0, max: 360 },
             quantity: 10,
-            tint: this.powerUpData.color
+            tint: glowColor
         }).setDepth(200);
         this.scene.time.delayedCall(600, () => {
             collectEffect.destroy();
@@ -149,7 +162,7 @@ class PowerUp extends Phaser.GameObjects.Sprite {
     expire() {
         console.log(`⏰ 道具过期: ${this.powerUpData.name}`);
         this.scene.tweens.add({
-            targets: [this, this.glowEffect, this.label],
+            targets: this,
             alpha: 0,
             scaleX: 0.5,
             scaleY: 0.5,
@@ -161,10 +174,9 @@ class PowerUp extends Phaser.GameObjects.Sprite {
         });
     }
     destroy() {
-        if (this.glowEffect) this.glowEffect.destroy();
-        if (this.label) this.label.destroy();
         if (this.lifeTimer) this.lifeTimer.destroy();
         if (this.warningTimer) this.warningTimer.destroy();
+        if (this.animationTimer) this.animationTimer.destroy();
         super.destroy();
     }
 }

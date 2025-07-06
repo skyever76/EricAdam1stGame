@@ -131,6 +131,10 @@ class MainScene extends Phaser.Scene {
     create() {
         console.log('MainScene: 创建场景开始');
       
+        // 🎨 初始化像素艺术系统
+        this.pixelArtSystem = new PixelArtSystem(this);
+        this.pixelArtSystem.initAllTextures();
+      
         // 🆕 加载当前关卡配置
         this.loadLevelConfig();
       
@@ -2093,27 +2097,92 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 创建关卡背景（修正版，100% Phaser 兼容）
     createLevelBackground() {
-        this.cameras.main.setBackgroundColor(this.currentLevel.bgColor);
-        try {
-            const name = this.currentLevel.name;
-            if (name.includes('城市')) {
-                this.generateParallaxTechGridBackground();
-            } else if (name.includes('沙漠')) {
-                this.generateParallaxCloudBackground();
-            } else if (name.includes('森林')) {
-                this.generateParallaxCircuitBackground();
-            } else if (name.includes('海洋') || name.includes('深渊')) {
-                this.generateParallaxWaveBackground();
-            } else if (name.includes('太空') || name.includes('宇宙')) {
-                this.generateParallaxStarFieldBackground();
-            } else {
-                this.generateParallaxHexagonBackground();
-            }
-        } catch (error) {
-            console.warn('背景生成失败，使用简化背景:', error);
-            this.generateSimpleBackground();
-        }
+        console.log('MainScene: 创建像素风关卡背景');
+        
+        // 🎨 使用像素艺术背景系统
+        this.createPixelArtBackground();
+        
         this.addEnvironmentEffects();
+    }
+
+    // 🎨 创建像素艺术背景
+    createPixelArtBackground() {
+        // 根据关卡索引选择主题
+        const levelIndex = this.currentLevelIndex + 1;
+        const theme = LEVEL_THEMES[levelIndex] || LEVEL_THEMES[1];
+        
+        // 创建背景图形
+        const graphics = this.add.graphics();
+        
+        // 分层渐变天空背景（Phaser兼容）
+        const gradientHeight = 400;
+        const colorCount = theme.bgColors.length;
+        const segmentHeight = gradientHeight / (colorCount - 1);
+        
+        for (let i = 0; i < colorCount - 1; i++) {
+            const startY = i * segmentHeight;
+            const endY = (i + 1) * segmentHeight;
+            const startColor = this.hexToRgb(theme.bgColors[i]);
+            const endColor = this.hexToRgb(theme.bgColors[i + 1]);
+            
+            // 创建渐变效果
+            for (let y = startY; y < endY; y++) {
+                const ratio = (y - startY) / segmentHeight;
+                const color = this.interpolateColor(startColor, endColor, ratio);
+                graphics.fillStyle(color);
+                graphics.fillRect(0, y, 4000, 1);
+            }
+        }
+        
+        // 视差背景层
+        this.createParallaxLayers(graphics, theme);
+        
+        // 地面
+        graphics.fillStyle(this.hexToRgb(theme.groundColor));
+        graphics.fillRect(0, 400, 4000, 320);
+        
+        graphics.setDepth(-100);
+    }
+
+    // 🎨 颜色转换和插值函数
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+    }
+
+    interpolateColor(color1, color2, ratio) {
+        const r = Math.round(color1.r + (color2.r - color1.r) * ratio);
+        const g = Math.round(color1.g + (color2.g - color1.g) * ratio);
+        const b = Math.round(color1.b + (color2.b - color1.b) * ratio);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    // 🎨 创建视差背景层
+    createParallaxLayers(graphics, theme) {
+        // 远景层
+        graphics.fillStyle(0x222222);
+        for (let i = 0; i < 20; i++) {
+            const x = i * 200;
+            graphics.fillRect(x, 300, 60, 100);
+        }
+        
+        // 中景层
+        graphics.fillStyle(0x444444);
+        for (let i = 0; i < 33; i++) {
+            const x = i * 120;
+            graphics.fillRect(x, 350, 40, 50);
+        }
+        
+        // 近景层
+        graphics.fillStyle(0x666666);
+        for (let i = 0; i < 50; i++) {
+            const x = i * 80;
+            graphics.fillRect(x, 380, 20, 20);
+        }
     }
 
     // 1. 科技网格背景（修正版）
@@ -2352,13 +2421,24 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 创建关卡对应的玩家
     createLevelPlayer() {
-        // 使用关卡指定的玩家皮肤，如果没有则使用选择的角色
-        let playerTexture = this.currentLevel.playerSkin;
-      
-        if (!this.textures.exists(playerTexture)) {
-            playerTexture = (this.selectedPlayer && this.selectedPlayer.key) || 'player';
+        // 🎨 使用像素艺术角色纹理
+        let characterType = 'warrior'; // 默认角色
+        
+        // 根据选择的角色或关卡确定角色类型
+        if (this.selectedPlayer && this.selectedPlayer.key) {
+            // 映射角色键到像素艺术类型
+            const characterMap = {
+                'elf': 'archer',
+                'soldier': 'warrior', 
+                'diver': 'mage',
+                'tank': 'tank',
+                'spaceship': 'assassin'
+            };
+            characterType = characterMap[this.selectedPlayer.key] || 'warrior';
         }
-      
+        
+        // 使用像素艺术纹理
+        const playerTexture = `${characterType}_0`; // 使用第一帧
         this.playerSpeed = (this.selectedPlayer && this.selectedPlayer.speed) || 400;
         this.playerSize = 40;
         
@@ -2368,13 +2448,23 @@ class MainScene extends Phaser.Scene {
       
         this.player.playerSpeed = this.playerSpeed;
         this.player.isInvincible = false;
+        this.player.characterType = characterType;
+        this.player.animationFrame = 0;
+        
+        // 🎨 设置角色动画
+        this.player.animationTimer = this.time.addEvent({
+            delay: 200, // 每200ms更新一帧
+            callback: this.updatePlayerAnimation,
+            callbackScope: this,
+            loop: true
+        });
         
         // 🆕 横版卷轴：设置摄像机跟随玩家
         this.cameras.main.startFollow(this.player);
         this.cameras.main.setLerp(0.1, 0.1); // 平滑跟随
         this.cameras.main.setDeadzone(100, 50); // 死区设置，避免频繁移动
   
-        console.log('MainScene: 关卡玩家创建完成，皮肤:', playerTexture);
+        console.log('MainScene: 像素风角色创建完成，类型:', characterType);
     }
 
     // 🆕 关卡特定的敌人生成
@@ -2388,35 +2478,80 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // 🎨 更新玩家动画
+    updatePlayerAnimation() {
+        if (!this.player || !this.player.active) return;
+        
+        this.player.animationFrame = (this.player.animationFrame + 1) % 4;
+        const newTexture = `${this.player.characterType}_${this.player.animationFrame}`;
+        
+        if (this.textures.exists(newTexture)) {
+            this.player.setTexture(newTexture);
+        }
+    }
+
+    // 🎨 更新敌人动画
+    updateEnemyAnimation(enemy) {
+        if (!enemy || !enemy.active) return;
+        
+        enemy.animationFrame = (enemy.animationFrame + 1) % 4;
+        const newTexture = `${enemy.pixelType}_${enemy.animationFrame}`;
+        
+        if (this.textures.exists(newTexture)) {
+            enemy.setTexture(newTexture);
+        }
+    }
+
     // 🆕 生成关卡敌人
     spawnLevelEnemy() {
         if (this.isGameOver || this.currentEnemyCount >= this.maxEnemies) return;
       
-        // 根据权重随机选择敌人类型
-        const enemyType = this.selectEnemyType();
-        if (!enemyType) return;
+        // 🎨 使用像素艺术敌人类型
+        const enemyTypes = ['drone', 'soldier', 'heavy', 'flyer'];
+        const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        const enemyTexture = `${enemyType}_0`; // 使用第一帧
       
         const y = Phaser.Math.Between(50, 670);
         // 🆕 横版卷轴：在摄像机右侧生成敌人
         const spawnX = this.cameras.main.scrollX + 900;
-        const enemy = this.enemies.create(spawnX, y, enemyType.sprite);
+        const enemy = this.enemies.create(spawnX, y, enemyTexture);
       
         if (enemy) {
-            // 设置敌人数据
-            enemy.enemyData = enemyType;
-            enemy.maxHp = enemyType.hp;
-            enemy.currentHp = enemyType.hp;
-            enemy.enemySpeed = enemyType.speed;
-            enemy.scoreValue = enemyType.score;
-            enemy.canShoot = enemyType.canShoot;
-            enemy.shootRate = enemyType.shootRate;
-            enemy.aiType = enemyType.ai;
+            // 🎨 设置像素艺术敌人数据
+            const pixelEnemyData = ENEMY_TYPES[enemyType];
+            enemy.enemyData = {
+                name: pixelEnemyData.name,
+                hp: pixelEnemyData.health,
+                speed: 100 + Math.random() * 50,
+                score: pixelEnemyData.health * 10,
+                canShoot: enemyType === 'soldier' || enemyType === 'heavy',
+                shootRate: 2000 + Math.random() * 1000,
+                ai: 'straight'
+            };
+            
+            enemy.maxHp = enemy.enemyData.hp;
+            enemy.currentHp = enemy.enemyData.hp;
+            enemy.enemySpeed = enemy.enemyData.speed;
+            enemy.scoreValue = enemy.enemyData.score;
+            enemy.canShoot = enemy.enemyData.canShoot;
+            enemy.shootRate = enemy.enemyData.shootRate;
+            enemy.aiType = enemy.enemyData.ai;
+            enemy.pixelType = enemyType;
+            enemy.animationFrame = 0;
+            
+            // 🎨 设置敌人动画
+            enemy.animationTimer = this.time.addEvent({
+                delay: 300,
+                callback: () => this.updateEnemyAnimation(enemy),
+                callbackScope: this,
+                loop: true
+            });
             
             // 初始化敌人
             enemy.init();
             this.currentEnemyCount++;
             
-            console.log(`MainScene: 生成关卡敌人: ${enemyType.name}，当前数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
+            console.log(`MainScene: 生成像素风敌人: ${enemy.enemyData.name}，当前数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
         } else {
             console.error('MainScene: 无法创建敌人对象');
         }
@@ -2633,6 +2768,11 @@ class MainScene extends Phaser.Scene {
         // 清理触摸控制
         if (this.touchControls) {
             this.touchControls.destroy();
+        }
+        
+        // 🎨 清理像素艺术动画定时器
+        if (this.player && this.player.animationTimer) {
+            this.player.animationTimer.destroy();
         }
         
         // 清理自定义事件监听器
