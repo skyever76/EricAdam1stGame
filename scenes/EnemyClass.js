@@ -332,21 +332,24 @@ class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   
     checkBounds() {
-        // 敌人逃脱检查
-        if (this.x < -50 && this.scene) {
-            const enemyName = this.enemyData ? this.enemyData.name : 'Unknown';
-            console.log(`${enemyName} escaped!`);
-          
-            // 🔧 通过事件通知场景敌人逃脱
-            if (this.scene && this.scene.events) {
-                this.scene.events.emit('enemyEscaped', {
-                    enemyName: this.enemyData ? this.enemyData.name : 'Unknown',
-                    damage: 10 // 逃脱造成的伤害
-                });
+        // 🆕 横版卷轴：敌人逃脱检查 - 移出摄像机左侧时销毁
+        if (this.scene && this.scene.cameras) {
+            const cameraLeft = this.scene.cameras.main.scrollX;
+            if (this.x < cameraLeft - 100) { // 移出摄像机左侧100像素时销毁
+                const enemyName = this.enemyData ? this.enemyData.name : 'Unknown';
+                console.log(`${enemyName} escaped!`);
+              
+                // 🔧 通过事件通知场景敌人逃脱
+                if (this.scene && this.scene.events) {
+                    this.scene.events.emit('enemyEscaped', {
+                        enemyName: this.enemyData ? this.enemyData.name : 'Unknown',
+                        damage: 10 // 逃脱造成的伤害
+                    });
+                }
+              
+                this.cleanup();
+                this.destroy();
             }
-          
-            this.cleanup();
-            this.destroy();
         }
     }
   

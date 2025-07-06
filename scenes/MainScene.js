@@ -146,8 +146,11 @@ class MainScene extends Phaser.Scene {
         // 🆕 创建关卡背景
         this.createLevelBackground();
   
-        // 设置物理边界
-        this.physics.world.setBounds(0, 0, 1280, 720);
+        // 🆕 横版卷轴：设置扩展的世界边界
+        this.physics.world.setBounds(0, 0, 4000, 720);
+        
+        // 🆕 横版卷轴：设置摄像机边界和跟随系统
+        this.cameras.main.setBounds(0, 0, 4000, 720);
   
         // 🆕 创建关卡对应的玩家
         this.createLevelPlayer();
@@ -533,6 +536,17 @@ class MainScene extends Phaser.Scene {
             }
         ).setOrigin(0.5, 0);
         
+        // 🆕 横版卷轴：距离进度显示
+        this.distanceText = this.add.text(640, 50, '距离: 0/4000', {
+            font: '16px Arial',
+            fill: '#00ffff',
+            backgroundColor: '#000000',
+            padding: { x: 6, y: 3 }
+        }).setOrigin(0.5, 0);
+        
+        // 🆕 横版卷轴：距离进度条
+        this.createDistanceProgressBar();
+        
         // 🆕 当前武器显示
         this.weaponText = this.add.text(20, 140, '武器: AK47', hudStyle);
         
@@ -690,6 +704,25 @@ class MainScene extends Phaser.Scene {
         this.healthBar = this.add.graphics();
         this.updateHealthBar();
     }
+    
+    // 🆕 横版卷轴：创建距离进度条
+    createDistanceProgressBar() {
+        const barWidth = 400;
+        const barHeight = 8;
+        const barX = 640 - barWidth / 2;
+        const barY = 80;
+      
+        // 距离进度条背景
+        this.distanceBarBg = this.add.graphics();
+        this.distanceBarBg.fillStyle(0x333333);
+        this.distanceBarBg.fillRect(barX, barY, barWidth, barHeight);
+        this.distanceBarBg.lineStyle(1, 0x00ffff);
+        this.distanceBarBg.strokeRect(barX, barY, barWidth, barHeight);
+      
+        // 距离进度条前景
+        this.distanceBar = this.add.graphics();
+        this.updateDistanceProgressBar();
+    }
 
     // 🆕 更新血量条
     updateHealthBar() {
@@ -718,6 +751,42 @@ class MainScene extends Phaser.Scene {
       
         this.healthBar.fillStyle(barColor);
         this.healthBar.fillRect(barX, barY, currentBarWidth, barHeight);
+    }
+    
+    // 🆕 横版卷轴：更新距离进度条
+    updateDistanceProgressBar() {
+        if (!this.distanceBar || !this.player) return;
+      
+        const barWidth = 400;
+        const barHeight = 8;
+        const barX = 640 - barWidth / 2;
+        const barY = 80;
+      
+        this.distanceBar.clear();
+      
+        // 计算距离进度（基于玩家X位置）
+        const currentDistance = Math.max(0, this.player.x);
+        const maxDistance = 4000; // 关卡总长度
+        const progress = Math.min(1, currentDistance / maxDistance);
+        const currentBarWidth = barWidth * progress;
+      
+        // 设置进度条颜色（从绿色渐变到红色）
+        let barColor;
+        if (progress < 0.5) {
+            barColor = 0x00ff00; // 绿色
+        } else if (progress < 0.8) {
+            barColor = 0xffff00; // 黄色
+        } else {
+            barColor = 0xff0000; // 红色（接近BOSS）
+        }
+      
+        this.distanceBar.fillStyle(barColor);
+        this.distanceBar.fillRect(barX, barY, currentBarWidth, barHeight);
+      
+        // 更新距离文本
+        if (this.distanceText) {
+            this.distanceText.setText(`距离: ${Math.round(currentDistance)}/${maxDistance}`);
+        }
     }
 
     // 修改敌人生成方法
@@ -884,6 +953,9 @@ class MainScene extends Phaser.Scene {
             this.killText.setText(`击杀: ${this.killCount}/${this.levelCompleteKills}`);
         }
         
+        // 🆕 横版卷轴：更新距离进度条
+        this.updateDistanceProgressBar();
+        
         // 🆕 更新时间显示
         if (this.timeText) {
             // 关卡结束后停止计时
@@ -960,14 +1032,23 @@ class MainScene extends Phaser.Scene {
             // 玩家移动
             this.player.setVelocity(0);
           
+            // 🆕 横版卷轴：限制玩家在可视区域内移动
+            const cameraLeft = this.cameras.main.scrollX;
+            const cameraRight = cameraLeft + 1280; // 游戏宽度
+            const cameraCenter = cameraLeft + 640; // 屏幕中心
+          
             // 水平移动 (左右方向键 或 A/D键)
             if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-                this.player.setVelocityX(-this.playerSpeed);
+                // 限制玩家不能移出屏幕左边缘
+                if (this.player.x > cameraLeft + 50) {
+                    this.player.setVelocityX(-this.playerSpeed);
+                }
             } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+                // 允许玩家向右移动，触发摄像机滚动
                 this.player.setVelocityX(this.playerSpeed);
             }
           
-            // 垂直移动 (上下方向键 或 W/S键)
+            // 垂直移动 (上下方向键 或 W/S键) - 不受摄像机影响
             if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
                 this.player.setVelocityY(-this.playerSpeed);
             } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
@@ -2199,6 +2280,11 @@ class MainScene extends Phaser.Scene {
       
         this.player.playerSpeed = this.playerSpeed;
         this.player.isInvincible = false;
+        
+        // 🆕 横版卷轴：设置摄像机跟随玩家
+        this.cameras.main.startFollow(this.player);
+        this.cameras.main.setLerp(0.1, 0.1); // 平滑跟随
+        this.cameras.main.setDeadzone(100, 50); // 死区设置，避免频繁移动
   
         console.log('MainScene: 关卡玩家创建完成，皮肤:', playerTexture);
     }
@@ -2223,7 +2309,9 @@ class MainScene extends Phaser.Scene {
         if (!enemyType) return;
       
         const y = Phaser.Math.Between(50, 670);
-        const enemy = this.enemies.create(1300, y, enemyType.sprite);
+        // 🆕 横版卷轴：在摄像机右侧生成敌人
+        const spawnX = this.cameras.main.scrollX + 900;
+        const enemy = this.enemies.create(spawnX, y, enemyType.sprite);
       
         if (enemy) {
             // 设置敌人数据
@@ -2350,6 +2438,12 @@ class MainScene extends Phaser.Scene {
       
         const currentTime = this.time.now;
         const survivalTime = currentTime - this.gameStartTime;
+      
+        // 🆕 横版卷轴：检查距离条件
+        if (this.player && this.player.x >= 4000) {
+            this.completeLevel(`到达关卡终点`);
+            return;
+        }
       
         // 检查生存时间条件
         if (survivalTime >= this.levelCompleteTime) {
