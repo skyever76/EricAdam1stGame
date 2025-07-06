@@ -216,6 +216,9 @@ export default class MainScene extends Phaser.Scene {
         }).setOrigin(1);
     
         console.log('MainScene: 场景创建完成');
+
+        // 设置初始积分为5000
+        this.score = 5000;
     }
 
     // 🆕 初始化武器系统
