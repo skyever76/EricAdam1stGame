@@ -3233,9 +3233,6 @@ class MainScene extends Phaser.Scene {
         graphics.closePath();
         graphics.fillPath();
     }
-        // 雾气效果实现
-        console.log('MainScene: 创建雾气效果');
-    }
 
     createBubblesEffect() {
         // 气泡效果实现

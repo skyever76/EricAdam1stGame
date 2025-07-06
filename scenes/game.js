@@ -59,7 +59,34 @@ function getGameConfig() {
 const config = getGameConfig();
 
 console.log('游戏配置:', config);
-console.log('场景列表:', config.scene.map(scene => scene.name || scene.constructor.name));
+
+// 检查场景是否正确加载
+function validateScenes() {
+    const scenes = [
+        { name: 'PreloaderScene', class: window.PreloaderScene },
+        { name: 'PlayerSelectScene', class: window.PlayerSelectScene },
+        { name: 'MainScene', class: window.MainScene }
+    ];
+  
+    const missingScenes = scenes.filter(scene => !scene.class);
+  
+    if (missingScenes.length > 0) {
+        console.error('❌ 缺失的场景类:', missingScenes.map(s => s.name));
+        return false;
+    }
+  
+    console.log('✅ 所有场景类加载成功');
+    return true;
+}
+
+// 验证场景
+if (!validateScenes()) {
+    throw new Error('场景类未正确加载，请检查脚本加载顺序');
+}
+
+console.log('场景列表:', config.scene.map(scene => 
+    scene ? (scene.name || scene.constructor?.name || 'Unknown') : 'undefined'
+));
 
 const game = new Phaser.Game(config);
 console.log('游戏实例已创建');
