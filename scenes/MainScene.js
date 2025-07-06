@@ -547,6 +547,9 @@ class MainScene extends Phaser.Scene {
         // 🆕 横版卷轴：距离进度条
         this.createDistanceProgressBar();
         
+        // 🆕 横版卷轴：创建小地图
+        this.createMiniMap();
+        
         // 🆕 当前武器显示
         this.weaponText = this.add.text(20, 140, '武器: AK47', hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
@@ -727,6 +730,35 @@ class MainScene extends Phaser.Scene {
         this.distanceBar.setScrollFactor(0); // 🆕 横版卷轴：固定显示
         this.updateDistanceProgressBar();
     }
+    
+    // 🆕 横版卷轴：创建小地图
+    createMiniMap() {
+        const mapSize = 120;
+        const mapX = 1280 - mapSize - 20;
+        const mapY = 180;
+        
+        // 小地图背景
+        this.miniMapBg = this.add.graphics();
+        this.miniMapBg.fillStyle(0x000000, 0.7);
+        this.miniMapBg.fillRect(mapX, mapY, mapSize, mapSize);
+        this.miniMapBg.lineStyle(2, 0x00ffff);
+        this.miniMapBg.strokeRect(mapX, mapY, mapSize, mapSize);
+        this.miniMapBg.setScrollFactor(0);
+        
+        // 小地图内容
+        this.miniMap = this.add.graphics();
+        this.miniMap.setScrollFactor(0);
+        
+        // 小地图标题
+        this.miniMapTitle = this.add.text(mapX + mapSize/2, mapY - 10, '小地图', {
+            font: '12px Arial',
+            fill: '#00ffff',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 2 }
+        }).setOrigin(0.5, 1).setScrollFactor(0);
+        
+        this.updateMiniMap();
+    }
 
     // 🆕 更新血量条
     updateHealthBar() {
@@ -791,6 +823,49 @@ class MainScene extends Phaser.Scene {
         if (this.distanceText) {
             this.distanceText.setText(`距离: ${Math.round(currentDistance)}/${maxDistance}`);
         }
+    }
+    
+    // 🆕 横版卷轴：更新小地图
+    updateMiniMap() {
+        if (!this.miniMap || !this.player) return;
+        
+        const mapSize = 120;
+        const mapX = 1280 - mapSize - 20;
+        const mapY = 180;
+        const worldWidth = 4000;
+        const worldHeight = 720;
+        
+        this.miniMap.clear();
+        
+        // 绘制世界边界
+        this.miniMap.lineStyle(1, 0x444444);
+        this.miniMap.strokeRect(mapX + 2, mapY + 2, mapSize - 4, mapSize - 4);
+        
+        // 绘制玩家位置
+        const playerMapX = mapX + (this.player.x / worldWidth) * (mapSize - 4) + 2;
+        const playerMapY = mapY + (this.player.y / worldHeight) * (mapSize - 4) + 2;
+        this.miniMap.fillStyle(0x00ff00);
+        this.miniMap.fillCircle(playerMapX, playerMapY, 3);
+        
+        // 绘制敌人位置
+        if (this.enemies) {
+            this.miniMap.fillStyle(0xff0000);
+            this.enemies.children.entries.forEach(enemy => {
+                if (enemy.active) {
+                    const enemyMapX = mapX + (enemy.x / worldWidth) * (mapSize - 4) + 2;
+                    const enemyMapY = mapY + (enemy.y / worldHeight) * (mapSize - 4) + 2;
+                    this.miniMap.fillCircle(enemyMapX, enemyMapY, 1);
+                }
+            });
+        }
+        
+        // 绘制摄像机视窗
+        const cameraLeft = this.cameras.main.scrollX;
+        const cameraRight = cameraLeft + 1280;
+        const cameraMapLeft = mapX + (cameraLeft / worldWidth) * (mapSize - 4) + 2;
+        const cameraMapRight = mapX + (cameraRight / worldWidth) * (mapSize - 4) + 2;
+        this.miniMap.lineStyle(1, 0x00ffff, 0.5);
+        this.miniMap.strokeRect(cameraMapLeft, mapY + 2, cameraMapRight - cameraMapLeft, mapSize - 4);
     }
 
     // 修改敌人生成方法
@@ -959,6 +1034,9 @@ class MainScene extends Phaser.Scene {
         
         // 🆕 横版卷轴：更新距离进度条
         this.updateDistanceProgressBar();
+        
+        // 🆕 横版卷轴：更新小地图
+        this.updateMiniMap();
         
         // 🆕 更新时间显示
         if (this.timeText) {
@@ -1823,6 +1901,12 @@ class MainScene extends Phaser.Scene {
       
         this.levelEndTime = this.time.now;
         this.levelComplete = true;
+        
+        // 🆕 横版卷轴：BOSS战时锁定摄像机
+        if (reason.includes('BOSS') || reason.includes('终点')) {
+            this.cameras.main.stopFollow();
+            console.log('🔒 摄像机已锁定，BOSS战开始');
+        }
       
         // 停止敌人生成
         if (this.enemySpawner) {
@@ -2013,17 +2097,17 @@ class MainScene extends Phaser.Scene {
         try {
             const name = this.currentLevel.name;
             if (name.includes('城市')) {
-                this.generateTechGridBackground();
+                this.generateParallaxTechGridBackground();
             } else if (name.includes('沙漠')) {
-                this.generateCloudBackground();
+                this.generateParallaxCloudBackground();
             } else if (name.includes('森林')) {
-                this.generateCircuitBackground();
+                this.generateParallaxCircuitBackground();
             } else if (name.includes('海洋') || name.includes('深渊')) {
-                this.generateWaveBackground();
+                this.generateParallaxWaveBackground();
             } else if (name.includes('太空') || name.includes('宇宙')) {
-                this.generateStarFieldBackground();
+                this.generateParallaxStarFieldBackground();
             } else {
-                this.generateHexagonBackground();
+                this.generateParallaxHexagonBackground();
             }
         } catch (error) {
             console.warn('背景生成失败，使用简化背景:', error);
@@ -2639,6 +2723,273 @@ class MainScene extends Phaser.Scene {
         }
         
         // ... 其他关卡切换逻辑 ...
+    }
+    
+    // 🆕 横版卷轴：多层视差背景方法
+    
+    // 1. 科技网格视差背景
+    generateParallaxTechGridBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xe6f3ff);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        for (let i = 0; i < 10; i++) {
+            const alpha = 0.1 - (i * 0.01);
+            farGraphics.fillStyle(0xccddff, alpha);
+            farGraphics.fillRect(0, i * 72, 4000, 72);
+        }
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        midGraphics.lineStyle(1, 0x99ccff, 0.3);
+        const gridSize = 40;
+        for (let x = 0; x <= 4000; x += gridSize) {
+            midGraphics.beginPath();
+            midGraphics.moveTo(x, 0);
+            midGraphics.lineTo(x, 720);
+            midGraphics.strokePath();
+        }
+        for (let y = 0; y <= 720; y += gridSize) {
+            midGraphics.beginPath();
+            midGraphics.moveTo(0, y);
+            midGraphics.lineTo(4000, y);
+            midGraphics.strokePath();
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        nearGraphics.fillStyle(0x6699ff, 0.4);
+        for (let i = 0; i < 60; i++) {
+            const x = Phaser.Math.Between(0, 4000);
+            const y = Phaser.Math.Between(0, 720);
+            nearGraphics.fillCircle(x, y, 2);
+            nearGraphics.lineStyle(1, 0x6699ff, 0.3);
+            nearGraphics.beginPath();
+            nearGraphics.moveTo(x - 5, y);
+            nearGraphics.lineTo(x + 5, y);
+            nearGraphics.moveTo(x, y - 5);
+            nearGraphics.lineTo(x, y + 5);
+            nearGraphics.strokePath();
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
+    }
+    
+    // 2. 云朵视差背景
+    generateParallaxCloudBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xf0f8ff);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        for (let i = 0; i < 20; i++) {
+            const alpha = 0.05 - (i * 0.002);
+            farGraphics.fillStyle(0xe0e6ff, alpha);
+            farGraphics.fillRect(0, i * 36, 4000, 36);
+        }
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        midGraphics.fillStyle(0xffffff, 0.4);
+        for (let i = 0; i < 30; i++) {
+            const cloudX = Phaser.Math.Between(0, 4000);
+            const cloudY = Phaser.Math.Between(50, 400);
+            const cloudSize = Phaser.Math.Between(40, 100);
+            this.drawCloud(midGraphics, cloudX, cloudY, cloudSize);
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        nearGraphics.fillStyle(0xffffff, 0.6);
+        for (let i = 0; i < 20; i++) {
+            const cloudX = Phaser.Math.Between(0, 4000);
+            const cloudY = Phaser.Math.Between(100, 500);
+            const cloudSize = Phaser.Math.Between(30, 80);
+            this.drawCloud(nearGraphics, cloudX, cloudY, cloudSize);
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
+    }
+    
+    // 3. 电路板视差背景
+    generateParallaxCircuitBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xf0fff0);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        midGraphics.lineStyle(2, 0x90ee90, 0.4);
+        for (let i = 0; i < 80; i++) {
+            const startX = Phaser.Math.Between(0, 4000);
+            const startY = Phaser.Math.Between(0, 720);
+            const endX = startX + Phaser.Math.Between(-200, 200);
+            const endY = startY + Phaser.Math.Between(-200, 200);
+            midGraphics.beginPath();
+            midGraphics.moveTo(startX, startY);
+            midGraphics.lineTo(endX, startY);
+            midGraphics.lineTo(endX, endY);
+            midGraphics.strokePath();
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        nearGraphics.fillStyle(0x32cd32, 0.8);
+        nearGraphics.lineStyle(1, 0x32cd32, 0.8);
+        for (let i = 0; i < 30; i++) {
+            const rectX = Phaser.Math.Between(50, 3900);
+            const rectY = Phaser.Math.Between(50, 650);
+            const rectW = Phaser.Math.Between(20, 60);
+            const rectH = Phaser.Math.Between(15, 40);
+            nearGraphics.fillRect(rectX, rectY, rectW, rectH);
+            nearGraphics.strokeRect(rectX, rectY, rectW, rectH);
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
+    }
+    
+    // 4. 星空视差背景
+    generateParallaxStarFieldBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xf8f8ff);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        for (let radius = 500; radius > 0; radius -= 50) {
+            const alpha = (500 - radius) / 500 * 0.1;
+            farGraphics.fillStyle(0xe6e6fa, alpha);
+            farGraphics.fillCircle(2000, 360, radius);
+        }
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        for (let i = 0; i < 200; i++) {
+            const x = Phaser.Math.Between(0, 4000);
+            const y = Phaser.Math.Between(0, 720);
+            const size = Phaser.Math.Between(1, 2);
+            const alpha = Math.random() * 0.6 + 0.2;
+            midGraphics.fillStyle(0xdda0dd, alpha);
+            midGraphics.fillCircle(x, y, size);
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        for (let i = 0; i < 100; i++) {
+            const x = Phaser.Math.Between(0, 4000);
+            const y = Phaser.Math.Between(0, 720);
+            const size = Phaser.Math.Between(2, 4);
+            const alpha = Math.random() * 0.8 + 0.2;
+            nearGraphics.fillStyle(0xffffff, alpha);
+            nearGraphics.fillCircle(x, y, size);
+            if (size >= 3) {
+                nearGraphics.lineStyle(1, 0xffffff, alpha * 0.5);
+                nearGraphics.beginPath();
+                nearGraphics.moveTo(x - size * 2, y);
+                nearGraphics.lineTo(x + size * 2, y);
+                nearGraphics.moveTo(x, y - size * 2);
+                nearGraphics.lineTo(x, y + size * 2);
+                nearGraphics.strokePath();
+            }
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
+    }
+    
+    // 5. 六角形视差背景
+    generateParallaxHexagonBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xf5f5f5);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        const hexSize = 40;
+        const hexWidth = hexSize * Math.sqrt(3);
+        const hexHeight = hexSize * 2;
+        midGraphics.lineStyle(1, 0xd3d3d3, 0.6);
+        for (let row = 0; row < Math.ceil(720 / (hexHeight * 0.75)) + 1; row++) {
+            for (let col = 0; col < Math.ceil(4000 / hexWidth) + 1; col++) {
+                const x = col * hexWidth + (row % 2) * (hexWidth / 2);
+                const y = row * hexHeight * 0.75;
+                this.drawHexagon(midGraphics, x, y, hexSize);
+            }
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        nearGraphics.fillStyle(0xe0e0e0, 0.5);
+        for (let i = 0; i < 60; i++) {
+            const randomRow = Phaser.Math.Between(0, Math.ceil(720 / (hexHeight * 0.75)));
+            const randomCol = Phaser.Math.Between(0, Math.ceil(4000 / hexWidth));
+            const x = randomCol * hexWidth + (randomRow % 2) * (hexWidth / 2);
+            const y = randomRow * hexHeight * 0.75;
+            this.fillHexagon(nearGraphics, x, y, hexSize);
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
+    }
+    
+    // 6. 波浪视差背景
+    generateParallaxWaveBackground() {
+        // 远景层（滚动速度 0.3）
+        const farGraphics = this.add.graphics();
+        farGraphics.fillStyle(0xf0ffff);
+        farGraphics.fillRect(0, 0, 4000, 720);
+        for (let i = 0; i < 15; i++) {
+            const alpha = 0.08 - (i * 0.005);
+            farGraphics.fillStyle(0xe0f6ff, alpha);
+            farGraphics.fillRect(0, i * 48, 4000, 48);
+        }
+        farGraphics.setDepth(-300);
+        farGraphics.setScrollFactor(0.3);
+        
+        // 中景层（滚动速度 0.6）
+        const midGraphics = this.add.graphics();
+        const waveColors = [0xb0e0e6, 0x87ceeb, 0x87cefa];
+        const waveAlphas = [0.2, 0.15, 0.1];
+        for (let layer = 0; layer < 3; layer++) {
+            midGraphics.fillStyle(waveColors[layer], waveAlphas[layer]);
+            const amplitude = 20 + layer * 15;
+            const frequency = 0.008 + layer * 0.003;
+            for (let x = 0; x < 4000; x += 5) {
+                const y = 360 + Math.sin(x * frequency) * amplitude;
+                midGraphics.fillCircle(x, y, 3);
+            }
+        }
+        midGraphics.setDepth(-200);
+        midGraphics.setScrollFactor(0.6);
+        
+        // 近景层（滚动速度 1.0）
+        const nearGraphics = this.add.graphics();
+        nearGraphics.fillStyle(0x00bfff, 0.3);
+        for (let i = 0; i < 50; i++) {
+            const x = Phaser.Math.Between(0, 4000);
+            const y = Phaser.Math.Between(100, 620);
+            const size = Phaser.Math.Between(10, 30);
+            nearGraphics.fillCircle(x, y, size);
+        }
+        nearGraphics.setDepth(-100);
+        nearGraphics.setScrollFactor(1.0);
     }
 }
 
