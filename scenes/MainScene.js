@@ -240,8 +240,10 @@ export default class MainScene extends Phaser.Scene {
         // 玩家与道具碰撞检测
         this.physics.add.overlap(this.player, this.powerUpManager.powerUps, this.collectPowerUp, null, this);
 
+        // 🆕 初始化障碍物系统
         this.obstacleManager = new window.ObstacleManager(this);
-        this.obstacleManager.generateLevelObstacles('forest', 2000, 2000);
+        this.obstacleManager.setLevel('forest');
+        this.obstacleManager.spawnObstacles();
     }
 
     // 🆕 初始化武器系统
@@ -533,6 +535,9 @@ export default class MainScene extends Phaser.Scene {
         
         // 击杀数显示（右上角）
         this.killText = this.add.text(1280 - 20, 50, '击杀: 0/30', rightHudStyle).setOrigin(1, 0);
+        
+        // 🆕 障碍物状态显示（右上角）
+        this.obstacleText = this.add.text(1280 - 20, 80, '🪨 障碍物: 0/0', rightHudStyle).setOrigin(1, 0);
       
         // 控制说明
         const controlStyle = {
@@ -826,9 +831,12 @@ export default class MainScene extends Phaser.Scene {
         if (this.powerUpManager) {
             this.updatePowerUpHUD();
         }
+        // 🆕 显示障碍物状态
         if (this.obstacleManager) {
-            const stats = this.obstacleManager.getStats();
-            this.hudText += `\n障碍物: ${stats.total} (可破坏: ${stats.destructible})`;
+            const obstacleStatus = this.obstacleManager.getObstacleStatus();
+            if (this.obstacleText) {
+                this.obstacleText.setText(`🪨 障碍物: ${obstacleStatus.count}/${obstacleStatus.maxCount}`);
+            }
         }
     }
 
@@ -878,8 +886,9 @@ export default class MainScene extends Phaser.Scene {
         if (this.powerUpManager) {
             this.powerUpManager.update();
         }
+        // 🆕 更新障碍物系统
         if (this.obstacleManager) {
-            this.obstacleManager.update();
+            this.obstacleManager.update(this.time.now, this.game.loop.delta);
         }
     }
 
@@ -1959,8 +1968,8 @@ export default class MainScene extends Phaser.Scene {
                 graphics.moveTo(x, y - size * 2);
                 graphics.lineTo(x, y + size * 2);
                 graphics.strokePath();
+                }
             }
-        }
         graphics.setDepth(-100);
     }
 
@@ -2020,8 +2029,8 @@ export default class MainScene extends Phaser.Scene {
             graphics.fillPath();
         }
         graphics.setDepth(-100);
-    }
-
+        }
+      
     // 简化版背景（降级方案）
     generateSimpleBackground() {
         const graphics = this.add.graphics();
@@ -2416,9 +2425,13 @@ export default class MainScene extends Phaser.Scene {
 
     switchLevel(levelType) {
         console.log(`🌍 切换到 ${levelType} 关卡`);
+        
+        // 🆕 更新障碍物系统关卡
         if (this.obstacleManager) {
-            this.obstacleManager.generateLevelObstacles(levelType, 2000, 2000);
+            this.obstacleManager.setLevel(levelType);
+            this.obstacleManager.spawnObstacles();
         }
+        
         // ... 其他关卡切换逻辑 ...
     }
 } 
