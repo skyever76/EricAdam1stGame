@@ -7,6 +7,101 @@ class GameLogger {
         this.setupConsoleOverride();
     }
 
+    // 安全序列化函数，处理循环引用
+    safeStringify(obj) {
+        const seen = new WeakSet();
+        return JSON.stringify(obj, (key, value) => {
+            // 处理循环引用
+            if (typeof value === 'object' && value !== null) {
+                if (seen.has(value)) {
+                    return '[Circular Reference]';
+                }
+                seen.add(value);
+            }
+            
+            // 处理Phaser对象
+            if (value && typeof value === 'object') {
+                // 检查是否是Phaser对象
+                if (value.constructor && value.constructor.name) {
+                    const constructorName = value.constructor.name;
+                    if (constructorName.includes('Scene') || 
+                        constructorName.includes('Group') || 
+                        constructorName.includes('Sprite') ||
+                        constructorName.includes('Game') ||
+                        constructorName.includes('initialize')) {
+                        return `[Phaser ${constructorName}]`;
+                    }
+                }
+                
+                // 处理DOM元素
+                if (value instanceof Element) {
+                    return `[DOM ${value.tagName}]`;
+                }
+                
+                // 处理函数
+                if (typeof value === 'function') {
+                    return `[Function ${value.name || 'anonymous'}]`;
+                }
+            }
+            
+            return value;
+        });
+    }
+
+    // 安全转换对象为字符串
+    safeStringifyObject(obj) {
+        try {
+            if (typeof obj === 'string') {
+                return obj;
+            }
+            if (typeof obj === 'number' || typeof obj === 'boolean') {
+                return String(obj);
+            }
+            if (obj === null) {
+                return 'null';
+            }
+            if (obj === undefined) {
+                return 'undefined';
+            }
+            
+            // 处理Phaser对象
+            if (obj && typeof obj === 'object') {
+                if (obj.constructor && obj.constructor.name) {
+                    const constructorName = obj.constructor.name;
+                    if (constructorName.includes('Scene') || 
+                        constructorName.includes('Group') || 
+                        constructorName.includes('Sprite') ||
+                        constructorName.includes('Game') ||
+                        constructorName.includes('initialize')) {
+                        return `[Phaser ${constructorName}]`;
+                    }
+                }
+                
+                // 处理DOM元素
+                if (obj instanceof Element) {
+                    return `[DOM ${obj.tagName}]`;
+                }
+                
+                // 处理函数
+                if (typeof obj === 'function') {
+                    return `[Function ${obj.name || 'anonymous'}]`;
+                }
+                
+                // 处理数组
+                if (Array.isArray(obj)) {
+                    return `[Array(${obj.length})]`;
+                }
+                
+                // 处理普通对象
+                return '[Object]';
+            }
+            
+            return String(obj);
+        } catch (e) {
+            return '[Error converting object]';
+        }
+    }
+
     // 加载已保存的日志
     loadLogs() {
         const savedLogs = localStorage.getItem('gameLogs');
@@ -22,7 +117,7 @@ class GameLogger {
     // 保存日志到localStorage
     saveLogs() {
         try {
-            localStorage.setItem('gameLogs', JSON.stringify(this.logs));
+            localStorage.setItem('gameLogs', this.safeStringify(this.logs));
         } catch (e) {
             console.error('保存日志失败:', e);
         }
@@ -55,22 +150,38 @@ class GameLogger {
         const originalInfo = console.info;
 
         console.log = (...args) => {
-            this.addLog('log', args.join(' '), args);
+            // 安全处理参数，避免循环引用
+            const safeArgs = args.map(arg => this.safeStringifyObject(arg));
+            const safeMessage = args.map(arg => this.safeStringifyObject(arg)).join(' ');
+            
+            this.addLog('log', safeMessage, safeArgs);
             originalLog.apply(console, args);
         };
 
         console.error = (...args) => {
-            this.addLog('error', args.join(' '), args);
+            // 安全处理参数，避免循环引用
+            const safeArgs = args.map(arg => this.safeStringifyObject(arg));
+            const safeMessage = args.map(arg => this.safeStringifyObject(arg)).join(' ');
+            
+            this.addLog('error', safeMessage, safeArgs);
             originalError.apply(console, args);
         };
 
         console.warn = (...args) => {
-            this.addLog('warn', args.join(' '), args);
+            // 安全处理参数，避免循环引用
+            const safeArgs = args.map(arg => this.safeStringifyObject(arg));
+            const safeMessage = args.map(arg => this.safeStringifyObject(arg)).join(' ');
+            
+            this.addLog('warn', safeMessage, safeArgs);
             originalWarn.apply(console, args);
         };
 
         console.info = (...args) => {
-            this.addLog('info', args.join(' '), args);
+            // 安全处理参数，避免循环引用
+            const safeArgs = args.map(arg => this.safeStringifyObject(arg));
+            const safeMessage = args.map(arg => this.safeStringifyObject(arg)).join(' ');
+            
+            this.addLog('info', safeMessage, safeArgs);
             originalInfo.apply(console, args);
         };
     }

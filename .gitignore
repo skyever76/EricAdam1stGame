@@ -23,6 +23,11 @@ venv.bak/
 *.swo
 *~
 
+# Development tools
+.eslintcache
+.prettierignore
+.stylelintcache
+
 # OS
 .DS_Store
 .DS_Store?
@@ -35,11 +40,22 @@ Thumbs.db
 # Logs
 *.log
 logs/
+game-logs-*.txt
+game-logs-*.json
+debug-logs/
+error-logs/
+performance-logs/
 
 # Temporary files
 *.tmp
 *.temp
 debug.html
+logs.html
+
+# Browser storage and cache
+.localStorage/
+sessionStorage/
+browser-cache/
 
 # Build files
 dist/
@@ -49,4 +65,11 @@ build/
 # Game specific
 # Uncomment if you want to exclude game saves
 # saves/
-# *.save 
+# *.save
+
+# Game logs and debugging
+game-debug.log
+phaser-debug.log
+console-output.log
+error-reports/
+crash-reports/ 
