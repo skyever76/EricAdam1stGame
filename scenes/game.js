@@ -1,8 +1,8 @@
 // game.js
 
-import PreloaderScene from './scenes/PreloaderScene.js';
-import PlayerSelectScene from './scenes/PlayerSelectScene.js';
-import MainScene from './scenes/MainScene.js';
+import PreloaderScene from './PreloaderScene.js';
+import PlayerSelectScene from './PlayerSelectScene.js';
+import MainScene from './MainScene.js';
 
 console.log('开始初始化游戏配置...');
 

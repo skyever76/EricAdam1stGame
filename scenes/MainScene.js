@@ -1,6 +1,6 @@
 // scenes/MainScene.js - 关卡系统集成
 
-import { LEVELS_CONFIG } from '../levels.js';
+import { LEVELS_CONFIG } from './levels.js';
 import Enemy from './EnemyClass.js';
 import EnemyBullet from './EnemyBullet.js';
 
