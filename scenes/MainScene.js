@@ -60,10 +60,8 @@ export class MainScene extends Phaser.Scene {
         this.pixelArtSystem = new PixelArtSystem(this);
         this.pixelArtSystem.initAllTextures();
       
-        // 🔊 检查音频系统状态（单例模式）
-        if (!AudioManager.audioUnlocked) {
-            AudioManager.promptToUnlock(this);
-        }
+        // 🔊 音频系统已默认启用，无需手动解锁
+        console.log('🎵 音频系统默认启用');
       
         // 🆕 加载当前关卡配置
         this.loadLevelConfig();
@@ -97,6 +95,8 @@ export class MainScene extends Phaser.Scene {
             classType: Bullet,
             maxSize: 50
         });
+        
+        console.log(`🔫 子弹组创建完成: 最大大小=${this.bullets.maxSize}, 当前大小=${this.bullets.getLength()}`);
   
         this.enemies = this.physics.add.group({
             classType: Enemy, // 🔧 使用导入的Enemy类
@@ -118,9 +118,10 @@ export class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.enemyBullets, this.handleEnemyBulletHit, null, this);
         
         // 🪨 障碍物碰撞检测（在障碍物管理器初始化后设置）
-        this.setupObstacleCollisions();
+        // 🆕 临时禁用障碍物碰撞检测
+        // this.setupObstacleCollisions();
   
-        // 🆕 初始化触摸控制系统
+        // 🆕 初始化触摸控制系统（仅iPad启用）
         this.touchControls = new TouchControls(this);
         this.touchControls.create();
 
@@ -135,8 +136,26 @@ export class MainScene extends Phaser.Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D
         });
         
-        this.input.on('pointerdown', this.shoot, this);
-        this.input.keyboard.on('keydown-SPACE', this.shoot, this);
+        // 🆕 添加调试键 - F1键显示物理体边界
+        this.debugKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F1);
+        this.showPhysicsBounds = false;
+        this.physicsDebugGraphics = null;
+        
+        // 修复射击事件绑定 - 使用包装函数传递正确的参数
+        this.input.on('pointerdown', (pointer) => {
+            // 鼠标点击时，计算从玩家到鼠标的角度
+            if (this.player && this.player.active) {
+                const startX = this.player.x + this.playerSize / 2;
+                const startY = this.player.y;
+                const angle = Phaser.Math.Angle.Between(startX, startY, pointer.worldX, pointer.worldY);
+                this.shoot(angle);
+            }
+        }, this);
+        
+        this.input.keyboard.on('keydown-SPACE', () => {
+            // 键盘射击时，默认朝右射击（角度0）
+            this.shoot(0);
+        }, this);
         this.input.keyboard.on('keydown-P', this.togglePause, this);
         
         // 🆕 武器切换按键
@@ -157,16 +176,23 @@ export class MainScene extends Phaser.Scene {
         this.sceneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
         
         // 🌍 默认加载第一个场景
-        this.advancedSceneManager.loadScene('inside_golem');
+        this.advancedSceneManager.loadScene('mechanical_interior');
         
         // 全局R键监听器（用于重新开始游戏）
         this.input.keyboard.on('keydown-R', this.handleRestart, this);
         
         // 初始化音频上下文（解决AudioContext警告）
         this.input.once('pointerdown', () => {
+            // 解锁AudioManager
+            if (AudioManager && !AudioManager.audioUnlocked) {
+                AudioManager.unlockAudio();
+                console.log('MainScene: AudioManager已解锁');
+            }
+            
+            // 恢复Phaser音频上下文
             if (this.sound && this.sound.context && this.sound.context.state === 'suspended') {
                 this.sound.context.resume();
-                console.log('MainScene: 音频上下文已恢复');
+                console.log('MainScene: Phaser音频上下文已恢复');
             }
         });
   
@@ -187,8 +213,8 @@ export class MainScene extends Phaser.Scene {
         });
 
         // 显示版本信息
-        this.add.text(1200, 700, 'v4.1-SideScroll', { 
-            font: '14px Arial', 
+        this.add.text(1000, 680, 'v4.1-SideScroll', { 
+            font: '12px Arial', 
             fill: '#666666' 
         }).setOrigin(1).setScrollFactor(0); // 🆕 固定显示
     
@@ -204,7 +230,8 @@ export class MainScene extends Phaser.Scene {
         // 🆕 初始化障碍物系统
         this.obstacleManager = new ObstacleManager(this);
         this.obstacleManager.setLevel('forest');
-        this.obstacleManager.spawnObstacles();
+        // 🆕 临时禁用障碍物生成
+        // this.obstacleManager.spawnObstacles();
     }
 
     // 🆕 初始化武器系统
@@ -250,6 +277,7 @@ export class MainScene extends Phaser.Scene {
             this.currentWeaponIndex = index;
             this.currentWeapon = targetWeapon;
             
+            // 🆕 如果是iPad，高亮触摸控制按钮
             if (this.touchControls && this.touchControls.isMobile) {
                 this.touchControls.highlightWeaponButton(index);
             }
@@ -361,7 +389,7 @@ export class MainScene extends Phaser.Scene {
         }
           
         this.player = this.physics.add.sprite(100, 360, playerTexture)
-            .setCollideWorldBounds(true)
+            .setCollideWorldBounds(false) // 🆕 移除世界边界限制，避免卡住
             .setDisplaySize(this.playerSize, this.playerSize);
     
         // 设置玩家属性到 sprite
@@ -371,53 +399,7 @@ export class MainScene extends Phaser.Scene {
         console.log('MainScene: 玩家创建完成，速度:', this.playerSpeed);
     }
 
-    // 🆕 创建粒子效果系统
-    createParticleSystems() {
-        // 射击粒子效果
-        this.shootEmitter = this.add.particles(0, 0, 'shoot', {
-            speed: { min: 50, max: 150 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 300,
-            frequency: 50,
-            blendMode: 'ADD'
-        });
-        
-        // 爆炸粒子效果
-        this.explosionEmitter = this.add.particles(0, 0, 'explosion', {
-            speed: { min: 100, max: 300 },
-            scale: { start: 1, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 500,
-            frequency: 20,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 }
-        });
-        
-        // 受伤粒子效果
-        this.damageEmitter = this.add.particles(0, 0, 'damage', {
-            speed: { min: 30, max: 80 },
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 400,
-            frequency: 30,
-            blendMode: 'ADD',
-            angle: { min: -30, max: 30 }
-        });
-        
-        // 敌人死亡粒子效果
-        this.deathEmitter = this.add.particles(0, 0, 'death', {
-            speed: { min: 80, max: 200 },
-            scale: { start: 0.8, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 600,
-            frequency: 25,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 }
-        });
-        
-        console.log('MainScene: 粒子效果系统创建完成');
-    }
+
 
 
 
@@ -467,40 +449,32 @@ export class MainScene extends Phaser.Scene {
         });
     }
 
-    // 🆕 处理敌人逃脱
+    // 🆕 处理敌人逃脱（单个敌人）
     handleEnemyEscape(enemy) {
-        // 扣除血量
-        this.currentHealth -= this.damagePerEnemyEscape;
-      
-        // 确保血量不低于0
-        if (this.currentHealth < 0) {
-            this.currentHealth = 0;
-        }
-      
-        console.log(`MainScene: 敌人逃脱扣血 ${this.damagePerEnemyEscape}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
-      
-        // 销毁敌人
-        enemy.destroy();
-      
-        // 🆕 视觉反馈效果
-        this.showDamageEffect(this.damagePerEnemyEscape, 'escape');
-      
-        // UI更新通过主循环自动处理
-      
-        // 检查游戏是否结束
-        if (this.currentHealth <= 0) {
-            this.gameOver();
-        }
+        // 触发敌人逃脱事件，让事件处理器统一处理
+        enemy.escape();
     }
 
     // 🆕 显示受伤效果
     showDamageEffect(damageAmount, damageType = 'escape') {
-        // 🆕 受伤粒子效果
-        this.damageEmitter.setPosition(this.player.x, this.player.y);
-        this.damageEmitter.start();
-        this.time.delayedCall(150, () => {
-            this.damageEmitter.stop();
-        });
+        // 💔 受伤效果 - 使用简单的Graphics动画
+        if (this.player) {
+            const damageEffect = this.add.graphics();
+            damageEffect.fillStyle(0xff0000, 0.6);
+            damageEffect.fillCircle(this.player.x, this.player.y, 30);
+            damageEffect.setDepth(150);
+            
+            // 简单的扩散和淡出动画
+            this.tweens.add({
+                targets: damageEffect,
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 400,
+                ease: 'Power2',
+                onComplete: () => damageEffect.destroy()
+            });
+        }
         
         // 屏幕红色闪烁效果
         const damageOverlay = this.add.rectangle(640, 360, 1280, 720, 0xff0000, 0.3).setScrollFactor(0); // 🆕 横版卷轴：固定显示
@@ -510,9 +484,7 @@ export class MainScene extends Phaser.Scene {
             targets: damageOverlay,
             alpha: 0,
             duration: 200,
-            onComplete: () => {
-                damageOverlay.destroy();
-            }
+            onComplete: () => damageOverlay.destroy()
         });
       
         // 摄像机震动效果
@@ -541,9 +513,7 @@ export class MainScene extends Phaser.Scene {
             y: damage.y - 50,
             alpha: 0,
             duration: 1000,
-            onComplete: () => {
-                damage.destroy();
-            }
+            onComplete: () => damage.destroy()
         });
     }
 
@@ -601,37 +571,350 @@ export class MainScene extends Phaser.Scene {
     updatePlayerSystem() {
         if (this.isGameOver) return;
         
-        // 更新触摸控制
+        // 🆕 检查触摸控制系统状态
         if (this.touchControls) {
+            const touchStatus = {
+                isMobile: this.touchControls.isMobile,
+                leftStickActive: this.touchControls.leftStick ? this.touchControls.leftStick.active : false,
+                isEnabled: this.touchControls.isEnabled
+            };
+            
+            // 🆕 只在触摸控制状态异常时显示警告
+            if (touchStatus.isMobile && !touchStatus.isEnabled) {
+                console.warn(`⚠️ 触摸控制系统状态异常:`, touchStatus);
+            }
+            
             this.touchControls.update();
         }
         
+        // 🆕 键盘控制（所有设备都启用，iPad可同时使用）
+        this.updatePlayerMovement();
+        
+        // 🆕 注释掉原来的条件检查
         // 键盘控制（非触摸设备）
-        if (!this.touchControls || !this.touchControls.isMobile) {
-            this.updatePlayerMovement();
-        }
+        // if (!this.touchControls || !this.touchControls.isMobile) {
+        //     this.updatePlayerMovement();
+        // }
     }
 
     // 🎮 更新玩家移动
     updatePlayerMovement() {
-            this.player.setVelocity(0);
-          
-        // 水平移动
-            if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-                    this.player.setVelocityX(-this.playerSpeed);
-            } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-                this.player.setVelocityX(this.playerSpeed);
+        // 🆕 添加调试信息
+        const keysPressed = [];
+        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) keysPressed.push('左');
+        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) keysPressed.push('右');
+        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) keysPressed.push('上');
+        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) keysPressed.push('下');
+        
+        // 🆕 只在按下按键时显示状态（减少日志噪音）
+        if (keysPressed.length > 0) {
+            console.log(`🎮 按键检测: ${keysPressed.join(',')} | 玩家位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
+        }
+        
+        // 🆕 检查玩家物理体状态（只在有问题时显示）
+        if (this.player.body) {
+            const body = this.player.body;
+            const isBodyNormal = body.enable && !body.immovable && !body.collideWorldBounds;
+            
+            // 🆕 只在物理体状态异常时显示警告
+            if (!isBodyNormal) {
+                console.warn(`⚠️ 玩家物理体状态异常: 启用=${body.enable}, 不可移动=${body.immovable}, 世界边界=${body.collideWorldBounds}`);
             }
-          
+        }
+        
+        // 重置速度
+        this.player.setVelocity(0);
+        
+        // 🆕 重置加速度，确保没有其他系统干扰玩家移动
+        this.player.body.setAcceleration(0, 0);
+        
+        // 水平移动
+        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+            this.player.setVelocityX(-this.playerSpeed);
+        } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+            this.player.setVelocityX(this.playerSpeed);
+        }
+        
         // 垂直移动（限制在世界边界内）
-            if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
             if (this.player.y > 50) {
                 this.player.setVelocityY(-this.playerSpeed);
             }
-            } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+        } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
             if (this.player.y < 670) {
                 this.player.setVelocityY(this.playerSpeed);
             }
+        }
+        
+        // 🆕 显示最终速度
+        if (keysPressed.length > 0) {
+            console.log(`🎮 最终速度: X=${this.player.body.velocity.x.toFixed(0)}, Y=${this.player.body.velocity.y.toFixed(0)}`);
+        }
+        
+        // 🆕 检查玩家是否被卡住（只在有问题时显示）
+        if (this.player.body.velocity.x === 0 && this.player.body.velocity.y === 0 && keysPressed.length > 0) {
+            console.warn(`⚠️ 玩家可能被卡住！按键: ${keysPressed.join(',')} | 位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
+            
+            // 🆕 检查周围是否有障碍物
+            if (this.obstacleManager && this.obstacleManager.obstacles) {
+                const nearbyObstacles = [];
+                this.obstacleManager.obstacles.getChildren().forEach(obstacle => {
+                    if (obstacle.active) {
+                        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, obstacle.x, obstacle.y);
+                        if (distance < 100) {
+                            nearbyObstacles.push({
+                                name: obstacle.name,
+                                distance: distance.toFixed(0),
+                                position: `(${obstacle.x.toFixed(0)}, ${obstacle.y.toFixed(0)})`,
+                                size: `${obstacle.body.width}x${obstacle.body.height}`
+                            });
+                        }
+                    }
+                });
+                
+                if (nearbyObstacles.length > 0) {
+                    console.warn(`🪨 附近障碍物:`, nearbyObstacles);
+                }
+            }
+            
+            // 🆕 尝试强制移动玩家
+            console.log(`🔧 尝试强制移动玩家...`);
+            this.player.body.reset(this.player.x, this.player.y);
+        }
+        
+        // 🆕 新增：检查玩家是否被卡住（即使有速度但位置不变）
+        if (keysPressed.length > 0 && this.player.body.velocity.x !== 0) {
+            // 记录上一帧的位置
+            if (!this.lastPlayerPosition) {
+                this.lastPlayerPosition = { x: this.player.x, y: this.player.y };
+            } else {
+                const distance = Phaser.Math.Distance.Between(
+                    this.lastPlayerPosition.x, this.lastPlayerPosition.y,
+                    this.player.x, this.player.y
+                );
+                
+                // 如果位置几乎没有变化但有速度，说明被卡住了
+                if (distance < 1) {
+                    console.warn(`⚠️ 玩家被卡住！有速度但位置不变: 速度=(${this.player.body.velocity.x.toFixed(0)}, ${this.player.body.velocity.y.toFixed(0)}), 位置=(${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
+                    
+                    // 🆕 检查周围是否有障碍物
+                    if (this.obstacleManager && this.obstacleManager.obstacles) {
+                        const nearbyObstacles = [];
+                        this.obstacleManager.obstacles.getChildren().forEach(obstacle => {
+                            if (obstacle.active) {
+                                const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, obstacle.x, obstacle.y);
+                                if (distance < 150) {
+                                    nearbyObstacles.push({
+                                        name: obstacle.name,
+                                        distance: distance.toFixed(0),
+                                        position: `(${obstacle.x.toFixed(0)}, ${obstacle.y.toFixed(0)})`,
+                                        size: `${obstacle.body.width}x${obstacle.body.height}`,
+                                        destructible: obstacle.destructible
+                                    });
+                                }
+                            }
+                        });
+                        
+                        if (nearbyObstacles.length > 0) {
+                            console.warn(`🪨 附近障碍物:`, nearbyObstacles);
+                        }
+                    }
+                    
+                    // 🆕 尝试强制移动玩家
+                    console.log(`🔧 尝试强制移动玩家...`);
+                    
+                    // 🆕 详细检查玩家物理状态
+                    console.log(`🔍 玩家物理状态检查:`);
+                    console.log(`  - 物理体启用: ${this.player.body.enable}`);
+                    console.log(`  - 物理体类型: ${this.player.body.type}`);
+                    console.log(`  - 物理体大小: ${this.player.body.width}x${this.player.body.height}`);
+                    console.log(`  - 物理体位置: (${this.player.body.x}, ${this.player.body.y})`);
+                    console.log(`  - 物理体速度: (${this.player.body.velocity.x}, ${this.player.body.velocity.y})`);
+                    console.log(`  - 物理体加速度: (${this.player.body.acceleration.x}, ${this.player.body.acceleration.y})`);
+                    console.log(`  - 物理体阻力: (${this.player.body.drag.x}, ${this.player.body.drag.y})`);
+                    console.log(`  - 物理体质量: ${this.player.body.mass}`);
+                    console.log(`  - 物理体不可移动: ${this.player.body.immovable}`);
+                    console.log(`  - 物理体碰撞世界边界: ${this.player.body.collideWorldBounds}`);
+                    
+                    // 🆕 检查是否有其他系统在干扰玩家移动
+                    if (this.advancedSceneManager && this.advancedSceneManager.bloodFlow) {
+                        console.log(`🌊 血液流动系统状态:`, this.advancedSceneManager.bloodFlow);
+                    }
+                    
+                    // 🆕 检查玩家是否在血液流动区域内
+                    const bloodCurrent = this.advancedSceneManager?.mechanicStates.get('bloodCurrent');
+                    if (bloodCurrent) {
+                        bloodCurrent.forEach((zone, index) => {
+                            if (this.player.x >= zone.x - zone.width/2 && 
+                                this.player.x <= zone.x + zone.width/2 &&
+                                this.player.y >= zone.y && 
+                                this.player.y <= zone.y + zone.height) {
+                                console.log(`⚠️ 玩家在血液流动区域 ${index} 内，可能被干扰移动`);
+                                console.log(`  区域位置: (${zone.x}, ${zone.y})`);
+                                console.log(`  区域大小: ${zone.width}x${zone.height}`);
+                                console.log(`  施加的力: (${zone.forceX}, ${zone.forceY})`);
+                            }
+                        });
+                    }
+                    
+                    // 🆕 检查触摸控制系统状态
+                    if (this.touchControls) {
+                        console.log(`📱 触摸控制系统状态:`, {
+                            enabled: this.touchControls.enabled,
+                            isActive: this.touchControls.isActive,
+                            joystickActive: this.touchControls.joystickActive
+                        });
+                    }
+                    
+                    // 🆕 检查场景状态
+                    console.log(`🎬 场景状态:`, {
+                        paused: this.scene.isPaused(),
+                        active: this.scene.isActive(),
+                        visible: this.scene.isVisible()
+                    });
+                    
+                    // 🆕 尝试多种方法解除卡住状态
+                    this.player.body.reset(this.player.x, this.player.y);
+                    this.player.body.setVelocity(0, 0);
+                    this.player.body.setAcceleration(0, 0);
+                    this.player.body.setDrag(0, 0);
+                    
+                    // 🚫 确保清除任何累积的加速度
+                    console.log(`🚫 清除玩家加速度: (${this.player.body.acceleration.x}, ${this.player.body.acceleration.y})`);
+                    this.player.body.setAcceleration(0, 0);
+                    
+                    // 🆕 临时禁用血液流动系统（如果存在）
+                    if (this.advancedSceneManager) {
+                        const bloodCurrent = this.advancedSceneManager.mechanicStates.get('bloodCurrent');
+                        if (bloodCurrent) {
+                            console.log(`🔧 临时禁用血液流动系统以避免干扰`);
+                            this.advancedSceneManager.mechanicStates.delete('bloodCurrent');
+                        }
+                        
+                        // 🚫 标记血液流动系统为禁用状态
+                        this.advancedSceneManager.bloodFlowDisabled = true;
+                        console.log(`🚫 血液流动系统已标记为禁用`);
+                    }
+                    
+                    // 🆕 强制设置位置
+                    this.player.setPosition(this.player.x + 1, this.player.y);
+                    console.log(`🔧 强制移动玩家到: (${this.player.x}, ${this.player.y})`);
+                    
+                    // 🆕 检查是否有隐藏的障碍物在玩家位置
+                    this.checkForInvisibleObstacles();
+                    
+                    // 🆕 检查AdvancedSceneManager的伤害区域
+                    this.checkAdvancedSceneManagerZones();
+                }
+                
+                this.lastPlayerPosition = { x: this.player.x, y: this.player.y };
+            }
+        } else {
+            this.lastPlayerPosition = null;
+        }
+    }
+    
+    // 🆕 检查隐藏的障碍物
+    checkForInvisibleObstacles() {
+        console.log(`🔍 检查玩家位置 (${this.player.x}, ${this.player.y}) 附近的隐藏障碍物:`);
+        
+        // 检查场景中的所有对象
+        this.children.entries.forEach(child => {
+            if (child.body && child !== this.player) {
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, this.player.y,
+                    child.x, child.y
+                );
+                
+                if (distance < 100) {
+                    console.log(`  - 发现对象: ${child.constructor.name}`);
+                    console.log(`    位置: (${child.x}, ${child.y})`);
+                    console.log(`    距离: ${distance.toFixed(1)}`);
+                    console.log(`    物理体: ${child.body.width}x${child.body.height}`);
+                    console.log(`    可见: ${child.visible}`);
+                    console.log(`    激活: ${child.active}`);
+                    console.log(`    名称: ${child.name || 'unnamed'}`);
+                    
+                    // 检查是否与玩家物理体重叠
+                    const playerBounds = this.player.body;
+                    const childBounds = child.body;
+                    
+                    const overlapX = Math.max(0, 
+                        Math.min(playerBounds.x + playerBounds.width, childBounds.x + childBounds.width) -
+                        Math.max(playerBounds.x, childBounds.x)
+                    );
+                    const overlapY = Math.max(0,
+                        Math.min(playerBounds.y + playerBounds.height, childBounds.y + childBounds.height) -
+                        Math.max(playerBounds.y, childBounds.y)
+                    );
+                    
+                    if (overlapX > 0 && overlapY > 0) {
+                        console.log(`    ⚠️ 与玩家物理体重叠: ${overlapX}x${overlapY}`);
+                    }
+                }
+            }
+        });
+    }
+    
+    // 🆕 检查AdvancedSceneManager的伤害区域
+    checkAdvancedSceneManagerZones() {
+        if (!this.advancedSceneManager) return;
+        
+        console.log(`🌍 检查AdvancedSceneManager状态:`);
+        console.log(`  - 当前场景: ${this.advancedSceneManager.currentSceneData?.name || 'None'}`);
+        console.log(`  - 伤害区域数量: ${this.advancedSceneManager.damageZones.size}`);
+        console.log(`  - 机制状态数量: ${this.advancedSceneManager.mechanicStates.size}`);
+        
+        // 检查伤害区域
+        this.advancedSceneManager.damageZones.forEach((data, zone) => {
+            const distance = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                zone.x, zone.y
+            );
+            
+            if (distance < 150) {
+                console.log(`  - 发现伤害区域: ${data.type}`);
+                console.log(`    位置: (${zone.x}, ${zone.y})`);
+                console.log(`    距离: ${distance.toFixed(1)}`);
+                console.log(`    伤害: ${data.damage}`);
+                console.log(`    创建时间: ${data.created}`);
+                
+                // 检查是否与玩家重叠
+                const playerBounds = this.player.body;
+                const zoneBounds = zone.body || { x: zone.x - zone.width/2, y: zone.y - zone.height/2, width: zone.width, height: zone.height };
+                
+                const overlapX = Math.max(0, 
+                    Math.min(playerBounds.x + playerBounds.width, zoneBounds.x + zoneBounds.width) -
+                    Math.max(playerBounds.x, zoneBounds.x)
+                );
+                const overlapY = Math.max(0,
+                    Math.min(playerBounds.y + playerBounds.height, zoneBounds.y + zoneBounds.height) -
+                    Math.max(playerBounds.y, zoneBounds.y)
+                );
+                
+                if (overlapX > 0 && overlapY > 0) {
+                    console.log(`    ⚠️ 与玩家重叠: ${overlapX}x${overlapY}`);
+                }
+            }
+        });
+        
+        // 检查血液流动区域
+        const bloodCurrent = this.advancedSceneManager.mechanicStates.get('bloodCurrent');
+        if (bloodCurrent) {
+            bloodCurrent.forEach((zone, index) => {
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, this.player.y,
+                    zone.x, zone.y
+                );
+                
+                if (distance < 200) {
+                    console.log(`  - 发现血液流动区域 ${index}:`);
+                    console.log(`    位置: (${zone.x}, ${zone.y})`);
+                    console.log(`    大小: ${zone.width}x${zone.height}`);
+                    console.log(`    距离: ${distance.toFixed(1)}`);
+                    console.log(`    力: (${zone.forceX}, ${zone.forceY})`);
+                }
+            });
         }
     }
 
@@ -640,7 +923,7 @@ export class MainScene extends Phaser.Scene {
         // 更新所有敌人AI
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active && enemy.update) {
-                enemy.update();
+                enemy.update(this.time.now, this.game.loop.delta);
             }
         });
         
@@ -659,13 +942,13 @@ export class MainScene extends Phaser.Scene {
         if (this.powerUpManager) {
             this.powerUpManager.update();
         }
-    }
+            }
 
     // 🪨 更新障碍物系统
     updateObstacleSystem() {
         // ObstacleManager 现在不需要每帧更新，只在障碍物被摧毁时自动处理
         // 这里可以保留用于未来扩展
-    }
+        }
         
     // 🌍 更新场景系统
     updateSceneSystem() {
@@ -676,6 +959,16 @@ export class MainScene extends Phaser.Scene {
         // 检查场景切换快捷键
         if (Phaser.Input.Keyboard.JustDown(this.sceneKey)) {
             this.sceneSwitcher.toggle();
+        }
+        
+        // 🆕 检查调试键
+        if (Phaser.Input.Keyboard.JustDown(this.debugKey)) {
+            this.togglePhysicsDebug();
+        }
+        
+        // 🆕 更新物理体调试显示
+        if (this.showPhysicsBounds) {
+            this.updatePhysicsDebug();
         }
     }
 
@@ -693,7 +986,7 @@ export class MainScene extends Phaser.Scene {
             this.updateUISystem();
             return;
         }
-        
+      
         // 检查关卡完成条件
         this.checkLevelComplete();
         
@@ -788,6 +1081,7 @@ export class MainScene extends Phaser.Scene {
             if (player && player.active) {
                 player.isInvincible = false;
                 player.clearTint();
+                console.log(`🛡️ 玩家无敌状态结束`);
             }
         });
       
@@ -799,7 +1093,13 @@ export class MainScene extends Phaser.Scene {
     handleBulletHit(bullet, enemy) {
         if (!enemy.active) return;
 
-        console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
+        // 🆕 详细的中文击中信息
+        const enemyName = enemy.enemyConfig?.name || enemy.enemyData?.name || '未知敌人';
+        const bulletPos = `(${bullet.x.toFixed(0)}, ${bullet.y.toFixed(0)})`;
+        const enemyPos = `(${enemy.x.toFixed(0)}, ${enemy.y.toFixed(0)})`;
+        const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y);
+        
+        console.log(`🎯 子弹击中敌人: ${bullet.weaponType} | 子弹位置: ${bulletPos} | 敌人位置: ${enemyPos} | 距离: ${distance.toFixed(1)} | 敌人: ${enemyName}`);
 
         // 🔊 播放击中音效
         AudioManager.play('hit');
@@ -808,19 +1108,22 @@ export class MainScene extends Phaser.Scene {
 
         // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
-            console.log('MainScene: 执行导弹爆炸');
+            console.log('💥 MainScene: 执行导弹爆炸');
             this.executeMissileExplosion(bullet, enemy);
             // 导弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else if (bullet.weaponType === '核弹') {
-            console.log('MainScene: 执行核弹爆炸');
+            console.log('☢️ MainScene: 执行核弹爆炸');
             this.executeNuclearStrike(bullet, enemy);
             // 核弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else {
             // 🔧 普通武器 - 让敌人类处理自己的伤害计算
             if (enemy.takeDamage) {
+                const enemyHealth = enemy.health || enemy.maxHealth || 100;
+                console.log(`💥 普通武器攻击: ${bullet.weaponType} | 伤害: ${bullet.damage} | 敌人血量: ${enemyHealth} → ${enemyHealth - bullet.damage}`);
                 isDead = enemy.takeDamage(bullet.damage);
             } else {
                 // 兼容旧版敌人
+                console.log(`💥 兼容模式攻击: ${bullet.weaponType} | 直接击杀敌人`);
                 isDead = true;
             }
         }
@@ -830,13 +1133,15 @@ export class MainScene extends Phaser.Scene {
         
         if (isDead) {
             // 通过事件系统报告击杀，让事件处理器统一处理
-            const enemyName = enemy.enemyData ? enemy.enemyData.name : '小兵';
+            const enemyName = enemy.enemyConfig?.name || enemy.enemyData?.name || '小兵';
             let baseScore = bullet.damage;
             if (this.selectedPlayer && this.selectedPlayer.damageMultiplier) {
                 baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
             }
             const killBonus = 20;
             const scoreGain = baseScore + killBonus;
+            
+            console.log(`💀 敌人死亡: ${enemyName} | 武器: ${bullet.weaponType} | 得分: ${scoreGain} (基础${baseScore} + 击杀奖励${killBonus})`);
             
             this.events.emit('enemyDied', { 
                 enemyName: enemyName,
@@ -845,9 +1150,11 @@ export class MainScene extends Phaser.Scene {
                 enemy: enemy,
                 weaponType: bullet.weaponType
             });
+        } else {
+            console.log(`💪 敌人存活: ${enemyName} | 剩余血量: ${enemy.health || '未知'}`);
         }
 
-        console.log(`MainScene: 使用${bullet.weaponType}攻击完成`);
+        console.log(`✅ MainScene: 使用${bullet.weaponType}攻击完成`);
     }
 
     gameOver() {
@@ -899,10 +1206,39 @@ export class MainScene extends Phaser.Scene {
             fill: '#ffffff'
         }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
-        this.add.text(640, 410, '按 R 重新开始', {
-            font: '16px Arial',
-            fill: '#cccccc'
-        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
+        // 🆕 创建重新开始按钮
+        const restartButton = this.add.rectangle(640, 420, 200, 50, 0x4CAF50, 0.8)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true });
+        
+        const restartText = this.add.text(640, 420, '重新开始', {
+            font: '20px Arial',
+            fill: '#ffffff'
+        }).setOrigin(0.5).setScrollFactor(0);
+        
+        // 🆕 按钮悬停效果
+        restartButton.on('pointerover', () => {
+            restartButton.setFillStyle(0x66BB6A, 0.9);
+            restartText.setStyle({ fill: '#ffffff' });
+        });
+        
+        restartButton.on('pointerout', () => {
+            restartButton.setFillStyle(0x4CAF50, 0.8);
+            restartText.setStyle({ fill: '#ffffff' });
+        });
+        
+        // 🆕 按钮点击事件
+        restartButton.on('pointerdown', () => {
+            console.log('🔄 用户点击重新开始按钮');
+            this.handleRestart();
+        });
+        
+        // 🆕 保存按钮引用以便后续清理
+        this.gameOverUI = {
+            background: gameOverBg,
+            restartButton: restartButton,
+            restartText: restartText
+        };
       
         // 🆕 暂停游戏逻辑但保持输入监听器活跃
         this.scene.pause();
@@ -921,10 +1257,16 @@ export class MainScene extends Phaser.Scene {
     }
 
     shoot(angle = null) {
-        if (this.isGameOver || this.scene.isPaused()) return; // 游戏状态检查
+        console.log(`🎯 射击触发: 角度=${angle}, 游戏状态=${this.isGameOver}, 暂停=${this.scene.isPaused()}`);
+        
+        if (this.isGameOver || this.scene.isPaused()) {
+            console.log('❌ 射击被阻止：游戏结束或暂停');
+            return; // 游戏状态检查
+        }
         
         // 🆕 检查子弹是否足够
         if (!this.currentWeapon.hasAmmo()) {
+            console.log('❌ 射击被阻止：子弹不足');
             this.showNoBulletsMessage();
             return;
         }
@@ -942,6 +1284,8 @@ export class MainScene extends Phaser.Scene {
             console.log('MainScene: 玩家不存在或未激活');
             return;
         }
+        
+        console.log(`✅ 射击条件满足，开始射击: 武器=${this.currentWeapon.name}, 子弹数=${this.currentWeapon.bulletCount}`);
         
         // 🆕 消耗子弹
         this.currentWeapon.consumeAmmo();
@@ -962,11 +1306,16 @@ export class MainScene extends Phaser.Scene {
         
         // 🆕 如果提供了角度（来自触摸控制），使用它；否则计算鼠标角度
         if (angle === null) {
-            angle = Phaser.Math.Angle.Between(
-                startX, startY,
-                this.input.activePointer.worldX,
-                this.input.activePointer.worldY
-            );
+            const mouseX = this.input.activePointer.worldX;
+            const mouseY = this.input.activePointer.worldY;
+            angle = Phaser.Math.Angle.Between(startX, startY, mouseX, mouseY);
+            
+            const angleDegrees = Phaser.Math.RadToDeg(angle);
+            const distance = Phaser.Math.Distance.Between(startX, startY, mouseX, mouseY);
+            console.log(`🎯 计算射击角度: 玩家位置(${startX.toFixed(0)}, ${startY.toFixed(0)}) | 鼠标位置(${mouseX.toFixed(0)}, ${mouseY.toFixed(0)}) | 角度: ${angleDegrees.toFixed(1)}° | 距离: ${distance.toFixed(0)}`);
+        } else {
+            const angleDegrees = Phaser.Math.RadToDeg(angle);
+            console.log(`🎯 使用预设角度: ${angleDegrees.toFixed(1)}°`);
         }
         
         // 🆕 加特林扇形散弹
@@ -995,10 +1344,10 @@ export class MainScene extends Phaser.Scene {
             const burstDelays = weapon.getBurstDelays();
             for (let i = 1; i < burstDelays.length; i++) {
                 this.time.delayedCall(burstDelays[i], () => {
-                    if (!this.isGameOver && this.player && this.player.active) {
-                        this.fireSingleBullet(startX, startY, angle, weapon);
-                    }
-                }, null, this);
+                        if (!this.isGameOver && this.player && this.player.active) {
+                            this.fireSingleBullet(startX, startY, angle, weapon);
+                        }
+                    }, null, this);
             }
             
             console.log(`MainScene: 发射${weapon.name}，连发${weapon.burstCount}发`);
@@ -1007,25 +1356,28 @@ export class MainScene extends Phaser.Scene {
     
     // 🆕 发射单发子弹
     fireSingleBullet(x, y, angle, weapon) {
+        const angleDegrees = Phaser.Math.RadToDeg(angle);
+        console.log(`🔫 尝试发射子弹: 位置(${x.toFixed(0)}, ${y.toFixed(0)}), 角度${angleDegrees.toFixed(1)}°, 武器${weapon.name}`);
+        
         const bullet = this.bullets.get();
         if (bullet) {
+            console.log(`✅ 成功获取子弹对象，开始发射`);
+            
             // 调用Bullet实例的fire方法，并把当前武器的配置传进去
             bullet.fire(x, y, angle, weapon);
+            
+            console.log(`✅ 子弹发射完成，位置(${bullet.x.toFixed(0)}, ${bullet.y.toFixed(0)}), 可见性:${bullet.visible}, 激活:${bullet.active}`);
             
             // 🔊 播放射击音效
             if (this.audioManager) {
                 this.audioManager.play('shoot');
             }
             
-            // 🆕 射击粒子效果
-            this.shootEmitter.setPosition(x, y);
-            this.shootEmitter.start();
-            this.time.delayedCall(100, () => {
-                this.shootEmitter.stop();
-            });
-            
             // 🔊 播放射击音效
             AudioManager.play('shoot');
+            
+            // 🔫 射击视觉效果
+            this.createShootEffect(x, y);
             
             // 🆕 特殊武器效果
             if (weapon.name === '声波枪' && weapon.isContinuous) {
@@ -1036,8 +1388,12 @@ export class MainScene extends Phaser.Scene {
             if (weapon.name === '核弹') {
                 this.setupNuclearHoming(bullet);
             }
+        } else {
+            console.error(`❌ 无法从子弹组获取子弹对象！子弹组大小: ${this.bullets.getLength()}`);
         }
     }
+    
+
     
         // 🆕 核弹追踪功能
     setupNuclearHoming(bullet) {
@@ -1079,16 +1435,15 @@ export class MainScene extends Phaser.Scene {
                 // 添加追踪视觉效果
                 bullet.setRotation(newAngle);
                 
-                // 添加追踪轨迹效果
+                // 添加追踪轨迹效果（不使用过时的粒子系统）
                 if (Math.random() < 0.5) { // 增加轨迹概率
-                    this.add.particles('nuke').createEmitter({
-                        x: bullet.x,
-                        y: bullet.y,
-                        speed: { min: 10, max: 30 },
-                        scale: { start: 0.3, end: 0 },
-                        alpha: { start: 0.5, end: 0 },
-                        lifespan: 300,
-                        quantity: 1
+                    const trail = this.add.graphics();
+                    trail.fillStyle(0xff0000, 0.5);
+                    trail.fillCircle(bullet.x, bullet.y, 3);
+                    trail.setDepth(5);
+                    
+                    this.time.delayedCall(300, () => {
+                        trail.destroy();
                     });
                 }
             }
@@ -1188,13 +1543,8 @@ export class MainScene extends Phaser.Scene {
                     const scoreGain = Math.floor(baseScore * distanceFactor);
                     this.score += scoreGain;
                   
-                    if (this.deathEmitter) {
-                        this.deathEmitter.setPosition(enemy.x, enemy.y);
-                        this.deathEmitter.start();
-                        this.time.delayedCall(100, () => { 
-                            if (this.deathEmitter) this.deathEmitter.stop(); 
-                        });
-                    }
+                                        // 💀 死亡视觉效果
+                    this.createDeathEffect(enemy.x, enemy.y);
                     enemy.destroy();
                 }
             }
@@ -1251,14 +1601,8 @@ export class MainScene extends Phaser.Scene {
         // 屏幕震动
         this.cameras.main.shake(300, 0.02);
       
-        // 爆炸粒子
-        if (this.explosionEmitter) {
-            this.explosionEmitter.setPosition(center.x, center.y);
-            this.explosionEmitter.start();
-            this.time.delayedCall(300, () => { 
-                if (this.explosionEmitter) this.explosionEmitter.stop(); 
-            });
-        }
+        // 爆炸视觉效果
+        this.createExplosionEffect(center.x, center.y);
     }
     
     // 🆕 声波持续效果
@@ -1356,40 +1700,43 @@ export class MainScene extends Phaser.Scene {
 
     // 🆕 创建放射性粒子效果
     createRadiationParticles(center) {
-        // 创建临时粒子发射器
-        const radiationEmitter = this.add.particles(center.x, center.y, 'bullet', {
-            speed: { min: 100, max: 400 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 0.8, end: 0 },
-            lifespan: 1500,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 3,
-            tint: [0xff0000, 0xff6600, 0xffff00, 0x00ff00]
-        }).setDepth(600);
-      
-        // 2秒后停止粒子效果
-        this.time.delayedCall(2000, () => {
-            radiationEmitter.destroy();
+        // 创建简单的放射性效果（不使用过时的粒子系统）
+        const effect = this.add.graphics();
+        effect.fillStyle(0xff0000, 0.6);
+        effect.fillCircle(center.x, center.y, 50);
+        effect.setDepth(600);
+        
+        // 放射性扩散动画
+        this.tweens.add({
+            targets: effect,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 2000,
+            onComplete: () => {
+                effect.destroy();
+            }
         });
     }
 
     // 🆕 创建敌人蒸发效果
     createEnemyVaporizeEffect(enemy) {
-        // 敌人蒸发粒子
-        const vaporize = this.add.particles(enemy.x, enemy.y, 'bullet', {
-            speed: { min: 50, max: 150 },
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 800,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 5,
-            tint: 0x00ff00
-        });
-      
-        this.time.delayedCall(1000, () => {
-            vaporize.destroy();
+        // 创建简单的蒸发效果（不使用过时的粒子系统）
+        const effect = this.add.graphics();
+        effect.fillStyle(0x00ff00, 0.8);
+        effect.fillCircle(enemy.x, enemy.y, 30);
+        effect.setDepth(10);
+        
+        // 蒸发扩散动画
+        this.tweens.add({
+            targets: effect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => {
+                effect.destroy();
+            }
         });
     }
 
@@ -1470,7 +1817,15 @@ export class MainScene extends Phaser.Scene {
     // 处理重新开始游戏
     handleRestart() {
         if (this.isGameOver || this.isLevelCompleted) {
-            console.log('MainScene: 检测到R键，重新开始游戏');
+            console.log('MainScene: 重新开始游戏');
+            
+            // 🆕 清理游戏结束界面UI
+            if (this.gameOverUI) {
+                if (this.gameOverUI.background) this.gameOverUI.background.destroy();
+                if (this.gameOverUI.restartButton) this.gameOverUI.restartButton.destroy();
+                if (this.gameOverUI.restartText) this.gameOverUI.restartText.destroy();
+                this.gameOverUI = null;
+            }
             
             // 如果场景被暂停，先恢复
             if (this.scene.isPaused()) {
@@ -1488,20 +1843,10 @@ export class MainScene extends Phaser.Scene {
     // 🆕 检查关卡完成条件
     checkLevelComplete() {
         if (this.isGameOver || this.isLevelCompleted) return;
-      
-        const currentTime = this.time.now;
-        const survivalTime = currentTime - this.gameStartTime;
-      
-        // 检查生存时间条件
-        if (survivalTime >= this.levelCompleteTime) {
-            this.completeLevel(`生存时间达到${this.levelCompleteTime/1000}秒`);
-            return;
-        }
-      
-        // 检查击杀数条件
-        if (this.killCount >= this.levelCompleteKills) {
-            this.completeLevel(`击杀${this.levelCompleteKills}个敌人`);
-            return;
+
+        // 只检查BOSS是否被击败
+        if (this.bossDefeated) {
+            this.completeLevel('击败关卡BOSS');
         }
     }
     
@@ -1535,7 +1880,7 @@ export class MainScene extends Phaser.Scene {
         if (SaveManager) {
             SaveManager.saveAll();
         }
-        
+      
         // 显示关卡完成界面
         this.showLevelCompleteScreen(reason);
     }
@@ -1615,7 +1960,7 @@ export class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 关卡目标
-        const targetText = `目标: 到达终点 或 生存${this.currentLevel.levelDuration/1000}秒 或 击杀${this.currentLevel.targetKills}个敌人`;
+        const targetText = `目标: 到达终点并击败关卡BOSS`;
         const levelTarget = this.add.text(640, 420, targetText, {
             font: '18px Arial',
             fill: '#ffff00',
@@ -1719,27 +2064,30 @@ export class MainScene extends Phaser.Scene {
         this.enemySpawnRate = this.currentLevel.spawnRate;
         this.maxEnemies = this.currentLevel.maxEnemies;
         this.currentEnemyCount = 0;
+        this.bossDefeated = false; // 🆕 初始化BOSS击败状态
+        this.bossSpawned = false; // 🆕 初始化BOSS生成状态
+        this.bossTriggerDistance = 3500; // 🆕 BOSS触发距离（距离关底500像素）
     }
 
     createLevelBackground() {
-        // 简化的横版卷轴背景
+        // 简化的横版卷轴背景 - 淡色半透明效果
         const graphics = this.add.graphics();
       
-        // 天空渐变
-        graphics.fillGradientStyle(0x87CEEB, 0x87CEEB, 0xF0F8FF, 0xF0F8FF, 1);
+        // 天空渐变 - 淡色半透明
+        graphics.fillGradientStyle(0x87CEEB, 0x87CEEB, 0xF0F8FF, 0xF0F8FF, 0.3); // 透明度0.3
         graphics.fillRect(0, 0, 4000, 400);
       
-        // 地面
-        graphics.fillStyle(0x228B22);
+        // 地面 - 淡色半透明
+        graphics.fillStyle(0x228B22, 0.4); // 透明度0.4
         graphics.fillRect(0, 400, 4000, 320);
       
         graphics.setDepth(-100);
         graphics.setScrollFactor(0.3); // 背景视差效果
       
-        console.log('🌄 横版卷轴背景创建完成');
+        console.log('🌄 横版卷轴淡色半透明背景创建完成');
     }
 
-    // 🎨 创建像素艺术背景
+    // 🎨 创建像素艺术背景 - 淡色半透明效果
     createPixelArtBackground() {
         // 根据关卡索引选择主题
         const levelIndex = this.currentLevelIndex + 1;
@@ -1748,7 +2096,7 @@ export class MainScene extends Phaser.Scene {
         // 创建背景图形
         const graphics = this.add.graphics();
         
-        // 分层渐变天空背景（Phaser兼容）
+        // 分层渐变天空背景（Phaser兼容）- 淡色半透明
         const gradientHeight = 400;
         const colorCount = theme.bgColors.length;
         const segmentHeight = gradientHeight / (colorCount - 1);
@@ -1759,20 +2107,20 @@ export class MainScene extends Phaser.Scene {
             const startColor = this.hexToRgb(theme.bgColors[i]);
             const endColor = this.hexToRgb(theme.bgColors[i + 1]);
             
-            // 创建渐变效果
+            // 创建渐变效果 - 淡色半透明
             for (let y = startY; y < endY; y++) {
                 const ratio = (y - startY) / segmentHeight;
                 const color = this.interpolateColor(startColor, endColor, ratio);
-                graphics.fillStyle(color);
+                graphics.fillStyle(color, 0.3); // 透明度0.3
                 graphics.fillRect(0, y, 4000, 1);
             }
         }
         
-        // 视差背景层
+        // 视差背景层 - 淡色半透明
         this.createParallaxLayers(graphics, theme);
         
-        // 地面
-        graphics.fillStyle(this.hexToRgb(theme.groundColor));
+        // 地面 - 淡色半透明
+        graphics.fillStyle(this.hexToRgb(theme.groundColor), 0.4); // 透明度0.4
         graphics.fillRect(0, 400, 4000, 320);
         
         graphics.setDepth(-100);
@@ -1795,24 +2143,24 @@ export class MainScene extends Phaser.Scene {
         return (r << 16) | (g << 8) | b;
     }
 
-    // 🎨 创建视差背景层
+    // �� 创建视差背景层 - 淡色半透明效果
     createParallaxLayers(graphics, theme) {
-        // 远景层
-        graphics.fillStyle(0x222222);
+        // 远景层 - 淡色半透明
+        graphics.fillStyle(0x222222, 0.2); // 透明度0.2
         for (let i = 0; i < 20; i++) {
             const x = i * 200;
             graphics.fillRect(x, 300, 60, 100);
         }
         
-        // 中景层
-        graphics.fillStyle(0x444444);
+        // 中景层 - 淡色半透明
+        graphics.fillStyle(0x444444, 0.3); // 透明度0.3
         for (let i = 0; i < 33; i++) {
             const x = i * 120;
             graphics.fillRect(x, 350, 40, 50);
         }
         
-        // 近景层
-        graphics.fillStyle(0x666666);
+        // 近景层 - 淡色半透明
+        graphics.fillStyle(0x666666, 0.4); // 透明度0.4
         for (let i = 0; i < 50; i++) {
             const x = i * 80;
             graphics.fillRect(x, 380, 20, 20);
@@ -1863,7 +2211,7 @@ export class MainScene extends Phaser.Scene {
         
         // 🆕 横版卷轴：玩家在世界坐标中的起始位置
         this.player = this.physics.add.sprite(100, 360, playerTexture)
-            .setCollideWorldBounds(true)
+            .setCollideWorldBounds(false) // 🆕 移除世界边界限制，避免卡住
             .setDisplaySize(this.playerSize, this.playerSize);
       
         this.player.playerSpeed = this.playerSpeed;
@@ -1924,14 +2272,20 @@ export class MainScene extends Phaser.Scene {
     spawnLevelEnemy() {
         if (this.isGameOver || this.currentEnemyCount >= this.maxEnemies) return;
       
-        // 从关卡配置中选择敌人类型
+        // 🆕 检查是否应该触发BOSS
+        if (!this.bossSpawned && this.player && this.player.x >= this.bossTriggerDistance) {
+            this.spawnBoss();
+            return;
+        }
+      
+        // 从关卡配置中选择敌人类型（排除BOSS）
         const enemyConfig = this.selectEnemyType();
         if (!enemyConfig) return;
       
         const y = Phaser.Math.Between(50, 670);
         // 🆕 横版卷轴：在摄像机右侧生成敌人
         const spawnX = this.cameras.main.scrollX + 900;
-        
+      
         // 从对象池获取敌人
         const enemy = this.enemies.get();
         if (enemy) {
@@ -1945,37 +2299,50 @@ export class MainScene extends Phaser.Scene {
         }
     }
 
-    // 🆕 根据权重选择敌人类型
+    // 🆕 根据权重选择敌人类型（排除BOSS）
     selectEnemyType() {
         const enemies = this.currentLevel.enemies;
-        let totalWeight = enemies.reduce((sum, enemy) => sum + enemy.weight, 0);
+        // 过滤掉BOSS敌人
+        const normalEnemies = enemies.filter(enemy => !enemy.isBoss);
+        
+        if (normalEnemies.length === 0) return null;
+        
+        let totalWeight = normalEnemies.reduce((sum, enemy) => sum + enemy.weight, 0);
         let random = Math.random() * totalWeight;
       
-        for (let enemy of enemies) {
+        for (let enemy of normalEnemies) {
             random -= enemy.weight;
             if (random <= 0) {
                 return enemy;
             }
         }
       
-        return enemies[0]; // 备用
+        return normalEnemies[0]; // 备用
     }
 
     // 🆕 处理敌人子弹击中玩家
     handleEnemyBulletHit(player, bullet) {
         if (player.isInvincible) return;
       
+        // 🆕 详细的中文击中信息
+        const bulletPos = `(${bullet.x.toFixed(0)}, ${bullet.y.toFixed(0)})`;
+        const playerPos = `(${player.x.toFixed(0)}, ${player.y.toFixed(0)})`;
+        const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, player.x, player.y);
+        
+        console.log(`🎯 敌人子弹击中玩家: 子弹位置: ${bulletPos} | 玩家位置: ${playerPos} | 距离: ${distance.toFixed(1)} | 伤害: ${bullet.damage || 15}`);
+      
         bullet.kill(); // 使用kill()回收对象池，而不是destroy()
       
         // 子弹伤害
         const bulletDamage = bullet.damage || 15;
+        const oldHealth = this.currentHealth;
         this.currentHealth -= bulletDamage;
       
         if (this.currentHealth < 0) {
             this.currentHealth = 0;
         }
       
-        console.log(`MainScene: 玩家被敌人子弹击中，扣血 ${bulletDamage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
+        console.log(`💥 玩家受伤: 血量: ${oldHealth} → ${this.currentHealth} | 伤害: ${bulletDamage} | 剩余血量: ${this.currentHealth}/${this.maxHealth}`);
       
         // 显示受伤效果
         this.showDamageEffect(bulletDamage, 'bullet');
@@ -1989,10 +2356,12 @@ export class MainScene extends Phaser.Scene {
             if (player && player.active) {
                 player.isInvincible = false;
                 player.clearTint();
+                console.log(`🛡️ 玩家无敌状态结束`);
             }
         });
       
         if (this.currentHealth <= 0) {
+            console.log(`💀 玩家死亡: 血量耗尽`);
             this.gameOver();
         }
     }
@@ -2018,12 +2387,8 @@ export class MainScene extends Phaser.Scene {
         }
         
         // 创建死亡效果
-        if (deathData.enemy && this.deathEmitter) {
-            this.deathEmitter.setPosition(deathData.enemy.x, deathData.enemy.y);
-            this.deathEmitter.start();
-            this.time.delayedCall(100, () => { 
-                if (this.deathEmitter) this.deathEmitter.stop(); 
-            });
+        if (deathData.enemy) {
+            this.createDeathEffect(deathData.enemy.x, deathData.enemy.y);
         }
         
         // 普通武器击杀时尝试掉落道具
@@ -2040,30 +2405,43 @@ export class MainScene extends Phaser.Scene {
         // UI更新通过主循环自动处理
       
         // 检查关卡完成
-        this.checkLevelComplete();
-        
+        // this.checkLevelComplete();
+        // 健壮BOSS判定
+        if (this.isBossEnemy(deathData)) {
+            this.bossDefeated = true; // 🆕 设置BOSS击败标志
+            console.log('🎉 BOSS已被击败！');
+        }
         console.log(`MainScene: 敌人死亡处理完成 - 击杀数: ${this.killCount}/${this.levelCompleteKills}, 当前分数: ${this.score}`);
     }
   
     // 🔧 修改敌人逃脱处理
     handleEnemyEscape(escapeData) {
-        console.log(`MainScene: 敌人逃脱事件 - ${escapeData.enemyName}`);
+        // 确保escapeData存在且有有效数据
+        if (!escapeData) {
+            console.warn('MainScene: 敌人逃脱事件数据为空');
+            return;
+        }
+        
+        const enemyName = escapeData.enemyName || '未知敌人';
+        const damage = escapeData.damage || 10; // 默认扣血10点
+        
+        console.log(`MainScene: 敌人逃脱事件 - ${enemyName}`);
       
         // 扣除血量
-        this.currentHealth -= escapeData.damage;
+        this.currentHealth -= damage;
       
         // 确保血量不低于0
         if (this.currentHealth < 0) {
             this.currentHealth = 0;
         }
       
-        console.log(`MainScene: 敌人逃脱扣血 ${escapeData.damage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
+        console.log(`MainScene: 敌人逃脱扣血 ${damage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
       
         // 减少敌人计数
         this.currentEnemyCount--;
       
         // 视觉反馈效果
-        this.showDamageEffect(escapeData.damage, 'escape');
+        this.showDamageEffect(damage, 'escape');
       
         // UI更新通过主循环自动处理
       
@@ -2083,23 +2461,30 @@ export class MainScene extends Phaser.Scene {
         const currentTime = this.time.now;
         const survivalTime = currentTime - this.gameStartTime;
       
-        // 🆕 横版卷轴：检查距离条件 - 到达世界右边界
+        // 🆕 检查BOSS是否被击败（唯一过关条件）
+        if (this.bossDefeated) {
+            this.completeLevel(`击败关卡BOSS`);
+            return;
+        }
+      
+        // 🆕 横版卷轴：检查距离条件 - 到达世界右边界（备用条件）
         if (this.player && this.player.x >= 3800) { // 接近4000像素时触发
             this.completeLevel(`到达关卡终点`);
             return;
         }
       
-        // 检查生存时间条件
+        // 🆕 移除击杀数和生存时间条件，只保留BOSS击败作为主要过关条件
+        // 检查生存时间条件（备用条件）
         if (survivalTime >= this.levelCompleteTime) {
             this.completeLevel(`生存时间达到${this.levelCompleteTime/1000}秒`);
             return;
         }
       
-        // 检查击杀数条件
-        if (this.killCount >= this.levelCompleteKills) {
-            this.completeLevel(`击杀${this.levelCompleteKills}个敌人`);
-            return;
-        }
+        // 🆕 注释掉击杀数条件，确保只有击败BOSS才能过关
+        // if (this.killCount >= this.levelCompleteKills) {
+        //     this.completeLevel(`击杀${this.levelCompleteKills}个敌人`);
+        //     return;
+        // }
     }
 
     // 🆕 完成关卡
@@ -2149,6 +2534,16 @@ export class MainScene extends Phaser.Scene {
             fill: '#ffffff'
         }).setOrigin(0.5).setScrollFactor(0);
       
+        // 🆕 如果击败了BOSS，额外显示
+        if (this.bossDefeated) {
+            this.add.text(640, 370, '已经击败关卡BOSS', {
+                font: '22px Arial',
+                fill: '#ff4444',
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0.5).setScrollFactor(0);
+        }
+      
         this.add.text(640, 380, `最终分数: ${this.score}`, {
             font: '24px Arial',
             fill: '#ffffff'
@@ -2175,6 +2570,14 @@ export class MainScene extends Phaser.Scene {
 
     // 🔧 在场景销毁时清理事件监听器
     destroy() {
+        // 🆕 清理游戏结束界面UI
+        if (this.gameOverUI) {
+            if (this.gameOverUI.background) this.gameOverUI.background.destroy();
+            if (this.gameOverUI.restartButton) this.gameOverUI.restartButton.destroy();
+            if (this.gameOverUI.restartText) this.gameOverUI.restartText.destroy();
+            this.gameOverUI = null;
+        }
+        
         // 清理触摸控制
         if (this.touchControls) {
             this.touchControls.destroy();
@@ -2194,18 +2597,8 @@ export class MainScene extends Phaser.Scene {
         }
         
         // 💥 清理所有粒子系统
-        if (this.shootEmitter) {
-            this.shootEmitter.destroy();
-        }
-        if (this.explosionEmitter) {
-            this.explosionEmitter.destroy();
-        }
-        if (this.damageEmitter) {
-            this.damageEmitter.destroy();
-        }
-        if (this.deathEmitter) {
-            this.deathEmitter.destroy();
-        }
+        // 清理视觉效果系统
+        this.effectsEnabled = false;
         
         // 🎁 清理道具管理器
         if (this.powerUpManager) {
@@ -2326,7 +2719,8 @@ export class MainScene extends Phaser.Scene {
         // 🆕 更新障碍物系统关卡
         if (this.obstacleManager) {
             this.obstacleManager.setLevel(levelType);
-            this.obstacleManager.spawnObstacles();
+            // 🆕 临时禁用障碍物生成
+            // this.obstacleManager.spawnObstacles();
         }
         
         // ... 其他关卡切换逻辑 ...
@@ -2403,11 +2797,8 @@ export class MainScene extends Phaser.Scene {
     // 👾 处理敌人与障碍物碰撞
     handleEnemyObstacleCollision(enemy, obstacle) {
         if (!obstacle.isDestructible) {
-            // 敌人遇到不可摧毁的障碍物时改变方向
-            if (enemy.body && enemy.body.velocity) {
-                enemy.body.velocity.x *= -0.5;
-                enemy.body.velocity.y *= -0.5;
-            }
+            // 敌人遇到不可摧毁的障碍物时，触发智能避障
+            enemy.triggerObstacleAvoidance(obstacle);
         }
     }
     
@@ -2452,44 +2843,43 @@ export class MainScene extends Phaser.Scene {
     // 💥 创建障碍物击中特效
     createObstacleHitEffect(x, y, weaponType) {
         // 根据武器类型创建不同的击中特效
-        let particleColor = 0xff6666;
-        let particleCount = 8;
+        let effectColor = 0xff6666;
+        let effectSize = 15;
       
         switch (weaponType) {
             case 'laser':
-                particleColor = 0x00ffff;
-                particleCount = 12;
+                effectColor = 0x00ffff;
+                effectSize = 20;
                 break;
             case 'missile':
-                particleColor = 0xffaa00;
-                particleCount = 15;
+                effectColor = 0xffaa00;
+                effectSize = 25;
                 break;
             case 'nuke':
-                particleColor = 0xff0000;
-                particleCount = 20;
+                effectColor = 0xff0000;
+                effectSize = 30;
                 break;
             default:
-                particleColor = 0xff6666;
-                particleCount = 8;
+                effectColor = 0xff6666;
+                effectSize = 15;
         }
       
-        // 创建击中粒子效果
-        const particles = this.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: x,
-            y: y,
-            speed: { min: 30, max: 80 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 0.4, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: particleColor,
-            lifespan: 400,
-            quantity: particleCount
-        });
-      
-        // 清理粒子
-        this.time.delayedCall(400, () => {
-            particles.destroy();
+        // 创建击中效果（不使用过时的粒子系统）
+        const effect = this.add.graphics();
+        effect.fillStyle(effectColor, 0.8);
+        effect.fillCircle(x, y, effectSize);
+        effect.setDepth(10);
+        
+        // 爆炸动画
+        this.tweens.add({
+            targets: effect,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 400,
+            onComplete: () => {
+                effect.destroy();
+            }
         });
     }
     
@@ -2526,6 +2916,389 @@ export class MainScene extends Phaser.Scene {
         });
     }
 
+    // 健壮的BOSS判定
+    isBossEnemy(deathData) {
+        // 1. 名称判定（不区分大小写）
+        if (deathData.enemyName && deathData.enemyName.toLowerCase().includes('boss')) return true;
+        // 2. sprite判定
+        if (deathData.enemy && deathData.enemy.enemyConfig && deathData.enemy.enemyConfig.sprite === 'boss') return true;
+        // 3. AI类型判定
+        if (deathData.enemy && deathData.enemy.enemyConfig && deathData.enemy.enemyConfig.ai === 'boss') return true;
+        // 4. 特殊标记
+        if (deathData.enemy && deathData.enemy.isBoss) return true;
+        if (deathData.enemy && deathData.enemy.enemyConfig && deathData.enemy.enemyConfig.isBoss) return true;
+        // 5. 血量阈值（可选）
+        if (deathData.enemy && deathData.enemy.maxHealth >= 300 && deathData.enemy.score >= 300) return true;
+        return false;
+    }
+
+    // 🆕 生成BOSS
+    spawnBoss() {
+        // 找到关卡中的BOSS配置
+        const bossConfig = this.currentLevel.enemies.find(enemy => enemy.isBoss);
+        if (!bossConfig) {
+            console.error('MainScene: 未找到BOSS配置');
+            return;
+        }
+        
+        // 清除所有普通敌人，为BOSS战做准备
+        this.enemies.children.entries.forEach(enemy => {
+            if (enemy.active && !enemy.isBoss) {
+                enemy.kill();
+                this.currentEnemyCount--;
+            }
+        });
+        
+        // 生成BOSS在关底最右边
+        const y = Phaser.Math.Between(200, 520); // BOSS在屏幕中央区域生成
+        const spawnX = 3900; // 🆕 BOSS在关底最右边生成（距离右边界100像素）
+        
+        const boss = this.enemies.get();
+        if (boss) {
+            // 使用BOSS配置激活敌人
+            boss.spawn(spawnX, y, bossConfig);
+            boss.isBoss = true; // 标记为BOSS
+            this.currentEnemyCount++;
+            this.bossSpawned = true; // 标记BOSS已生成
+            
+            // 显示BOSS出现提示
+            this.showBossAppearanceNotification(bossConfig.name);
+            
+            // 播放BOSS出现音效
+            if (AudioManager) {
+                AudioManager.play('bossAppear');
+            }
+            
+            console.log(`🎉 BOSS出现！类型: ${bossConfig.name}，位置: (${boss.x}, ${boss.y})`);
+        } else {
+            console.error('MainScene: 无法从对象池获取BOSS对象');
+        }
+    }
+
+    // 🆕 显示BOSS出现提示
+    showBossAppearanceNotification(bossName) {
+        // 创建BOSS出现背景
+        const bossBg = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7)
+            .setDepth(999).setScrollFactor(0);
+        
+        // BOSS出现标题
+        const bossTitle = this.add.text(640, 280, '⚠️ BOSS出现！⚠️', {
+            font: '48px Arial',
+            fill: '#ff0000',
+            stroke: '#ffffff',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(1000).setScrollFactor(0);
+        
+        // BOSS名称
+        const bossNameText = this.add.text(640, 340, bossName, {
+            font: '36px Arial',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5).setDepth(1000).setScrollFactor(0);
+        
+        // 提示文本
+        const hintText = this.add.text(640, 400, '击败BOSS才能过关！', {
+            font: '24px Arial',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5).setDepth(1000).setScrollFactor(0);
+        
+        // 3秒后隐藏提示
+        this.time.delayedCall(3000, () => {
+            this.tweens.add({
+                targets: [bossBg, bossTitle, bossNameText, hintText],
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => {
+                    bossBg.destroy();
+                    bossTitle.destroy();
+                    bossNameText.destroy();
+                    hintText.destroy();
+                }
+            });
+        });
+    }
+
+    // 🆕 创建视觉效果系统 - 使用Graphics替代粒子系统
+    createParticleSystems() {
+        console.log('✨ 创建Graphics视觉效果系统...');
+        
+        // 初始化效果标志
+        this.effectsEnabled = true;
+        
+        console.log('✨ Graphics视觉效果系统创建完成');
+        
+        // 🧪 测试视觉效果系统
+        this.time.delayedCall(2000, () => {
+            this.createExplosionEffect(400, 300);
+            console.log('🧪 测试视觉效果系统...');
+        });
+    }
+    
+    // 🆕 创建爆炸视觉效果
+    createExplosionEffect(x, y) {
+        if (!this.effectsEnabled) return;
+        
+        // 创建爆炸圆圈
+        const explosion = this.add.circle(x, y, 20, 0xff6600, 0.8).setDepth(400);
+        
+        // 爆炸扩散动画
+        this.tweens.add({
+            targets: explosion,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => explosion.destroy()
+        });
+        
+        // 创建多个小爆炸点
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 30;
+            const particleX = x + Math.cos(angle) * distance;
+            const particleY = y + Math.sin(angle) * distance;
+            
+            const particle = this.add.circle(particleX, particleY, 3, 0xffff00, 0.9).setDepth(401);
+            
+            this.tweens.add({
+                targets: particle,
+                x: particleX + Math.cos(angle) * 50,
+                y: particleY + Math.sin(angle) * 50,
+                alpha: 0,
+                duration: 400,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+    }
+    
+    // 🆕 创建射击视觉效果
+    createShootEffect(x, y) {
+        if (!this.effectsEnabled) return;
+        
+        // 创建射击闪光
+        const flash = this.add.circle(x, y, 8, 0xffff00, 0.8).setDepth(300);
+        
+        this.tweens.add({
+            targets: flash,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 150,
+            ease: 'Power2',
+            onComplete: () => flash.destroy()
+        });
+    }
+    
+    // 🆕 创建死亡视觉效果
+    createDeathEffect(x, y) {
+        if (!this.effectsEnabled) return;
+        
+        // 创建主死亡圆圈 - 增大尺寸
+        const death = this.add.circle(x, y, 40, 0xff0000, 0.8).setDepth(200);
+        
+        this.tweens.add({
+            targets: death,
+            scaleX: 3.0,
+            scaleY: 3.0,
+            alpha: 0,
+            duration: 600,
+            ease: 'Power2',
+            onComplete: () => death.destroy()
+        });
+        
+        // 创建外圈爆炸效果
+        const explosion = this.add.circle(x, y, 60, 0xff6600, 0.6).setDepth(199);
+        
+        this.tweens.add({
+            targets: explosion,
+            scaleX: 2.5,
+            scaleY: 2.5,
+            alpha: 0,
+            duration: 800,
+            ease: 'Power2',
+            onComplete: () => explosion.destroy()
+        });
+        
+        // 创建更多死亡粒子 - 增加数量和大小
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = 35;
+            const particleX = x + Math.cos(angle) * distance;
+            const particleY = y + Math.sin(angle) * distance;
+            
+            const particle = this.add.circle(particleX, particleY, 4, 0xff0000, 0.9).setDepth(201);
+            
+            this.tweens.add({
+                targets: particle,
+                x: particleX + Math.cos(angle) * 80,
+                y: particleY + Math.sin(angle) * 80,
+                alpha: 0,
+                duration: 700,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 创建额外的闪光效果
+        const flash = this.add.circle(x, y, 20, 0xffffff, 0.9).setDepth(202);
+        
+        this.tweens.add({
+            targets: flash,
+            scaleX: 4.0,
+            scaleY: 4.0,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => flash.destroy()
+        });
+    }
+    
+    // 🆕 创建受伤视觉效果
+    createDamageEffect(x, y) {
+        // 创建伤害效果
+        const effect = this.add.graphics();
+        effect.fillStyle(0xff0000, 0.6);
+        effect.fillCircle(x, y, 20);
+        effect.setDepth(10);
+        
+        this.tweens.add({
+            targets: effect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+                effect.destroy();
+            }
+        });
+    }
+    
+    // 🆕 切换物理体调试显示
+    togglePhysicsDebug() {
+        this.showPhysicsBounds = !this.showPhysicsBounds;
+        
+        if (this.showPhysicsBounds) {
+            console.log('🔍 启用物理体调试显示 - 按F1键关闭');
+            this.physicsDebugGraphics = this.add.graphics();
+            this.physicsDebugGraphics.setDepth(1000);
+        } else {
+            console.log('🔍 关闭物理体调试显示');
+            if (this.physicsDebugGraphics) {
+                this.physicsDebugGraphics.destroy();
+                this.physicsDebugGraphics = null;
+            }
+        }
+    }
+    
+    // 🆕 更新物理体调试显示
+    updatePhysicsDebug() {
+        if (!this.physicsDebugGraphics) return;
+        
+        this.physicsDebugGraphics.clear();
+        
+        // 显示玩家物理体 - 绿色
+        if (this.player && this.player.body) {
+            this.physicsDebugGraphics.lineStyle(3, 0x00ff00, 1);
+            this.physicsDebugGraphics.strokeRect(
+                this.player.body.x, 
+                this.player.body.y, 
+                this.player.body.width, 
+                this.player.body.height
+            );
+            // 显示玩家中心点
+            this.physicsDebugGraphics.fillStyle(0x00ff00, 1);
+            this.physicsDebugGraphics.fillCircle(this.player.x, this.player.y, 3);
+        }
+        
+        // 显示障碍物物理体 - 红色
+        if (this.obstacleManager && this.obstacleManager.obstacles) {
+            this.obstacleManager.obstacles.getChildren().forEach(obstacle => {
+                if (obstacle.active && obstacle.body) {
+                    this.physicsDebugGraphics.lineStyle(2, 0xff0000, 1);
+                    this.physicsDebugGraphics.strokeRect(
+                        obstacle.body.x, 
+                        obstacle.body.y, 
+                        obstacle.body.width, 
+                        obstacle.body.height
+                    );
+                    // 显示障碍物名称
+                    this.physicsDebugGraphics.fillStyle(0xff0000, 1);
+                    this.physicsDebugGraphics.fillText(obstacle.name || 'obstacle', obstacle.x, obstacle.y - 20);
+                }
+            });
+        }
+        
+        // 显示敌人物理体 - 蓝色
+        if (this.enemies) {
+            this.enemies.getChildren().forEach(enemy => {
+                if (enemy.active && enemy.body) {
+                    this.physicsDebugGraphics.lineStyle(2, 0x0000ff, 1);
+                    this.physicsDebugGraphics.strokeRect(
+                        enemy.body.x, 
+                        enemy.body.y, 
+                        enemy.body.width, 
+                        enemy.body.height
+                    );
+                }
+            });
+        }
+        
+        // 显示子弹物理体 - 黄色
+        if (this.bullets) {
+            this.bullets.getChildren().forEach(bullet => {
+                if (bullet.active && bullet.body) {
+                    this.physicsDebugGraphics.lineStyle(1, 0xffff00, 1);
+                    this.physicsDebugGraphics.strokeRect(
+                        bullet.body.x, 
+                        bullet.body.y, 
+                        bullet.body.width, 
+                        bullet.body.height
+                    );
+                }
+            });
+        }
+        
+        // 显示敌人子弹物理体 - 紫色
+        if (this.enemyBullets) {
+            this.enemyBullets.getChildren().forEach(bullet => {
+                if (bullet.active && bullet.body) {
+                    this.physicsDebugGraphics.lineStyle(1, 0xff00ff, 1);
+                    this.physicsDebugGraphics.strokeRect(
+                        bullet.body.x, 
+                        bullet.body.y, 
+                        bullet.body.width, 
+                        bullet.body.height
+                    );
+                }
+            });
+        }
+        
+        // 🆕 显示所有其他物理体 - 橙色（可能包含隐藏的障碍物）
+        this.scene.children.entries.forEach(child => {
+            if (child.body && child !== this.player && 
+                !this.enemies.getChildren().includes(child) &&
+                (!this.obstacleManager || !this.obstacleManager.obstacles.getChildren().includes(child)) &&
+                (!this.bullets || !this.bullets.getChildren().includes(child)) &&
+                (!this.enemyBullets || !this.enemyBullets.getChildren().includes(child))) {
+                this.physicsDebugGraphics.lineStyle(1, 0xff8800, 0.5);
+                this.physicsDebugGraphics.strokeRect(
+                    child.body.x, 
+                    child.body.y, 
+                    child.body.width, 
+                    child.body.height
+                );
+                // 显示对象类型
+                this.physicsDebugGraphics.fillStyle(0xff8800, 1);
+                this.physicsDebugGraphics.fillText(child.constructor.name || 'unknown', child.x, child.y - 10);
+            }
+        });
+    }
 }
 
+console.log('✅ MainScene.js ES6模块已加载'); 
 console.log('✅ MainScene.js ES6模块已加载'); 

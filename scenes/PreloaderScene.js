@@ -38,7 +38,7 @@ export class PreloaderScene extends Phaser.Scene {
     createLoadingBar() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
+      
         // 创建进度条背景
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
@@ -58,7 +58,7 @@ export class PreloaderScene extends Phaser.Scene {
             fill: '#ffffff'
         });
         loadingText.setOrigin(0.5);
-        
+
         const percentText = this.add.text(width / 2, height / 2, '0%', {
             font: '18px Arial',
             fill: '#ffffff'
@@ -73,10 +73,10 @@ export class PreloaderScene extends Phaser.Scene {
         
         // 监听加载进度
         this.load.on('progress', (value) => {
-            progressBar.clear();
+                progressBar.clear();
             progressBar.fillStyle(0x00ff00);
             progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
-            percentText.setText(Math.round(value * 100) + '%');
+                percentText.setText(Math.round(value * 100) + '%');
         });
         
         this.load.on('fileprogress', (file) => {
@@ -131,11 +131,23 @@ export class PreloaderScene extends Phaser.Scene {
     }
 
     createParticleTexture() {
+        // 创建更好的粒子纹理
         const graphics = this.add.graphics();
-        graphics.fillStyle(0xffffff, 1); // 白色
-        graphics.fillRect(0, 0, 1, 1);
-        graphics.generateTexture('particle', 1, 1);
+        
+        // 创建圆形粒子
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillCircle(4, 4, 4);
+        graphics.generateTexture('particle', 8, 8);
         graphics.destroy();
+        
+        // 创建AK47专用粒子纹理
+        const ak47Graphics = this.add.graphics();
+        ak47Graphics.fillStyle(0xff6600, 1);
+        ak47Graphics.fillCircle(3, 3, 3);
+        ak47Graphics.fillStyle(0xffff00, 0.6);
+        ak47Graphics.fillCircle(3, 3, 5);
+        ak47Graphics.generateTexture('ak47_particle', 6, 6);
+        ak47Graphics.destroy();
     }
 
     showLoadingComplete() {

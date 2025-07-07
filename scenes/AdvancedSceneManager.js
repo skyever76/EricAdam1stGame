@@ -275,20 +275,21 @@ export class AdvancedSceneManager {
   
     // 🩸 初始化血液流动
     initializeBloodCurrent() {
-        const currentZones = [];
-        for (let i = 0; i < 2; i++) {
-            const zone = {
-                x: 500 + i * 800,
-                y: 300 + (i % 2) * 200,
-                width: 200,
-                height: 400,
-                forceX: 50,
-                forceY: 0
-            };
-            currentZones.push(zone);
-        }
-        this.mechanicStates.set('bloodCurrent', currentZones);
-        console.log('🩸 初始化血液流动');
+        // 🚫 暂时取消血液流动区域的生成
+        // const currentZones = [];
+        // for (let i = 0; i < 2; i++) {
+        //     const zone = {
+        //         x: 500 + i * 800,
+        //         y: 300 + (i % 2) * 200,
+        //         width: 200,
+        //         height: 400,
+        //         forceX: 50,
+        //         forceY: 0
+        //     };
+        //     currentZones.push(zone);
+        // }
+        // this.mechanicStates.set('bloodCurrent', currentZones);
+        console.log('🚫 血液流动区域生成已暂时取消');
     }
   
     // 🌀 初始化现实故障
@@ -394,20 +395,28 @@ export class AdvancedSceneManager {
             // 齿轮已经有动画，不需要额外更新
         }
       
-        if (this.activeEffects.has('bloodFlow')) {
-            // 血液流动更新
-            this.updateBloodFlow(time, delta);
-        }
+        // 🚫 临时禁用血液流动以避免干扰玩家移动
+        // if (this.activeEffects.has('bloodFlow')) {
+        //     // 血液流动更新
+        //     this.updateBloodFlow(time, delta);
+        // }
     }
   
     // 🩸 更新血液流动
     updateBloodFlow(time, delta) {
+        // 🚫 如果血液流动系统被禁用，直接返回
+        if (this.bloodFlowDisabled) {
+            return;
+        }
+        
         const player = this.scene.player;
         if (!player) return;
       
         const currentZones = this.mechanicStates.get('bloodCurrent');
         if (!currentZones) return;
       
+        // 检查玩家是否在任何血液流动区域内
+        let inZone = false;
         currentZones.forEach(zone => {
             if (player.x >= zone.x - zone.width/2 && 
                 player.x <= zone.x + zone.width/2 &&
@@ -416,8 +425,14 @@ export class AdvancedSceneManager {
               
                 // 应用血液流向力
                 player.body.setAcceleration(zone.forceX, zone.forceY);
+                inZone = true;
             }
         });
+        
+        // 如果玩家不在任何区域内，清除加速度
+        if (!inZone) {
+            player.body.setAcceleration(0, 0);
+        }
     }
   
     // ⚙️ 更新机制
@@ -454,17 +469,43 @@ export class AdvancedSceneManager {
   
     // 🌫️ 触发蒸汽喷射
     triggerSteamJet(x, y, damage) {
-        // 创建蒸汽喷射效果
-        const steam = this.scene.add.particles(x, y, 'bullet', {
-            speed: { min: 100, max: 200 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 0.8, end: 0 },
-            lifespan: 1000,
-            blendMode: 'ADD',
-            angle: { min: 240, max: 300 },
-            quantity: 10,
-            tint: 0xeeeeee
-        }).setDepth(100);
+        // ✅ 使用现代Graphics替代过时的粒子系统
+        const steam = this.scene.add.graphics();
+        steam.fillStyle(0xeeeeee, 0.8);
+        steam.fillCircle(x, y, 20);
+        steam.setDepth(100);
+        
+        // 创建多个蒸汽粒子效果
+        for (let i = 0; i < 8; i++) {
+            const angle = (240 + Math.random() * 60) * Math.PI / 180; // 240-300度
+            const distance = 30 + Math.random() * 50;
+            const particleX = x + Math.cos(angle) * distance;
+            const particleY = y + Math.sin(angle) * distance;
+            
+            const particle = this.scene.add.circle(particleX, particleY, 4, 0xeeeeee, 0.7);
+            particle.setDepth(101);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 主蒸汽效果动画
+        this.scene.tweens.add({
+            targets: steam,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => steam.destroy()
+        });
       
         // 创建伤害区域（而不是直接伤害玩家）
         const damageZone = this.scene.add.zone(x, y, 80, 80);
@@ -478,7 +519,6 @@ export class AdvancedSceneManager {
       
         // 1秒后销毁
         this.scene.time.delayedCall(1000, () => {
-            steam.destroy();
             damageZone.destroy();
             this.damageZones.delete(damageZone);
         });
@@ -521,23 +561,51 @@ export class AdvancedSceneManager {
     destroyPipe(pipe) {
         console.log('🔧 管道被摧毁');
       
-        // 爆炸效果
-        const explosion = this.scene.add.particles(pipe.x, pipe.y, 'bullet', {
-            speed: { min: 80, max: 150 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 800,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 15,
-            tint: 0x888888
-        }).setDepth(100);
+        // ✅ 使用现代Graphics替代过时的粒子系统
+        const explosion = this.scene.add.graphics();
+        explosion.fillStyle(0x888888, 1);
+        explosion.fillCircle(pipe.x, pipe.y, 25);
+        explosion.setDepth(100);
+        
+        // 创建多个爆炸粒子效果
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = 20 + Math.random() * 40;
+            const particleX = pipe.x + Math.cos(angle) * distance;
+            const particleY = pipe.y + Math.sin(angle) * distance;
+            
+            const particle = this.scene.add.circle(particleX, particleY, 3, 0x888888, 0.8);
+            particle.setDepth(101);
+            
+            // 🆕 添加调试信息
+            console.log(`🔧 管道爆炸粒子: 位置: (${particleX.toFixed(0)}, ${particleY.toFixed(0)}) | 颜色: 灰色 | 大小: 3`);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => {
+                    console.log(`🔧 管道爆炸粒子销毁: 位置: (${particle.x.toFixed(0)}, ${particle.y.toFixed(0)})`);
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // 主爆炸效果动画
+        this.scene.tweens.add({
+            targets: explosion,
+            scaleX: 4,
+            scaleY: 4,
+            alpha: 0,
+            duration: 800,
+            ease: 'Power2',
+            onComplete: () => explosion.destroy()
+        });
       
         pipe.destroy();
-      
-        this.scene.time.delayedCall(1000, () => {
-            explosion.destroy();
-        });
     }
   
     // ⚠️ 检查环境危害

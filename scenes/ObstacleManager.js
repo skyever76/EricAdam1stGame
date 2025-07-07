@@ -55,6 +55,10 @@ export class ObstacleManager {
   
     // 🎯 生成障碍物
     spawnObstacles() {
+        // 🆕 临时禁用障碍物生成
+        console.log(`🚫 障碍物生成已临时禁用`);
+        return;
+        
         if (!this.spawnConfig || this.obstaclesSpawned >= this.maxObstacles) {
             return;
         }
@@ -152,27 +156,46 @@ export class ObstacleManager {
   
     // 🪨 创建单个障碍物 - 专注生成，移除碰撞设置
     createSingleObstacle(x, y) {
-        // 随机选择障碍物类型
         const availableTypes = this.spawnConfig.types;
-        const randomType = Phaser.Utils.Array.GetRandom(availableTypes);
+        
+        // 🆕 添加权重系统，减少不可摧毁障碍物的出现频率
+        const weightedTypes = this.getWeightedObstacleTypes(availableTypes);
+        const randomType = Phaser.Utils.Array.GetRandom(weightedTypes);
         const obstacleData = OBSTACLE_TYPES[randomType];
-      
+
         if (!obstacleData) {
-            console.warn(`⚠️ 未找到障碍物数据: ${randomType}`);
+            console.warn(`⚠️ 未找到障碍物数据: ${randomType}，可用类型:`, Object.keys(OBSTACLE_TYPES));
             return;
         }
-      
-        console.log(`🪨 生成障碍物: ${obstacleData.name} 在位置 (${x}, ${y})`);
-      
-        // group.get() 会自动处理创建新实例的情况
+
         const obstacle = this.obstacles.get(x, y);
-        
-        if (obstacle) {
-            // 不论是获取的还是新建的，都调用 spawn 来初始化/重置
-            obstacle.spawn(x, y, obstacleData);
+        if (!obstacle) {
+            console.error(`❌ group.get() 返回 null，无法创建障碍物: ${randomType} at (${x}, ${y})`);
+            return;
         }
-        
+
+        obstacle.spawn(x, y, obstacleData);
         this.obstaclesSpawned++;
+    }
+    
+    // 🆕 获取带权重的障碍物类型列表
+    getWeightedObstacleTypes(availableTypes) {
+        const weightedTypes = [];
+        
+        availableTypes.forEach(type => {
+            const obstacleData = OBSTACLE_TYPES[type];
+            if (obstacleData) {
+                // 🆕 不可摧毁的障碍物权重更低（出现频率减少）
+                const weight = obstacleData.destructible ? 3 : 1; // 可摧毁障碍物权重3，不可摧毁权重1
+                
+                // 根据权重添加多次到列表中
+                for (let i = 0; i < weight; i++) {
+                    weightedTypes.push(type);
+                }
+            }
+        });
+        
+        return weightedTypes;
     }
   
     // 💀 障碍物被摧毁时的回调

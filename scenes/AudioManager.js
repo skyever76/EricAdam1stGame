@@ -8,15 +8,12 @@ export const AudioManager = {
     isMuted: false,
     volume: 0.5,
     isInitialized: false,
-    audioUnlocked: false,
+    audioUnlocked: true, // 🆕 默认解锁音频
     
     // 背景音乐相关
     currentMusic: null,
     musicVolume: 0.3, // 背景音乐音量较低
     musicTimerId: null, // 背景音乐定时器ID
-    
-    // 临时场景引用（用于UI提示）
-    tempScene: null,
     
     // 音效参数配置
     soundConfigs: {
@@ -69,6 +66,29 @@ export const AudioManager = {
         if (this.isInitialized) return; // 防止重复初始化
         
         try {
+            // 延迟创建AudioContext，等待用户交互
+            this.audioContext = null;
+            this.masterGain = null;
+            this.musicGain = null;
+            
+            this.isInitialized = true;
+            this.audioUnlocked = false; // 等待用户交互解锁
+            
+            console.log('🎵 AudioManager initialized, waiting for user interaction');
+            
+        } catch (error) {
+            console.error('❌ AudioManager initialization failed:', error);
+            this.isInitialized = false;
+        }
+    },
+    
+    // 在用户交互时创建AudioContext
+    unlockAudio() {
+        if (this.audioUnlocked || !this.isInitialized) return;
+        
+        try {
+            console.log('🎵 Creating AudioContext after user interaction...');
+            
             // 创建音频上下文
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.audioContext = new AudioContext();
@@ -83,15 +103,11 @@ export const AudioManager = {
             this.musicGain.connect(this.audioContext.destination);
             this.musicGain.gain.value = this.musicVolume;
             
-            this.isInitialized = true;
-            console.log('🎵 AudioManager initialized successfully');
-            
-            // 检查音频上下文状态
-            this.checkAudioContext();
+            this.audioUnlocked = true;
+            console.log('🎵 AudioContext created successfully');
             
         } catch (error) {
-            console.error('❌ AudioManager initialization failed:', error);
-            this.isInitialized = false;
+            console.error('❌ Failed to create AudioContext:', error);
         }
     },
     
@@ -100,59 +116,28 @@ export const AudioManager = {
         if (!this.audioContext) return;
         
         if (this.audioContext.state === 'suspended') {
-            console.log('🔇 Audio context suspended, waiting for user interaction');
+            console.log('🔇 Audio context suspended, attempting to resume');
+            this.audioContext.resume().then(() => {
+                console.log('🔊 Audio context resumed successfully');
+            }).catch(error => {
+                console.error('❌ Failed to resume audio context:', error);
+            });
         } else if (this.audioContext.state === 'running') {
             console.log('🔊 Audio context running');
-            this.audioUnlocked = true;
         }
-    },
-    
-    // 提示用户解锁音频（需要传入scene）
-    promptToUnlock(scene) {
-        if (this.audioUnlocked || !scene || !scene.add) return;
-        
-        this.tempScene = scene;
-        
-        // 在游戏界面显示音频解锁提示
-        this.audioUnlockText = scene.add.text(400, 200, '点击屏幕启用音效', {
-            fontSize: '24px',
-            fill: '#ffffff',
-            backgroundColor: '#000000',
-            padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setDepth(1000);
-        
-        // 使用 once 避免重复监听
-        scene.input.once('pointerdown', () => {
-            this.unlockAudio();
-        });
-    },
-    
-    // 解锁音频
-    unlockAudio() {
-        if (!this.audioContext || this.audioContext.state !== 'suspended') return;
-        
-        this.audioContext.resume().then(() => {
-            console.log('🔊 Audio context unlocked');
-            this.audioUnlocked = true;
-            
-            // 移除提示文本
-            if (this.audioUnlockText) {
-                this.audioUnlockText.destroy();
-                this.audioUnlockText = null;
-            }
-            
-            // 清除临时场景引用
-            this.tempScene = null;
-            
-        }).catch(error => {
-            console.error('❌ Failed to unlock audio:', error);
-        });
     },
     
     // 播放音效
     play(soundType) {
-        if (!this.isInitialized || !this.audioUnlocked || this.isMuted) {
+        if (!this.isInitialized || this.isMuted) {
             return;
+        }
+        
+        // 检查AudioContext是否已创建
+        if (!this.audioUnlocked || !this.audioContext) {
+            console.log('🔇 Audio not unlocked yet, attempting to unlock...');
+            this.unlockAudio();
+            return; // 等待下次调用
         }
         
         const config = this.soundConfigs[soundType];

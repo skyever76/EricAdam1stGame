@@ -17,6 +17,7 @@ export class Weapon {
         this.bulletCost = config.bulletCost || 0;
         this.isContinuous = config.isContinuous || false;
         this.duration = config.duration || 0;
+        this.autoRefill = config.autoRefill || false;
         
         // 2. 管理自身的状态 (例如，子弹数量)
         this.bulletCount = config.initialBullets || 0;
@@ -35,6 +36,11 @@ export class Weapon {
         if (this.bulletCost > 0) {
             this.bulletCount--;
         }
+        
+        // AK47和沙漠之鹰自动加满子弹
+        if (this.autoRefill && this.bulletCount < 999) {
+            this.bulletCount = 999;
+        }
     }
     
     // 获取武器配置信息
@@ -51,7 +57,8 @@ export class Weapon {
             burstDelay: this.burstDelay,
             bulletCost: this.bulletCost,
             isContinuous: this.isContinuous,
-            duration: this.duration
+            duration: this.duration,
+            autoRefill: this.autoRefill
         };
     }
     

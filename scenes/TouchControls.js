@@ -50,29 +50,31 @@ export class TouchControls {
         if (this.isMobile) {
             this.createTouchUI();
             this.setupTouchEvents();
-            console.log('📱 移动设备检测成功，启用触摸控制');
+            console.log('📱 iPad检测成功，启用双摇杆触摸控制');
         } else {
-            console.log('🖥️ 桌面设备，使用键鼠控制');
+            console.log('🖥️ 非iPad设备，使用键鼠控制（WASD/方向键 + 鼠标射击）');
         }
     }
   
     detectMobileDevice() {
         const userAgent = navigator.userAgent.toLowerCase();
-        const mobileKeywords = ['ipad', 'iphone', 'android', 'mobile', 'tablet'];
-      
-        // 检查User Agent
-        const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
-      
-        // 检查触摸支持
+        
+        // 🆕 只检测iPad设备
+        const isIPad = userAgent.includes('ipad');
+        
+        // 🆕 检查触摸支持（iPad必须支持触摸）
         const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-        // 检查屏幕尺寸（iPad通常是1024x768或更大）
+        
+        // 🆕 检查屏幕尺寸（iPad通常是1024x768或更大）
         const screenSize = window.innerWidth >= 768 || window.innerHeight >= 768;
-      
-        const isMobile = (isMobileUA || hasTouchSupport) && screenSize;
-      
-        console.log(`🔍 设备检测: UA=${isMobileUA}, Touch=${hasTouchSupport}, Screen=${screenSize}, Result=${isMobile}`);
-        return isMobile;
+        
+        // 🆕 只有iPad才启用触摸控制
+        const shouldEnableTouch = isIPad && hasTouchSupport && screenSize;
+        
+        console.log(`🔍 iPad检测: iPad=${isIPad}, Touch=${hasTouchSupport}, Screen=${screenSize}, 启用触摸控制=${shouldEnableTouch}`);
+        console.log(`🔍 User Agent: ${navigator.userAgent}`);
+        
+        return shouldEnableTouch;
     }
   
     createTouchUI() {
@@ -574,6 +576,9 @@ export class TouchControls {
   
     // 🔄 更新方法（每帧调用）
     update() {
+        // 🆕 持续应用移动，确保触摸控制的移动能够正常工作
+        this.applyMovement();
+        
         // 可以在这里添加任何需要每帧更新的逻辑
         // 比如摇杆的弹性回弹效果等
     }

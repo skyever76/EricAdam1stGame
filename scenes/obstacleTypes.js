@@ -142,8 +142,8 @@ const OBSTACLE_TYPES = {
         health: 100,
         width: 40,
         height: 40,
-        primaryColor: 0x666666,
-        secondaryColor: 0x444444,
+        primaryColor: 0x8B4513, // 棕色
+        secondaryColor: 0x654321, // 深棕色
         destructible: true,
         visualizer: ObstacleVisualizers.drawRock,
         loot: {
@@ -176,8 +176,8 @@ const OBSTACLE_TYPES = {
         health: 300,
         width: 80,
         height: 60,
-        primaryColor: 0x888888,
-        secondaryColor: 0x666666,
+        primaryColor: 0x1E3A8A, // 深蓝色
+        secondaryColor: 0x1E40AF, // 深蓝色
         destructible: true,
         visualizer: ObstacleVisualizers.drawBuilding,
         loot: {
@@ -210,8 +210,8 @@ const OBSTACLE_TYPES = {
         health: 200,
         width: 60,
         height: 60,
-        primaryColor: 0x555555,
-        secondaryColor: 0x333333,
+        primaryColor: 0x166534, // 深绿色
+        secondaryColor: 0x14532D, // 深绿色
         destructible: true,
         visualizer: ObstacleVisualizers.drawAsteroid,
         loot: {
@@ -228,8 +228,8 @@ const OBSTACLE_TYPES = {
         health: 999999,
         width: 100,
         height: 20,
-        primaryColor: 0x444444,
-        secondaryColor: 0x222222,
+        primaryColor: 0x222222, // 深黑色
+        secondaryColor: 0x111111, // 更深的黑色
         destructible: false,
         visualizer: ObstacleVisualizers.drawWall
     },
@@ -240,10 +240,35 @@ const OBSTACLE_TYPES = {
         health: 999999,
         width: 30,
         height: 100,
-        primaryColor: 0x666666,
-        secondaryColor: 0x444444,
+        primaryColor: 0x333333, // 深灰色
+        secondaryColor: 0x222222, // 深黑色
         destructible: false,
         visualizer: ObstacleVisualizers.drawPillar
+    },
+    
+    // 新增不可摧毁的灰色障碍物
+    GRAY_ROCK: {
+        type: 'gray_rock',
+        name: '灰岩',
+        health: 999999,
+        width: 50,
+        height: 50,
+        primaryColor: 0x666666, // 灰色
+        secondaryColor: 0x555555, // 深灰色
+        destructible: false,
+        visualizer: ObstacleVisualizers.drawRock
+    },
+    
+    GRAY_WALL: {
+        type: 'gray_wall',
+        name: '灰墙',
+        health: 999999,
+        width: 120,
+        height: 25,
+        primaryColor: 0x777777, // 浅灰色
+        secondaryColor: 0x666666, // 灰色
+        destructible: false,
+        visualizer: ObstacleVisualizers.drawWall
     }
 };
 
@@ -251,32 +276,32 @@ const OBSTACLE_TYPES = {
 const LEVEL_OBSTACLE_CONFIG = {
     'forest': {
         types: ['ROCK', 'TREE', 'PILLAR'],
-        density: 0.3, // 障碍物密度
-        maxCount: 15,
+        density: 0, // 🆕 临时设为0，禁用障碍物生成
+        maxCount: 0, // 🆕 临时设为0，禁用障碍物生成
         spawnPattern: 'scattered'
     },
     'city': {
         types: ['BUILDING', 'WALL', 'PILLAR'],
-        density: 0.4,
-        maxCount: 20,
+        density: 0, // 🆕 临时设为0，禁用障碍物生成
+        maxCount: 0, // 🆕 临时设为0，禁用障碍物生成
         spawnPattern: 'grid'
     },
     'ocean': {
         types: ['CORAL', 'ROCK'],
-        density: 0.25,
-        maxCount: 12,
+        density: 0, // 🆕 临时设为0，禁用障碍物生成
+        maxCount: 0, // 🆕 临时设为0，禁用障碍物生成
         spawnPattern: 'clusters'
     },
     'desert': {
         types: ['ROCK', 'PILLAR'],
-        density: 0.2,
-        maxCount: 10,
+        density: 0, // 🆕 临时设为0，禁用障碍物生成
+        maxCount: 0, // 🆕 临时设为0，禁用障碍物生成
         spawnPattern: 'scattered'
     },
     'space': {
         types: ['ASTEROID', 'ROCK'],
-        density: 0.35,
-        maxCount: 18,
+        density: 0, // 🆕 临时设为0，禁用障碍物生成
+        maxCount: 0, // 🆕 临时设为0，禁用障碍物生成
         spawnPattern: 'random'
     }
 };
@@ -284,24 +309,24 @@ const LEVEL_OBSTACLE_CONFIG = {
 // 🎯 障碍物生成模式
 const OBSTACLE_SPAWN_PATTERNS = {
     scattered: {
-        minDistance: 100,
-        maxDistance: 300,
+        minDistance: 120,
+        maxDistance: 350,
         clusterSize: 1
     },
     grid: {
-        minDistance: 150,
-        maxDistance: 200,
-        clusterSize: 3
+        minDistance: 180,
+        maxDistance: 250,
+        clusterSize: 2
     },
     clusters: {
-        minDistance: 80,
-        maxDistance: 250,
-        clusterSize: 4
+        minDistance: 100,
+        maxDistance: 300,
+        clusterSize: 3
     },
     random: {
-        minDistance: 120,
-        maxDistance: 400,
-        clusterSize: 2
+        minDistance: 150,
+        maxDistance: 450,
+        clusterSize: 1
     }
 };
 

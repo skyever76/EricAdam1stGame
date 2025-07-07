@@ -18,8 +18,11 @@ export class PlayerSelectScene extends Phaser.Scene {
         // 创建标题
         this.createTitle();
         
-        // 创建玩家选择界面
+        // 创建玩家选择界面（左侧）
         this.createPlayerSelection();
+        
+        // 创建游戏玩法说明（右侧）
+        this.createGameInstructions();
         
         // 创建开始按钮
         this.createStartButton();
@@ -61,7 +64,7 @@ export class PlayerSelectScene extends Phaser.Scene {
     }
 
     createTitle() {
-        const title = this.add.text(640, 80, '选择你的角色', {
+        const title = this.add.text(640, 80, "Eric & Adam's 1st Game", {
             font: '48px Arial',
             fill: '#ffffff',
             stroke: '#000000',
@@ -82,13 +85,17 @@ export class PlayerSelectScene extends Phaser.Scene {
 
     createPlayerSelection() {
         const startX = 200;
-        const spacing = 220;
+        const startY = 200;
+        const spacingX = 180;
+        const spacingY = 150;
         
         this.playerButtons = [];
         
         this.players.forEach((player, index) => {
-            const x = startX + (index * spacing);
-            const y = 300;
+            const row = Math.floor(index / 2);
+            const col = index % 2;
+            const x = startX + (col * spacingX);
+            const y = startY + (row * spacingY);
             
             // 创建玩家卡片
             const card = this.createPlayerCard(x, y, player, index);
@@ -105,53 +112,45 @@ export class PlayerSelectScene extends Phaser.Scene {
         // 卡片背景
         const background = this.add.graphics();
         background.fillStyle(0x333333, 0.8);
-        background.fillRoundedRect(-80, -100, 160, 200, 10);
+        background.fillRoundedRect(-70, -80, 140, 120, 10);
         background.lineStyle(3, 0x666666);
-        background.strokeRoundedRect(-80, -100, 160, 200, 10);
+        background.strokeRoundedRect(-70, -80, 140, 120, 10);
         card.add(background);
         
         // 玩家图片（使用占位符）
         const playerSprite = this.add.graphics();
         playerSprite.fillStyle(this.getPlayerColor(player.key));
-        playerSprite.fillCircle(0, -50, 30);
+        playerSprite.fillCircle(0, -40, 25);
         playerSprite.lineStyle(2, 0xffffff);
-        playerSprite.strokeCircle(0, -50, 30);
+        playerSprite.strokeCircle(0, -40, 25);
         card.add(playerSprite);
         
         // 玩家名称
-        const nameText = this.add.text(0, -10, player.name, {
-            font: '20px Arial',
+        const nameText = this.add.text(0, -5, player.name, {
+            font: '18px Arial',
             fill: '#ffffff'
         });
         nameText.setOrigin(0.5);
         card.add(nameText);
         
         // 玩家描述
-        const descText = this.add.text(0, 15, player.description, {
-            font: '14px Arial',
+        const descText = this.add.text(0, 20, player.description, {
+            font: '12px Arial',
             fill: '#cccccc',
-            wordWrap: { width: 140 }
+            wordWrap: { width: 120 }
         });
         descText.setOrigin(0.5);
         card.add(descText);
         
-        // 玩家属性
-        const statsText = this.add.text(0, 50, this.getPlayerStats(player), {
-            font: '12px Arial',
-            fill: '#ffff00'
-        });
-        statsText.setOrigin(0.5);
-        card.add(statsText);
-        
         // 选择指示器
         const selector = this.add.graphics();
         selector.lineStyle(4, 0x00ff00);
-        selector.strokeRoundedRect(-85, -105, 170, 210, 10);
+        selector.strokeRoundedRect(-75, -85, 150, 130, 10);
         selector.setVisible(false);
         card.add(selector);
         
         // 添加交互
-        card.setInteractive(new Phaser.Geom.Rectangle(-80, -100, 160, 200), Phaser.Geom.Rectangle.Contains);
+        card.setInteractive(new Phaser.Geom.Rectangle(-70, -80, 140, 120), Phaser.Geom.Rectangle.Contains);
         card.on('pointerdown', () => this.selectPlayer(index));
         card.on('pointerover', () => this.highlightCard(card, true));
         card.on('pointerout', () => this.highlightCard(card, false));
@@ -164,6 +163,74 @@ export class PlayerSelectScene extends Phaser.Scene {
         return card;
     }
 
+    createGameInstructions() {
+        const startX = 800;
+        const startY = 200;
+        
+        // 标题
+        const title = this.add.text(startX, startY - 40, '游戏操作说明', {
+            font: '24px Arial',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+        title.setOrigin(0.5);
+        
+        // 🆕 左列操作说明
+        const leftInstructions = [
+            '🎮 移动控制',
+            'WASD 或 方向键：移动角色',
+            '',
+            '🔫 射击控制',
+            '鼠标左键：射击',
+            '空格键：射击'
+        ];
+        
+        // 🆕 右列操作说明
+        const rightInstructions = [
+            '🔄 武器切换',
+            '数字键 1-4：切换武器',
+            'Q/E：切换武器',
+            '',
+            '💾 游戏控制',
+            'ESC：暂停游戏',
+            'R：重新开始',
+            '',
+            '🎯 游戏目标',
+            '击败所有敌人和Boss',
+            '收集道具提升能力',
+            '完成关卡获得积分'
+        ];
+        
+        // 🆕 左列位置
+        const leftX = startX - 150;
+        leftInstructions.forEach((instruction, index) => {
+            const y = startY + (index * 25);
+            const color = instruction.includes('🎮') || instruction.includes('🔫') ? '#ffff00' : '#cccccc';
+            const fontSize = instruction.includes('🎮') || instruction.includes('🔫') ? '16px' : '14px';
+            
+            const text = this.add.text(leftX, y, instruction, {
+                font: fontSize + ' Arial',
+                fill: color
+            });
+            text.setOrigin(0.5);
+        });
+        
+        // 🆕 右列位置
+        const rightX = startX + 150;
+        rightInstructions.forEach((instruction, index) => {
+            const y = startY + (index * 25);
+            const color = instruction.includes('🔄') || instruction.includes('💾') || instruction.includes('🎯') ? '#ffff00' : '#cccccc';
+            const fontSize = instruction.includes('🔄') || instruction.includes('💾') || instruction.includes('🎯') ? '16px' : '14px';
+            
+            const text = this.add.text(rightX, y, instruction, {
+                font: fontSize + ' Arial',
+                fill: color
+            });
+            text.setOrigin(0.5);
+        });
+    }
+
     getPlayerColor(key) {
         const colors = {
             soldier: 0x8B4513,
@@ -172,17 +239,6 @@ export class PlayerSelectScene extends Phaser.Scene {
             score: 0xC0C0C0
         };
         return colors[key] || 0xffffff;
-    }
-
-    getPlayerStats(player) {
-        let stats = `速度: ${player.speed}\n生命: ${player.health}`;
-        if (player.damageMultiplier) {
-            stats += `\n伤害: x${player.damageMultiplier}`;
-        }
-        if (player.initPoints) {
-            stats += `\n积分: ${player.initPoints}`;
-        }
-        return stats;
     }
 
     selectPlayer(index) {
@@ -201,9 +257,9 @@ export class PlayerSelectScene extends Phaser.Scene {
     _drawCardBackground(graphics, fillColor, fillAlpha, strokeColor) {
         graphics.clear();
         graphics.fillStyle(fillColor, fillAlpha);
-        graphics.fillRoundedRect(-80, -100, 160, 200, 10);
+        graphics.fillRoundedRect(-70, -80, 140, 120, 10);
         graphics.lineStyle(3, strokeColor);
-        graphics.strokeRoundedRect(-80, -100, 160, 200, 10);
+        graphics.strokeRoundedRect(-70, -80, 140, 120, 10);
     }
 
     highlightCard(card, isHighlighted) {
@@ -215,26 +271,26 @@ export class PlayerSelectScene extends Phaser.Scene {
     }
 
     createStartButton() {
-        this.startButton = this.add.container(640, 550);
+        this.startButton = this.add.container(640, 600);
         
-        // 按钮背景
+        // 按钮背景 - 调整为适合四个字的大小
         const buttonBg = this.add.graphics();
         buttonBg.fillStyle(0x00aa00, 0.8);
-        buttonBg.fillRoundedRect(-100, -30, 200, 60, 10);
+        buttonBg.fillRoundedRect(-60, -25, 120, 50, 10);
         buttonBg.lineStyle(3, 0x00ff00);
-        buttonBg.strokeRoundedRect(-100, -30, 200, 60, 10);
+        buttonBg.strokeRoundedRect(-60, -25, 120, 50, 10);
         this.startButton.add(buttonBg);
         
         // 按钮文本
         this.startButtonText = this.add.text(0, 0, '开始游戏', {
-            font: '24px Arial',
+            font: '20px Arial',
             fill: '#ffffff'
         });
         this.startButtonText.setOrigin(0.5);
         this.startButton.add(this.startButtonText);
         
         // 添加交互
-        this.startButton.setInteractive(new Phaser.Geom.Rectangle(-100, -30, 200, 60), Phaser.Geom.Rectangle.Contains);
+        this.startButton.setInteractive(new Phaser.Geom.Rectangle(-60, -25, 120, 50), Phaser.Geom.Rectangle.Contains);
         this.startButton.on('pointerdown', () => this.startGame());
         this.startButton.on('pointerover', () => this.highlightStartButton(true));
         this.startButton.on('pointerout', () => this.highlightStartButton(false));
@@ -250,27 +306,27 @@ export class PlayerSelectScene extends Phaser.Scene {
         if (!this.startButton) return;
         const isActive = !!this.selectedPlayer;
         if (isActive) {
-            this._drawCardBackground(this.startButton.background, 0x00cc66, 0.95, 0xffffff);
+            this._drawStartButtonBackground(0x00cc66, 0.95, 0xffffff);
         } else {
-            this._drawCardBackground(this.startButton.background, 0x666666, 0.7, 0x999999);
+            this._drawStartButtonBackground(0x666666, 0.7, 0x999999);
         }
+    }
+
+    _drawStartButtonBackground(fillColor, fillAlpha, strokeColor) {
+        this.startButton.background.clear();
+        this.startButton.background.fillStyle(fillColor, fillAlpha);
+        this.startButton.background.fillRoundedRect(-60, -25, 120, 50, 10);
+        this.startButton.background.lineStyle(3, strokeColor);
+        this.startButton.background.strokeRoundedRect(-60, -25, 120, 50, 10);
     }
 
     highlightStartButton(isHighlighted) {
         if (!this.selectedPlayer) return;
         
         if (isHighlighted) {
-            this.startButton.background.clear();
-            this.startButton.background.fillStyle(0x00cc00, 0.9);
-            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
-            this.startButton.background.lineStyle(3, 0x00ff00);
-            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+            this._drawStartButtonBackground(0x00cc00, 0.9, 0x00ff00);
         } else {
-            this.startButton.background.clear();
-            this.startButton.background.fillStyle(0x00aa00, 0.8);
-            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
-            this.startButton.background.lineStyle(3, 0x00ff00);
-            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+            this._drawStartButtonBackground(0x00aa00, 0.8, 0x00ff00);
         }
     }
 
@@ -297,6 +353,14 @@ export class PlayerSelectScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => {
             if (this.selectedPlayer) {
                 this.startGame();
+            }
+        });
+        
+        // 解锁音频（在用户交互时）
+        this.input.once('pointerdown', () => {
+            if (window.AudioManager && !window.AudioManager.audioUnlocked) {
+                window.AudioManager.unlockAudio();
+                console.log('PlayerSelectScene: AudioManager已解锁');
             }
         });
     }

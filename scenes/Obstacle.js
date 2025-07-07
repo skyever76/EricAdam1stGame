@@ -1,35 +1,11 @@
 // Obstacle.js - 障碍物基类
 import { POWER_UP_TYPES } from './PowerUpDef.js';
 
-export class Obstacle extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, obstacleData) {
-        super(scene, x, y);
-      
+export class Obstacle extends Phaser.GameObjects.Container {
+    constructor(scene, x, y) {
+        super(scene, x, y, []);
         this.scene = scene;
-        this.obstacleData = obstacleData;
-        this.obstacleType = obstacleData.type;
-        this.name = obstacleData.name;
-      
-        // 添加到场景
-        scene.add.existing(this);
-      
-        // 障碍物基础属性
-        this.health = obstacleData.health;
-        this.maxHealth = this.health;
-        this.isDestroyed = false;
-        this.isDestructible = obstacleData.destructible !== false;
-      
-        // 物理属性
-        this.body.setSize(obstacleData.width, obstacleData.height);
-        this.body.setImmovable(true);
-        this.body.setCollideWorldBounds(false);
-      
-        // 视觉效果
-        this.createVisual();
-        this.createHealthBar();
-        this.setupAnimations();
-      
-        console.log(`🪨 障碍物生成: ${this.name} (${this.health}HP)`);
+        // 其余属性全部在spawn方法中初始化
     }
   
     createVisual() {
@@ -47,40 +23,16 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
       
         // 将Graphics转换为纹理并应用到Sprite
         graphics.generateTexture('obstacle_' + this.obstacleType, data.width, data.height);
-        this.setTexture('obstacle_' + this.obstacleType);
+        const visualSprite = this.scene.add.sprite(0, 0, 'obstacle_' + this.obstacleType);
         graphics.destroy();
       
+        // 将主视觉Sprite作为子对象添加到容器中
+        this.add(visualSprite);
+        this.mainBody = visualSprite;
         this.setDepth(50);
     }
   
-    createHealthBar() {
-        if (!this.isDestructible) return;
-      
-        const barWidth = 60;
-        const barHeight = 6;
-        const x = -barWidth / 2;
-        const y = -this.obstacleData.height / 2 - 15;
-      
-        // 背景
-        this.healthBarBg = this.scene.add.rectangle(x, y, barWidth, barHeight, 0x333333);
-        this.healthBarBg.setOrigin(0, 0.5);
-      
-        // 血条
-        this.healthBar = this.scene.add.rectangle(x, y, barWidth, barHeight, 0x00ff00);
-        this.healthBar.setOrigin(0, 0.5);
-      
-        // 边框
-        this.healthBarBorder = this.scene.add.rectangle(x + barWidth/2, y, barWidth, barHeight);
-        this.healthBarBorder.setFillStyle(0x000000, 0); // 透明填充
-        
-        // 使用Graphics绘制边框
-        const border = this.scene.add.graphics();
-        border.lineStyle(1, 0xffffff, 1);
-        border.strokeRect(x, y - barHeight/2, barWidth, barHeight);
-      
-        // 将血条作为子对象添加到障碍物容器中
-        this.add([this.healthBarBg, this.healthBar, this.healthBarBorder, border]);
-    }
+
   
     setupAnimations() {
         // 轻微浮动动画
@@ -94,7 +46,6 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
         });
     }
   
-    // 🎯 对象池支持 - 重置障碍物
     spawn(x, y, obstacleData) {
         this.setPosition(x, y);
         this.obstacleData = obstacleData;
@@ -105,9 +56,17 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
         this.isDestroyed = false;
         this.isDestructible = obstacleData.destructible !== false;
         
+        // 将容器自身添加到场景和物理系统
+        this.scene.add.existing(this);
+        this.scene.physics.add.existing(this);
+        
+        // 设置物理体的属性
+        this.body.setSize(obstacleData.width, obstacleData.height);
+        this.body.setImmovable(true);
+        this.body.setCollideWorldBounds(false);
+        
         // 重新创建视觉效果
         this.createVisual();
-        this.createHealthBar();
         this.setupAnimations();
         
         this.setActive(true);
@@ -120,14 +79,16 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
     recycle() {
         this.setActive(false);
         this.setVisible(false);
+        this.body.enable = false; // 禁用物理体
         
         // 停止动画
         this.scene.tweens.killTweensOf(this);
         
-        // 清理血条（子对象会自动被清理）
-        this.healthBarBg = null;
-        this.healthBar = null;
-        this.healthBarBorder = null;
+        // ✅ 一键销毁所有子对象（主视觉、血条等），非常干净
+        this.removeAll(true);
+        
+        // 重置引用
+        this.mainBody = null;
         
         console.log(`🔄 障碍物回收: ${this.name}`);
     }
@@ -138,7 +99,6 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
         }
       
         this.health -= damage;
-        this.updateHealthBar();
         this.createDamageEffect(damage);
       
         console.log(`💥 障碍物受伤: ${this.name} -${damage}HP (剩余: ${this.health})`);
@@ -151,23 +111,7 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
         return false;
     }
   
-    updateHealthBar() {
-        if (!this.isDestructible || !this.healthBar) return;
-      
-        const healthPercent = this.health / this.maxHealth;
-        const barWidth = 60;
-      
-        this.healthBar.width = barWidth * healthPercent;
-      
-        // 根据血量改变颜色
-        if (healthPercent > 0.6) {
-            this.healthBar.setFillStyle(0x00ff00);
-        } else if (healthPercent > 0.3) {
-            this.healthBar.setFillStyle(0xffff00);
-        } else {
-            this.healthBar.setFillStyle(0xff0000);
-        }
-    }
+
   
     createDamageEffect(damage) {
         // 伤害数字
@@ -204,21 +148,21 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
     }
   
     createHitParticles() {
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: this.x,
-            y: this.y,
-            speed: { min: 50, max: 100 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: 0xff6666,
-            lifespan: 500,
-            quantity: 8
-        });
-      
-        this.scene.time.delayedCall(500, () => {
-            particles.destroy();
+        // 创建受击效果（不使用过时的粒子系统）
+        const effect = this.scene.add.graphics();
+        effect.fillStyle(0xff6666, 0.8);
+        effect.fillCircle(this.x, this.y, 12);
+        effect.setDepth(10);
+        
+        this.scene.tweens.add({
+            targets: effect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => {
+                effect.destroy();
+            }
         });
     }
   
@@ -238,27 +182,26 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
     }
   
     createDestructionEffect() {
-        // 爆炸粒子效果
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: this.x,
-            y: this.y,
-            speed: { min: 100, max: 200 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: 0xffaa00,
-            lifespan: 1000,
-            quantity: 15
+        // 爆炸效果（不使用过时的粒子系统）
+        const effect = this.scene.add.graphics();
+        effect.fillStyle(0xffaa00, 1);
+        effect.fillCircle(this.x, this.y, 25);
+        effect.setDepth(10);
+        
+        // 爆炸动画
+        this.scene.tweens.add({
+            targets: effect,
+            scaleX: 4,
+            scaleY: 4,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => {
+                effect.destroy();
+            }
         });
       
         // 震动效果
         this.scene.cameras.main.shake(300, 0.01);
-      
-        // 清理粒子
-        this.scene.time.delayedCall(1000, () => {
-            particles.destroy();
-        });
     }
   
     completeDestruction() {
@@ -305,9 +248,14 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
         }
     }
   
+
+  
     destroy() {
         // 停止动画
         this.scene.tweens.killTweensOf(this);
+        
+        // ✅ 一键销毁所有子对象
+        this.removeAll(true);
         
         super.destroy();
     }

@@ -69,32 +69,32 @@ export const GAME_CONFIG = {
     MUSIC_VOLUME: 0.3
 };
 
-// 🎯 UI布局配置
+// 🎯 UI布局配置 - 修复位置和字体大小
 export const UI_LAYOUT = {
-    // HUD位置
+    // HUD位置 - 确保在画布内可见
     SCORE_POS: { x: 20, y: 20 },
-    HEALTH_POS: { x: 20, y: 60 },
-    WEAPON_POS: { x: 20, y: 100 },
-    KILL_COUNT_POS: { x: 20, y: 140 },
-    TIME_POS: { x: 20, y: 180 },
+    HEALTH_POS: { x: 20, y: 50 },
+    WEAPON_POS: { x: 20, y: 80 },
+    KILL_COUNT_POS: { x: 20, y: 110 },
+    TIME_POS: { x: 20, y: 140 },
     
-    // 进度条位置
+    // 进度条位置 - 调整到画布底部中央
     DISTANCE_PROGRESS_POS: { x: 640, y: 680 },
     DISTANCE_PROGRESS_SIZE: { width: 800, height: 20 },
     
-    // 小地图位置
-    MINIMAP_POS: { x: 1200, y: 100 },
-    MINIMAP_SIZE: { width: 200, height: 150 },
+    // 小地图位置 - 调整到右上角，确保在画布内
+    MINIMAP_POS: { x: 1000, y: 100 },
+    MINIMAP_SIZE: { width: 150, height: 120 },
     
     // 对话框位置
     DIALOG_CENTER: { x: 640, y: 360 },
     DIALOG_SIZE: { width: 500, height: 400 },
     
-    // 音效控制位置
-    AUDIO_CONTROLS_POS: { x: 1200, y: 300 },
+    // 音效控制位置 - 调整到右上角
+    AUDIO_CONTROLS_POS: { x: 1000, y: 250 },
     
-    // 统计按钮位置
-    STATS_BUTTON_POS: { x: 1200, y: 400 },
+    // 统计按钮位置 - 调整到右上角
+    STATS_BUTTON_POS: { x: 1000, y: 300 },
     
     // 🎮 触摸控制UI布局
     TOUCH_CONTROLS: {
@@ -175,14 +175,17 @@ export const WEAPON_CONFIGS = {
         damage: 15,
         fireRate: 200,
         bulletSpeed: 600,
-        bulletSize: { width: 8, height: 8 },
-        bulletColor: COLOR_CONFIG.YELLOW, // 🔧 引用颜色配置
+        bulletSize: { width: 16, height: 16 },
+        bulletColor: 0xff6600, // 改为橙色，更明显
         texture: 'ak47',
         burstCount: 3,
         burstDelay: 50,
         bulletCost: 0,
         isContinuous: false,
-        duration: 0
+        duration: 0,
+        initialBullets: 999,
+        autoRefill: true,
+        lifetime: 5000 // 🆕 子弹生命周期5秒
     },
     
     DESERT_EAGLE: {
@@ -190,14 +193,17 @@ export const WEAPON_CONFIGS = {
         damage: 60,
         fireRate: 300,
         bulletSpeed: 800,
-        bulletSize: { width: 12, height: 12 },
+        bulletSize: { width: 18, height: 18 },
         bulletColor: COLOR_CONFIG.ORANGE, // 🔧 引用颜色配置
         texture: 'pistol',
         burstCount: 1,
         burstDelay: 0,
         bulletCost: 0,
         isContinuous: false,
-        duration: 0
+        duration: 0,
+        initialBullets: 999,
+        autoRefill: true,
+        lifetime: 6000 // 🆕 子弹生命周期6秒
     },
     
     GATLING: {
@@ -205,12 +211,12 @@ export const WEAPON_CONFIGS = {
         damage: 12,
         fireRate: 100,
         bulletSpeed: 700,
-        bulletSize: { width: 6, height: 6 },
+        bulletSize: { width: 14, height: 14 },
         bulletColor: COLOR_CONFIG.RED, // 🔧 引用颜色配置
         texture: 'gatling',
         burstCount: 1,
         burstDelay: 0,
-        bulletCost: 0,
+        bulletCost: 20,
         isContinuous: true,
         duration: 5000
     },
@@ -220,12 +226,12 @@ export const WEAPON_CONFIGS = {
         damage: 60,
         fireRate: 150,
         bulletSpeed: 900,
-        bulletSize: { width: 10, height: 10 },
+        bulletSize: { width: 16, height: 16 },
         bulletColor: COLOR_CONFIG.CYAN, // 🔧 引用颜色配置
         texture: 'tesla',
         burstCount: 1,
         burstDelay: 0,
-        bulletCost: 0,
+        bulletCost: 10,
         isContinuous: false,
         duration: 0
     },
@@ -235,7 +241,7 @@ export const WEAPON_CONFIGS = {
         damage: 300,
         fireRate: 1000,
         bulletSpeed: 400,
-        bulletSize: { width: 16, height: 16 },
+        bulletSize: { width: 24, height: 24 },
         bulletColor: COLOR_CONFIG.MAGENTA, // 🔧 引用颜色配置
         texture: 'missile',
         burstCount: 1,
@@ -250,7 +256,7 @@ export const WEAPON_CONFIGS = {
         damage: 999,
         fireRate: 1000,
         bulletSpeed: 300,
-        bulletSize: { width: 20, height: 20 },
+        bulletSize: { width: 28, height: 28 },
         bulletColor: COLOR_CONFIG.RED, // 🔧 引用颜色配置
         texture: 'nuke',
         burstCount: 1,
@@ -343,42 +349,62 @@ export const PLAYER_CONFIGS = [
     { 
         key: 'soldier', 
         name: '士兵', 
-        description: '平衡型，攻防兼备', 
+        description: '平衡型，攻防兼备',
         speed: 400, 
         health: 100,
         damageMultiplier: 1.0,
         fireRateMultiplier: 1.0,
-        initPoints: 0
+        initPoints: 0,
+        weapon: 'gun',
+        armor: 'light',
+        helmet: false,
+        color: 0x4A90E2,
+        accent: 0x222222
     },
     { 
         key: 'defense', 
         name: '盾牌', 
-        description: '防御型，生命值高', 
+        description: '防御型，生命值高',
         speed: 350, 
-        health: 300, // 生命值X3 (100*3)
+        health: 300, 
         damageMultiplier: 1.0,
         fireRateMultiplier: 1.0,
-        initPoints: 0
+        initPoints: 0,
+        weapon: 'shield',
+        armor: 'heavy',
+        helmet: true,
+        color: 0x888888,
+        accent: 0x333333
     },
     { 
         key: 'attack', 
         name: '骑士', 
-        description: '攻击型，伤害高，射速快', 
+        description: '攻击型，伤害高，射速快',
         speed: 300, 
         health: 90, 
-        damageMultiplier: 2.0, // 伤害威力X2
-        fireRateMultiplier: 2.0, // 开枪速度X2
-        initPoints: 0
+        damageMultiplier: 2.0, 
+        fireRateMultiplier: 2.0, 
+        initPoints: 0,
+        weapon: 'sword',
+        armor: 'heavy',
+        helmet: true,
+        color: 0xFFD700,
+        accent: 0x222222
     },
     { 
         key: 'score', 
         name: '绝地武士', 
-        description: '特殊型，初始积分高', 
+        description: '特殊型，初始积分高',
         speed: 500, 
         health: 70, 
         damageMultiplier: 1.0,
         fireRateMultiplier: 1.0,
-        initPoints: 5000 // 初始积分5000
+        initPoints: 5000,
+        weapon: 'lightsaber',
+        armor: 'robe',
+        helmet: false,
+        color: 0x222222,
+        accent: 0x00FFEE
     }
 ];
 

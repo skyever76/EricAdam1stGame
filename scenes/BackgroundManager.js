@@ -229,35 +229,29 @@ export class BackgroundManager {
     }
     
     addEnvironmentEffect(levelType) {
-        this.clearEnvironmentEffects();
-        
-        const effectMap = {
-            forest: 'fog',
-            desert: 'sandstorm',
-            ocean: 'bubbles',
-            space: 'stars'
-        };
-        
-        const effect = effectMap[levelType];
-        if (effect && this.effects[effect]) {
-            this.effects[effect]();
-        }
+        // this.clearEnvironmentEffects();
+        // const effectMap = {
+        //     forest: 'fog',
+        //     desert: 'sandstorm',
+        //     ocean: 'bubbles',
+        //     space: 'stars'
+        // };
+        // const effect = effectMap[levelType];
+        // if (effect && this.effects[effect]) {
+        //     this.effects[effect]();
+        // }
     }
     
     createSandstormEffect() {
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: { min: 0, max: 1280 },
-            y: { min: 0, max: 720 },
-            speed: { min: 50, max: 150 },
-            scale: { start: 0.1, end: 0 },
-            alpha: { start: 0.3, end: 0 },
-            tint: 0xf4e4bc,
-            lifespan: 3000,
-            frequency: 100
-        });
-        
-        this.environmentEffects.push(particles);
+        // const sandstorm = this.scene.add.graphics();
+        // sandstorm.fillStyle(0xf4e4bc, 0.3);
+        // for (let i = 0; i < 50; i++) {
+        //     const x = Math.random() * 1280;
+        //     const y = Math.random() * 720;
+        //     const size = Math.random() * 3 + 1;
+        //     sandstorm.fillCircle(x, y, size);
+        // }
+        // this.environmentEffects.push(sandstorm);
     }
     
     createFogEffect() {
@@ -269,36 +263,27 @@ export class BackgroundManager {
     }
     
     createBubbleEffect() {
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: { min: 0, max: 1280 },
-            y: 720,
-            speedY: { min: -100, max: -200 },
-            speedX: { min: -20, max: 20 },
-            scale: { start: 0.2, end: 0 },
-            alpha: { start: 0.5, end: 0 },
-            tint: 0x87ceeb,
-            lifespan: 4000,
-            frequency: 200
-        });
-        
-        this.environmentEffects.push(particles);
+        // const bubbles = this.scene.add.graphics();
+        // bubbles.fillStyle(0x87ceeb, 0.5);
+        // for (let i = 0; i < 30; i++) {
+        //     const x = Math.random() * 1280;
+        //     const y = Math.random() * 720;
+        //     const size = Math.random() * 8 + 4;
+        //     bubbles.fillCircle(x, y, size);
+        // }
+        // this.environmentEffects.push(bubbles);
     }
     
     createStarEffect() {
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: { min: 0, max: 1280 },
-            y: { min: 0, max: 720 },
-            speed: { min: 20, max: 80 },
-            scale: { start: 0.1, end: 0 },
-            alpha: { start: 0.8, end: 0 },
-            tint: 0xffffff,
-            lifespan: 2000,
-            frequency: 150
-        });
-        
-        this.environmentEffects.push(particles);
+        // const stars = this.scene.add.graphics();
+        // stars.fillStyle(0xffffff, 0.8);
+        // for (let i = 0; i < 100; i++) {
+        //     const x = Math.random() * 1280;
+        //     const y = Math.random() * 720;
+        //     const size = Math.random() * 2 + 1;
+        //     stars.fillCircle(x, y, size);
+        // }
+        // this.environmentEffects.push(stars);
     }
     
     clearBackground() {

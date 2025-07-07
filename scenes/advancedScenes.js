@@ -333,25 +333,28 @@ export const SCENE_EFFECTS = {
     steam: (scene, config = {}) => {
         const steamEmitters = [];
         const count = config.count || 5;
-        const frequency = config.frequency || 500;
         const tint = config.tint || 0xeeeeee;
-        const speed = config.speed || { min: 20, max: 50 };
         
         for (let i = 0; i < count; i++) {
             const x = Math.random() * 2000;
             const y = Math.random() * 2000;
             
-            const steam = scene.add.particles(x, y, 'bullet', {
-                speed: speed,
-                scale: { start: 0.3, end: 0.8 },
-                alpha: { start: 0.6, end: 0 },
-                lifespan: 3000,
-                blendMode: 'ADD',
-                angle: { min: 260, max: 280 },
-                quantity: 2,
-                frequency: frequency,
-                tint: tint
-            }).setDepth(50);
+            // ✅ 使用现代Graphics替代过时的粒子系统
+            const steam = scene.add.graphics();
+            steam.fillStyle(tint, 0.6);
+            steam.fillCircle(x, y, 15);
+            steam.setDepth(50);
+            
+            // 创建蒸汽动画
+            scene.tweens.add({
+                targets: steam,
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 3000,
+                ease: 'Power2',
+                onComplete: () => steam.destroy()
+            });
             
             steamEmitters.push(steam);
         }
@@ -428,25 +431,26 @@ export const SCENE_EFFECTS = {
     dataStream: (scene, config = {}) => {
         const dataParticles = [];
         const count = config.count || 10;
-        const speed = config.speed || { min: 30, max: 80 };
         const tint = config.tint || 0x00ffff;
-        const frequency = config.frequency || 200;
         
         for (let i = 0; i < count; i++) {
             const x = Math.random() * 2000;
             const y = Math.random() * 2000;
             
-            const data = scene.add.particles(x, y, 'bullet', {
-                speed: speed,
-                scale: { start: 0.2, end: 0 },
-                alpha: { start: 0.8, end: 0 },
-                lifespan: 2000,
-                blendMode: 'ADD',
-                angle: { min: 0, max: 360 },
-                quantity: 1,
-                frequency: frequency,
-                tint: tint
-            }).setDepth(55);
+            // ✅ 使用现代Graphics替代过时的粒子系统
+            const data = scene.add.circle(x, y, 3, tint, 0.8);
+            data.setDepth(55);
+            
+            // 创建数据流动画
+            scene.tweens.add({
+                targets: data,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 2000,
+                ease: 'Power2',
+                onComplete: () => data.destroy()
+            });
             
             dataParticles.push(data);
         }
@@ -478,25 +482,26 @@ export const SCENE_EFFECTS = {
     toxicSpores: (scene, config = {}) => {
         const sporeEmitters = [];
         const count = config.count || 8;
-        const speed = config.speed || { min: 10, max: 30 };
         const tint = config.tint || 0x90ee90;
-        const frequency = config.frequency || 1000;
         
         for (let i = 0; i < count; i++) {
             const x = Math.random() * 2000;
             const y = Math.random() * 2000;
             
-            const spores = scene.add.particles(x, y, 'bullet', {
-                speed: speed,
-                scale: { start: 0.3, end: 0 },
-                alpha: { start: 0.5, end: 0 },
-                lifespan: 4000,
-                blendMode: 'ADD',
-                angle: { min: 0, max: 360 },
-                quantity: 1,
-                frequency: frequency,
-                tint: tint
-            }).setDepth(50);
+            // ✅ 使用现代Graphics替代过时的粒子系统
+            const spores = scene.add.circle(x, y, 4, tint, 0.5);
+            spores.setDepth(50);
+            
+            // 创建孢子动画
+            scene.tweens.add({
+                targets: spores,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 4000,
+                ease: 'Power2',
+                onComplete: () => spores.destroy()
+            });
             
             sporeEmitters.push(spores);
         }

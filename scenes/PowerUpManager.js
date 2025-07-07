@@ -149,34 +149,84 @@ export class PowerUpManager {
     }
     createHealEffect(player) {
         if (!player) return;
-        const healEffect = this.scene.add.particles(player.x, player.y, 'bullet', {
-            speed: { min: 30, max: 80 },
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 1000,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 15,
-            tint: 0x44ff44
-        }).setDepth(150);
-        this.scene.time.delayedCall(1200, () => {
-            healEffect.destroy();
+        
+        // ✅ 使用现代Graphics替代过时的粒子系统
+        const healEffect = this.scene.add.graphics();
+        healEffect.fillStyle(0x44ff44, 0.8);
+        healEffect.fillCircle(player.x, player.y, 25);
+        healEffect.setDepth(150);
+        
+        // 创建多个小粒子效果
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = 15 + Math.random() * 25;
+            const particleX = player.x + Math.cos(angle) * distance;
+            const particleY = player.y + Math.sin(angle) * distance;
+            
+            const particle = this.scene.add.circle(particleX, particleY, 2, 0x44ff44, 0.9);
+            particle.setDepth(151);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 主效果动画
+        this.scene.tweens.add({
+            targets: healEffect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => healEffect.destroy()
         });
     }
     createBoostEffect(player, powerUpData) {
         if (!player) return;
-        const boostEffect = this.scene.add.particles(player.x, player.y, 'bullet', {
-            speed: { min: 50, max: 120 },
-            scale: { start: 0.4, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 1500,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 20,
-            tint: powerUpData.color
-        }).setDepth(150);
-        this.scene.time.delayedCall(1800, () => {
-            boostEffect.destroy();
+        
+        // ✅ 使用现代Graphics替代过时的粒子系统
+        const boostEffect = this.scene.add.graphics();
+        boostEffect.fillStyle(powerUpData.color, 0.8);
+        boostEffect.fillCircle(player.x, player.y, 30);
+        boostEffect.setDepth(150);
+        
+        // 创建多个小粒子效果
+        for (let i = 0; i < 16; i++) {
+            const angle = (i / 16) * Math.PI * 2;
+            const distance = 20 + Math.random() * 30;
+            const particleX = player.x + Math.cos(angle) * distance;
+            const particleY = player.y + Math.sin(angle) * distance;
+            
+            const particle = this.scene.add.circle(particleX, particleY, 3, powerUpData.color, 0.9);
+            particle.setDepth(151);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 1500,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 主效果动画
+        this.scene.tweens.add({
+            targets: boostEffect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Power2',
+            onComplete: () => boostEffect.destroy()
         });
         
         // 使用子对象方式，避免onUpdate回调

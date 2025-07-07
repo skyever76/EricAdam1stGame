@@ -33,6 +33,10 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
         this.damage = config.damage || 20;
         this.speed = config.speed || 200;
         
+        // 🆕 添加敌人子弹发射信息
+        const angleDegrees = Phaser.Math.RadToDeg(angle);
+        console.log(`👹 敌人子弹发射: ${config.name || '敌人子弹'} | 位置: (${x}, ${y}) | 角度: ${angleDegrees.toFixed(1)}° | 速度: ${this.speed} | 伤害: ${this.damage} | 颜色: 红色 | 大小: ${config.size || 12}`);
+        
         // 动态生成纹理
         this.generateAndApplyTexture(config);
         
@@ -44,12 +48,15 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
         if (this.lifeTimer) {
             this.lifeTimer.remove(false);
         }
-        this.lifeTimer = this.scene.time.delayedCall(this.lifetime, this.kill, [], this);
+        this.lifeTimer = this.scene.time.delayedCall(this.lifetime, () => {
+            console.log(`⏰ 敌人子弹超时: ${config.name || '敌人子弹'} | 位置: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
+            this.kill();
+        });
     }
     
     // 动态纹理生成逻辑
     generateAndApplyTexture(config) {
-        const size = config.size || 8;
+        const size = config.size || 12;
         const color = config.color || 0xff0000;
         const textureKey = `enemy_bullet_${size}_${color}`;
         
@@ -57,11 +64,24 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
         if (!this.scene.textures.exists(textureKey)) {
             const graphics = this.scene.add.graphics();
             
-            // 绘制子弹主体
+            // 🆕 改进敌人子弹视觉效果，使其更明显
+            // 1. 添加发光效果
+            graphics.fillStyle(0xffffff, 0.6);
+            graphics.fillCircle(size / 2, size / 2, size / 2 + 3);
+            
+            // 2. 绘制子弹主体
             graphics.fillStyle(color);
             graphics.fillCircle(size / 2, size / 2, size / 2);
             
-            // 根据敌人类型添加特效（可选）
+            // 3. 添加边框
+            graphics.lineStyle(2, 0xffffff);
+            graphics.strokeCircle(size / 2, size / 2, size / 2);
+            
+            // 4. 添加内部高光
+            graphics.fillStyle(0xffffff, 0.8);
+            graphics.fillCircle(size / 2 - 2, size / 2 - 2, 3);
+            
+            // 根据敌人类型添加特殊特效
             if (config.enemyType) {
                 switch (config.enemyType) {
                     case 'alien':
@@ -73,11 +93,11 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
                         graphics.strokeCircle(size / 2, size / 2, size / 2 + 1);
                         break;
                     case 'boss':
-                        graphics.lineStyle(2, 0xff0000);
+                        graphics.lineStyle(3, 0xff0000);
                         graphics.strokeCircle(size / 2, size / 2, size / 2 + 2);
                         // 添加能量效果
                         graphics.fillStyle(0xffff00);
-                        graphics.fillCircle(size / 2, size / 2, 2);
+                        graphics.fillCircle(size / 2, size / 2, 3);
                         break;
                 }
             }
@@ -91,14 +111,23 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
         this.setTexture(textureKey);
         // 调整物理体大小以匹配纹理
         this.body.setSize(size, size);
+        
+        // 🆕 设置高深度，确保敌人子弹在最上层显示
+        this.setDepth(50);
     }
     
     // update方法现在是Sprite的一部分，Phaser会自动调用
     preUpdate(time, delta) {
         super.preUpdate(time, delta); // 必须调用父类的preUpdate
         
+        // 🆕 添加敌人子弹位置跟踪（每秒显示一次）
+        if (time % 1000 < 16) { // 每秒显示一次
+            console.log(`🎯 敌人子弹飞行: 位置: (${this.x.toFixed(0)}, ${this.y.toFixed(0)}) | 速度: (${this.body.velocity.x.toFixed(0)}, ${this.body.velocity.y.toFixed(0)})`);
+        }
+        
         // 检查边界
         if (this.x < -100 || this.x > 4100 || this.y < -100 || this.y > 820) {
+            console.log(`🌍 敌人子弹飞出边界: 位置: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
             this.kill();
         }
     }
@@ -106,6 +135,8 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
     // 定义一个kill方法用于回收对象池
     kill() {
         if (!this.active) return; // 防止重复回收
+        
+        console.log(`💥 敌人子弹销毁: 位置: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
         
         // 创建销毁效果
         this.createDestroyEffect();
@@ -122,21 +153,37 @@ export class EnemyBullet extends Phaser.Physics.Arcade.Sprite {
     }
     
     createDestroyEffect() {
-        // 创建小型爆炸效果
-        const particles = this.scene.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: this.x,
-            y: this.y,
-            speed: { min: 30, max: 80 },
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 0.8, end: 0 },
-            lifespan: 500,
-            quantity: 8
-        });
+        // 🆕 改进敌人子弹销毁效果，使其更明显
+        const effect = this.scene.add.graphics();
         
-        // 延迟销毁粒子
-        this.scene.time.delayedCall(500, () => {
-            particles.destroy();
+        // 创建多层爆炸效果
+        // 外层光晕
+        effect.fillStyle(0xffffff, 0.8);
+        effect.fillCircle(this.x, this.y, 15);
+        
+        // 中层红色
+        effect.fillStyle(0xff0000, 0.9);
+        effect.fillCircle(this.x, this.y, 10);
+        
+        // 内层白色
+        effect.fillStyle(0xffffff, 1);
+        effect.fillCircle(this.x, this.y, 5);
+        
+        effect.setDepth(60);
+        
+        // 改进的缩放和淡出动画
+        this.scene.tweens.add({
+            targets: effect,
+            scaleX: 3,
+            scaleY: 3,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => {
+                if (effect && effect.active) {
+                    effect.destroy();
+                }
+            }
         });
     }
     

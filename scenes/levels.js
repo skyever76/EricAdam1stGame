@@ -6,7 +6,7 @@ export const LEVELS_CONFIG = [
         name: "城市危机",
         description: "暴徒正在城市中肆虐，消灭他们！",
         background: "city",
-        bgColor: 0xe8f4f8,
+        bgColor: 0xf0f8ff, // 更淡的天蓝色
         playerSkin: "soldier",
         music: "city_theme",
         spawnRate: 2000, // 敌人生成间隔（毫秒）
@@ -24,7 +24,7 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.8 // 生成权重
+                weight: 0.7 // 生成权重
             },
             {
                 name: "枪手",
@@ -37,6 +37,19 @@ export const LEVELS_CONFIG = [
                 canShoot: true,
                 shootRate: 4000,
                 weight: 0.2
+            },
+            {
+                name: "城市BOSS",
+                sprite: "boss",
+                color: 0xFF0000,
+                hp: 300,
+                speed: 40,
+                score: 300,  // 200*1.5=300
+                ai: "boss",
+                canShoot: true,
+                shootRate: 2000,
+                weight: 0.1,
+                isBoss: true
             }
         ],
         powerUps: ["health", "ammo"],
@@ -47,7 +60,7 @@ export const LEVELS_CONFIG = [
         name: "沙漠风暴",
         description: "沙漠蝎群来袭，小心它们的弧线攻击！",
         background: "desert",
-        bgColor: 0xf4e4bc,
+        bgColor: 0xfaf0e6, // 更淡的沙漠色
         playerSkin: "tank",
         music: "desert_theme",
         spawnRate: 1800,
@@ -65,7 +78,7 @@ export const LEVELS_CONFIG = [
                 ai: "curve",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.4
+                weight: 0.35
             },
             {
                 name: "暴徒",
@@ -89,7 +102,7 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: true,
                 shootRate: 3500,
-                weight: 0.25
+                weight: 0.2
             },
             {
                 name: "沙漠猎手",
@@ -101,7 +114,20 @@ export const LEVELS_CONFIG = [
                 ai: "curve",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.2
+                weight: 0.15
+            },
+            {
+                name: "沙漠BOSS",
+                sprite: "boss",
+                color: 0xFF6600,
+                hp: 350,
+                speed: 30,
+                score: 350,  // 233*1.5=349.5 向上取整
+                ai: "boss",
+                canShoot: true,
+                shootRate: 1800,
+                weight: 0.1,
+                isBoss: true
             }
         ],
         powerUps: ["health", "ammo", "damage"],
@@ -112,7 +138,7 @@ export const LEVELS_CONFIG = [
         name: "森林迷雾",
         description: "在迷雾森林中，敌人变得更加狡猾！",
         background: "forest",
-        bgColor: 0xd4f0d4,
+        bgColor: 0xf0fff0, // 更淡的森林绿
         playerSkin: "soldier",
         music: "forest_theme",
         spawnRate: 1600,
@@ -130,7 +156,7 @@ export const LEVELS_CONFIG = [
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.3
+                weight: 0.25
             },
             {
                 name: "弓箭手",
@@ -142,7 +168,7 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: true,
                 shootRate: 3000,
-                weight: 0.3
+                weight: 0.25
             },
             {
                 name: "森林守卫",
@@ -166,7 +192,20 @@ export const LEVELS_CONFIG = [
                 ai: "zigzag",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.25
+                weight: 0.2
+            },
+            {
+                name: "森林BOSS",
+                sprite: "boss",
+                color: 0x228B22,
+                hp: 400,
+                speed: 50,
+                score: 400,  // 267*1.5=400.5 向上取整
+                ai: "boss",
+                canShoot: true,
+                shootRate: 1600,
+                weight: 0.1,
+                isBoss: true
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed"],
@@ -177,7 +216,7 @@ export const LEVELS_CONFIG = [
         name: "海洋深渊",
         description: "深海怪物拥有智能，它们会主动追击！",
         background: "ocean",
-        bgColor: 0xe6f3ff,
+        bgColor: 0xf0f8ff, // 更淡的海洋蓝
         playerSkin: "diver",
         music: "ocean_theme",
         spawnRate: 1400,
@@ -195,7 +234,7 @@ export const LEVELS_CONFIG = [
                 ai: "chase",
                 canShoot: true,
                 shootRate: 2500,
-                weight: 0.3
+                weight: 0.25
             },
             {
                 name: "电鳗",
@@ -219,7 +258,7 @@ export const LEVELS_CONFIG = [
                 ai: "straight",
                 canShoot: true,
                 shootRate: 2000,
-                weight: 0.2
+                weight: 0.15
             },
             {
                 name: "深海狙击手",
@@ -243,7 +282,7 @@ export const LEVELS_CONFIG = [
                 ai: "chase",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.25
+                weight: 0.2
             },
             {
                 name: "高速追击者",
@@ -255,7 +294,20 @@ export const LEVELS_CONFIG = [
                 ai: "fast_chase",
                 canShoot: false,
                 shootRate: 0,
-                weight: 0.2
+                weight: 0.1
+            },
+            {
+                name: "海洋BOSS",
+                sprite: "boss",
+                color: 0x0066CC,
+                hp: 450,
+                speed: 60,
+                score: 450,  // 300*1.5=450
+                ai: "boss",
+                canShoot: true,
+                shootRate: 1400,
+                weight: 0.05,
+                isBoss: true
             }
         ],
         powerUps: ["health", "ammo", "damage", "speed", "shield"],
@@ -266,7 +318,7 @@ export const LEVELS_CONFIG = [
         name: "太空堡垒",
         description: "最终决战！面对太空中最强的敌人！",
         background: "space",
-        bgColor: 0xf0f0f0,
+        bgColor: 0xfafafa, // 更淡的太空灰
         playerSkin: "spaceship",
         music: "space_theme",
         spawnRate: 1000,
@@ -344,7 +396,8 @@ export const LEVELS_CONFIG = [
                 ai: "boss",
                 canShoot: true,
                 shootRate: 800,
-                weight: 0.1
+                weight: 0.1,
+                isBoss: true
             },
             {
                 name: "极速猎手",
@@ -369,7 +422,8 @@ export const AI_BEHAVIORS = {
     straight: {
         name: "直线移动",
         update: (enemy) => {
-            // 简单直线移动，已在基础移动中实现
+            // 🆕 基础移动逻辑：向左移动
+            enemy.setVelocityX(-enemy.speed);
         }
     },
     curve: {
@@ -386,6 +440,8 @@ export const AI_BEHAVIORS = {
             const newY = enemy.aiData.startY + 
                 Math.sin(time * enemy.aiData.frequency) * enemy.aiData.amplitude;
             enemy.setY(newY);
+            // 🆕 添加X轴移动：向左移动
+            enemy.setVelocityX(-enemy.speed * 0.8);
         }
     },
     zigzag: {
@@ -408,6 +464,8 @@ export const AI_BEHAVIORS = {
             }
           
             enemy.setVelocityY(enemy.aiData.direction * enemy.aiData.speed * 0.5);
+            // 🆕 添加X轴移动：向左移动
+            enemy.setVelocityX(-enemy.speed * 0.7);
         }
     },
     chase: {
@@ -500,6 +558,9 @@ export const AI_BEHAVIORS = {
                     enemy.setY(targetY);
                     break;
             }
+          
+            // 🆕 添加X轴移动：BOSS也向左移动
+            enemy.setVelocityX(-enemy.speed * 0.5);
           
             // 切换移动模式
             enemy.aiData.phaseTimer++;

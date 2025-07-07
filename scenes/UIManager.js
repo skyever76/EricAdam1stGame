@@ -7,12 +7,8 @@ export class UIManager {
         this.scene = scene;
         this.hudElements = {};
         this.dialogs = {};
-        this.audioControls = {};
-        this.statsButton = null;
         
         this.createHUD();
-        this.createAudioControls();
-        this.createStatsButton();
     }
     
     createHUD() {
@@ -21,8 +17,6 @@ export class UIManager {
         this.createWeaponInfo();
         this.createKillCount();
         this.createTimeDisplay();
-        this.createDistanceProgressBar();
-        this.createMinimap();
     }
     
     createScoreDisplay() {
@@ -31,7 +25,7 @@ export class UIManager {
             UI_LAYOUT.SCORE_POS.y, 
             '分数: 0', 
             { 
-                fontSize: '24px', 
+                fontSize: '20px', 
                 fill: `#${COLOR_CONFIG.UI_TEXT.toString(16)}`,
                 fontFamily: 'Arial'
             }
@@ -50,7 +44,7 @@ export class UIManager {
             UI_LAYOUT.HEALTH_POS.y, 
             '血量: 100/100', 
             { 
-                fontSize: '20px', 
+                fontSize: '18px', 
                 fill: `#${COLOR_CONFIG.HEALTH_FULL.toString(16)}`,
                 fontFamily: 'Arial'
             }
@@ -64,7 +58,7 @@ export class UIManager {
             UI_LAYOUT.WEAPON_POS.y, 
             '武器: AK47', 
             { 
-                fontSize: '18px', 
+                fontSize: '16px', 
                 fill: `#${COLOR_CONFIG.WEAPON_ACTIVE.toString(16)}`,
                 fontFamily: 'Arial'
             }
@@ -78,7 +72,7 @@ export class UIManager {
             UI_LAYOUT.KILL_COUNT_POS.y, 
             '击杀: 0', 
             { 
-                fontSize: '18px', 
+                fontSize: '16px', 
                 fill: `#${COLOR_CONFIG.UI_TEXT.toString(16)}`,
                 fontFamily: 'Arial'
             }
@@ -92,7 +86,7 @@ export class UIManager {
             UI_LAYOUT.TIME_POS.y, 
             '时间: 00:00', 
             { 
-                fontSize: '18px', 
+                fontSize: '16px', 
                 fill: `#${COLOR_CONFIG.UI_TEXT.toString(16)}`,
                 fontFamily: 'Arial'
             }
@@ -100,69 +94,13 @@ export class UIManager {
         this.hudElements.timeDisplay.setScrollFactor(0);
     }
     
-    createDistanceProgressBar() {
-        this.hudElements.distanceProgress = this.scene.add.graphics();
-        this.hudElements.distanceProgress.setScrollFactor(0);
-    }
+
     
-    createMinimap() {
-        const minimap = this.scene.add.graphics();
-        minimap.setScrollFactor(0);
-        minimap.setPosition(UI_LAYOUT.MINIMAP_POS.x, UI_LAYOUT.MINIMAP_POS.y);
-        
-        // 绘制小地图边框
-        minimap.lineStyle(2, COLOR_CONFIG.UI_BORDER);
-        minimap.strokeRect(0, 0, UI_LAYOUT.MINIMAP_SIZE.width, UI_LAYOUT.MINIMAP_SIZE.height);
-        
-        this.hudElements.minimap = minimap;
-    }
+
     
-    createAudioControls() {
-        // 音量滑块
-        this.audioControls.volumeSlider = this.scene.add.graphics();
-        this.audioControls.volumeSlider.setScrollFactor(0);
-        this.audioControls.volumeSlider.setPosition(UI_LAYOUT.AUDIO_CONTROLS_POS.x, UI_LAYOUT.AUDIO_CONTROLS_POS.y);
-        
-        // 静音按钮
-        this.audioControls.muteButton = this.scene.add.text(
-            UI_LAYOUT.AUDIO_CONTROLS_POS.x, 
-            UI_LAYOUT.AUDIO_CONTROLS_POS.y + 30, 
-            '🔊', 
-            { 
-                fontSize: '24px', 
-                fill: `#${COLOR_CONFIG.UI_TEXT.toString(16)}`,
-                fontFamily: 'Arial'
-            }
-        );
-        this.audioControls.muteButton.setScrollFactor(0);
-        this.audioControls.muteButton.setInteractive();
-        
-        // 静音按钮事件
-        this.audioControls.muteButton.on('pointerdown', () => {
-            this.toggleMute();
-        });
-    }
+
     
-    createStatsButton() {
-        this.statsButton = this.scene.add.text(
-            UI_LAYOUT.STATS_BUTTON_POS.x, 
-            UI_LAYOUT.STATS_BUTTON_POS.y, 
-            '📊 统计', 
-            { 
-                fontSize: '20px', 
-                fill: `#${COLOR_CONFIG.UI_HIGHLIGHT.toString(16)}`,
-                fontFamily: 'Arial',
-                backgroundColor: `#${COLOR_CONFIG.UI_BACKGROUND.toString(16)}`,
-                padding: { x: 10, y: 5 }
-            }
-        );
-        this.statsButton.setScrollFactor(0);
-        this.statsButton.setInteractive();
-        
-        this.statsButton.on('pointerdown', () => {
-            this.showStats();
-        });
-    }
+
     
     update(gameState) {
         // 🎯 这是现在唯一更新UI元素的地方
@@ -180,11 +118,9 @@ export class UIManager {
         // 更新击杀数
         this.updateKillCount(gameState.killCount, gameState.levelCompleteKills);
         
-        // 更新距离进度条
-        this.updateDistanceProgressBar(gameState.player);
+
         
-        // 更新小地图
-        this.updateMinimap(gameState);
+
         
         // 更新时间显示
         this.updateTimeDisplay(gameState);
@@ -240,7 +176,9 @@ export class UIManager {
     
     updateKillCount(killCount, levelCompleteKills) {
         if (this.hudElements.killCount) {
-            this.hudElements.killCount.setText(`击杀: ${killCount || 0}/${levelCompleteKills || 0}`);
+            // 🆕 改为显示BOSS状态而不是击杀数
+            const bossStatus = this.scene.bossDefeated ? '✅ BOSS已击败' : '❌ BOSS未击败';
+            this.hudElements.killCount.setText(`BOSS状态: ${bossStatus} | 击杀: ${killCount || 0}`);
         }
     }
     
@@ -257,69 +195,9 @@ export class UIManager {
         }
     }
     
-    updateDistanceProgressBar(player) {
-        if (this.hudElements.distanceProgress && player) {
-            const currentDistance = Math.max(0, Math.round(player.x));
-            const maxDistanceValue = 4000;
-            const progress = currentDistance / maxDistanceValue;
-            
-            this.hudElements.distanceProgress.clear();
-            this.hudElements.distanceProgress.fillStyle(COLOR_CONFIG.UI_BACKGROUND);
-            this.hudElements.distanceProgress.fillRect(
-                UI_LAYOUT.DISTANCE_PROGRESS_POS.x - UI_LAYOUT.DISTANCE_PROGRESS_SIZE.width / 2,
-                UI_LAYOUT.DISTANCE_PROGRESS_POS.y - UI_LAYOUT.DISTANCE_PROGRESS_SIZE.height / 2,
-                UI_LAYOUT.DISTANCE_PROGRESS_SIZE.width,
-                UI_LAYOUT.DISTANCE_PROGRESS_SIZE.height
-            );
-            this.hudElements.distanceProgress.fillStyle(COLOR_CONFIG.UI_HIGHLIGHT);
-            this.hudElements.distanceProgress.fillRect(
-                UI_LAYOUT.DISTANCE_PROGRESS_POS.x - UI_LAYOUT.DISTANCE_PROGRESS_SIZE.width / 2,
-                UI_LAYOUT.DISTANCE_PROGRESS_POS.y - UI_LAYOUT.DISTANCE_PROGRESS_SIZE.height / 2,
-                UI_LAYOUT.DISTANCE_PROGRESS_SIZE.width * progress,
-                UI_LAYOUT.DISTANCE_PROGRESS_SIZE.height
-            );
-        }
-    }
+
     
-    updateMinimap(gameState) {
-        if (!this.hudElements.minimap) return;
-        
-        this.hudElements.minimap.clear();
-        
-        // 绘制小地图边框
-        this.hudElements.minimap.lineStyle(2, COLOR_CONFIG.UI_BORDER);
-        this.hudElements.minimap.strokeRect(0, 0, UI_LAYOUT.MINIMAP_SIZE.width, UI_LAYOUT.MINIMAP_SIZE.height);
-        
-        // 绘制玩家位置
-        if (gameState.player) {
-            const playerX = (gameState.player.x / 4000) * UI_LAYOUT.MINIMAP_SIZE.width;
-            const playerY = (gameState.player.y / 720) * UI_LAYOUT.MINIMAP_SIZE.height;
-            
-            this.hudElements.minimap.fillStyle(COLOR_CONFIG.GREEN);
-            this.hudElements.minimap.fillCircle(playerX, playerY, 3);
-        }
-        
-        // 绘制敌人位置
-        if (gameState.enemies) {
-            this.hudElements.minimap.fillStyle(COLOR_CONFIG.RED);
-            gameState.enemies.forEach(enemy => {
-                const enemyX = (enemy.x / 4000) * UI_LAYOUT.MINIMAP_SIZE.width;
-                const enemyY = (enemy.y / 720) * UI_LAYOUT.MINIMAP_SIZE.height;
-                this.hudElements.minimap.fillCircle(enemyX, enemyY, 2);
-            });
-        }
-        
-        // 绘制摄像机视口
-        if (gameState.camera) {
-            const cameraX = (gameState.camera.x / 4000) * UI_LAYOUT.MINIMAP_SIZE.width;
-            const cameraY = (gameState.camera.y / 720) * UI_LAYOUT.MINIMAP_SIZE.height;
-            const cameraWidth = (gameState.camera.width / 4000) * UI_LAYOUT.MINIMAP_SIZE.width;
-            const cameraHeight = (gameState.camera.height / 720) * UI_LAYOUT.MINIMAP_SIZE.height;
-            
-            this.hudElements.minimap.lineStyle(1, COLOR_CONFIG.CYAN);
-            this.hudElements.minimap.strokeRect(cameraX, cameraY, cameraWidth, cameraHeight);
-        }
-    }
+
 
     // 🆕 更新道具HUD
     updatePowerUpHUD(powerUpManager) {
@@ -333,31 +211,31 @@ export class UIManager {
         
         const activeBonuses = powerUpManager.getActiveBonuses();
         activeBonuses.forEach((bonus, index) => {
-            const x = 50;
-            const y = 150 + index * 40;
+            const x = 20;
+            const y = 180 + index * 35;
             const remainingTime = Math.max(0, bonus.endTime - Date.now());
             const seconds = Math.ceil(remainingTime / 1000);
             
-            const bg = this.scene.add.rectangle(x, y, 200, 30, 0x000000, 0.6)
+            const bg = this.scene.add.rectangle(x, y, 180, 25, 0x000000, 0.6)
                 .setOrigin(0, 0.5)
                 .setScrollFactor(0);
             // 使用Graphics绘制边框
             const border = this.scene.add.graphics();
             border.lineStyle(1, 0xffffff);
-            border.strokeRect(x - 100, y - 15, 200, 30);
+            border.strokeRect(x - 90, y - 12.5, 180, 25);
             border.setScrollFactor(0);
                 
-            const text = this.scene.add.text(x + 10, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
-                fontSize: '14px',
+            const text = this.scene.add.text(x + 5, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
+                fontSize: '12px',
                 fill: '#ffffff'
             }).setOrigin(0, 0.5).setScrollFactor(0);
             
-            const progressWidth = 180;
+            const progressWidth = 160;
             const progress = remainingTime / bonus.effect.duration;
-            const progressBg = this.scene.add.rectangle(x + 10, y + 12, progressWidth, 4, 0x333333)
+            const progressBg = this.scene.add.rectangle(x + 5, y + 10, progressWidth, 3, 0x333333)
                 .setOrigin(0, 0.5)
                 .setScrollFactor(0);
-            const progressBar = this.scene.add.rectangle(x + 10, y + 12, progressWidth * progress, 4, 0x00ff00)
+            const progressBar = this.scene.add.rectangle(x + 5, y + 10, progressWidth * progress, 3, 0x00ff00)
                 .setOrigin(0, 0.5)
                 .setScrollFactor(0);
                 
@@ -475,32 +353,9 @@ export class UIManager {
         }
     }
     
-    toggleMute() {
-        if (this.audioControls.muteButton) {
-            const isMuted = this.audioControls.muteButton.text === '🔇';
-            this.audioControls.muteButton.setText(isMuted ? '🔊' : '🔇');
-            
-            // 触发静音事件
-            this.scene.events.emit('toggleMute', !isMuted);
-        }
-    }
+
     
-    showStats() {
-        // 获取统计数据
-        const stats = this.scene.getStats ? this.scene.getStats() : {};
-        
-        const statsText = `
-总击杀: ${stats.totalKills || 0}
-总分数: ${stats.totalScore || 0}
-最高分: ${stats.highestScore || 0}
-游戏次数: ${stats.gamesPlayed || 0}
-平均分: ${stats.avgScore || 0}
-最长生存: ${Math.floor((stats.longestSurvival || 0) / 1000)}秒
-击杀死亡比: ${stats.killDeathRatio || '0.00'}
-        `.trim();
-        
-        this.showDialog('游戏统计', statsText, 'stats');
-    }
+
     
     destroy() {
         // 清理所有UI元素
@@ -510,11 +365,7 @@ export class UIManager {
             }
         });
         
-        Object.values(this.audioControls).forEach(element => {
-            if (element && element.destroy) {
-                element.destroy();
-            }
-        });
+
         
         Object.values(this.dialogs).forEach(dialog => {
             Object.values(dialog).forEach(element => {
@@ -524,9 +375,7 @@ export class UIManager {
             });
         });
         
-        if (this.statsButton && this.statsButton.destroy) {
-            this.statsButton.destroy();
-        }
+
     }
 }
 

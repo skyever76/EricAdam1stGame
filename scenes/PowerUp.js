@@ -24,10 +24,13 @@ export class PowerUp extends Phaser.GameObjects.Sprite {
         
         // 初始化物理属性
         scene.add.existing(this);
-        this.body.setSize(30, 30);
-        this.body.setCollideWorldBounds(true);
-        this.body.setBounce(0.3);
-        this.body.setDrag(100);
+        // 只有物理体存在时才设置物理属性
+        if (this.body) {
+            this.body.setSize(30, 30);
+            this.body.setCollideWorldBounds(true);
+            this.body.setBounce(0.3);
+            this.body.setDrag(100);
+        }
         this.setScale(0.8);
         this.setDepth(100);
         
@@ -236,18 +239,42 @@ export class PowerUp extends Phaser.GameObjects.Sprite {
         const design = POWERUP_DESIGNS[this.pixelType];
         const glowColor = design ? design.glow : 0x00ff00;
         
-        const collectEffect = this.scene.add.particles(this.x, this.y, 'bullet', {
-            speed: { min: 50, max: 150 },
-            scale: { start: 0.5, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 500,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: 10,
-            tint: glowColor
-        }).setDepth(200);
-        this.scene.time.delayedCall(600, () => {
-            collectEffect.destroy();
+        // ✅ 使用现代Graphics替代过时的粒子系统
+        const collectEffect = this.scene.add.graphics();
+        collectEffect.fillStyle(glowColor, 1);
+        collectEffect.fillCircle(this.x, this.y, 20);
+        collectEffect.setDepth(200);
+        
+        // 创建多个小粒子效果
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 30 + Math.random() * 20;
+            const particleX = this.x + Math.cos(angle) * distance;
+            const particleY = this.y + Math.sin(angle) * distance;
+            
+            const particle = this.scene.add.circle(particleX, particleY, 3, glowColor, 0.8);
+            particle.setDepth(201);
+            
+            this.scene.tweens.add({
+                targets: particle,
+                scaleX: 0,
+                scaleY: 0,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 主效果动画
+        this.scene.tweens.add({
+            targets: collectEffect,
+            scaleX: 2,
+            scaleY: 2,
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => collectEffect.destroy()
         });
     }
 

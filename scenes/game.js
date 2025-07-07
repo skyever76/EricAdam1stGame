@@ -77,7 +77,7 @@ function getGameConfig() {
             default: 'arcade',
             arcade: {
                 gravity: { y: 0 },
-                debug: false
+                debug: false // ✅ 关闭物理调试，粒子系统已修复
             }
         },
         audio: {

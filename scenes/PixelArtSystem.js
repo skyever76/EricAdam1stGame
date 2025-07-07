@@ -7,6 +7,14 @@ import { BOSS_DESIGNS } from './bossDesigns.js';
 import { LEVEL_THEMES } from './levelThemes.js';
 import { POWERUP_DESIGNS } from './powerUpDesigns.js';
 
+// 辅助函数：将数字色值转为#RRGGBB字符串
+function colorToHex(c) {
+  if (typeof c === 'number') {
+    return '#' + c.toString(16).padStart(6, '0');
+  }
+  return c;
+}
+
 // 🎨 像素艺术绘制系统
 export class PixelArtSystem {
     constructor(scene) {
@@ -21,7 +29,7 @@ export class PixelArtSystem {
         this.canvas = document.createElement('canvas');
         this.canvas.width = 64;
         this.canvas.height = 64;
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
         
         // 设置像素完美渲染
         this.ctx.imageSmoothingEnabled = false;
@@ -30,74 +38,87 @@ export class PixelArtSystem {
     // 🎭 角色绘制函数
     drawCharacter(ctx, x, y, characterConfig, frame = 0) {
         if (!characterConfig) return;
-      
-        // 身体主体 - 像素化矩形组合
-        ctx.fillStyle = characterConfig.primary;
-        ctx.fillRect(x-8, y-12, 16, 20);  // 主体
-      
-        // 头盔/头部
-        ctx.fillStyle = characterConfig.secondary;
-        ctx.fillRect(x-6, y-16, 12, 8);   // 头部
-      
-        // 眼部发光效果
-        ctx.fillStyle = characterConfig.accent;
-        ctx.fillRect(x-4, y-14, 2, 2);    // 左眼
-        ctx.fillRect(x+2, y-14, 2, 2);    // 右眼
-      
-        // 武器
-        this.drawWeapon(ctx, x, y, characterConfig);
-      
-        // 行走动画 - 简单的腿部摆动
-        if (frame % 20 < 10) {
-            ctx.fillStyle = characterConfig.primary;
-            ctx.fillRect(x-6, y+8, 3, 4);   // 左腿
-            ctx.fillRect(x+3, y+8, 3, 4);   // 右腿
+        // 主体
+        ctx.fillStyle = colorToHex(characterConfig.color || characterConfig.primary || '#888');
+        ctx.fillRect(x-8, y-12, 16, 20);  // 身体
+
+        // 头部/头盔
+        if (characterConfig.helmet) {
+            ctx.fillStyle = colorToHex('#888'); // 头盔灰色
+            ctx.fillRect(x-6, y-16, 12, 8); // 头盔
+            ctx.fillStyle = colorToHex('#444'); // 头盔装饰
+            ctx.fillRect(x-6, y-16, 12, 3);
         } else {
-            ctx.fillStyle = characterConfig.primary;
-            ctx.fillRect(x-6, y+8, 3, 6);   // 左腿
-            ctx.fillRect(x+3, y+8, 3, 2);   // 右腿
+            ctx.fillStyle = colorToHex('#FFDAB9'); // 皮肤色
+            ctx.fillRect(x-6, y-16, 12, 8); // 头
+        }
+
+        // 眼睛/发光
+        ctx.fillStyle = colorToHex(characterConfig.accent || '#00FFEE');
+        ctx.fillRect(x-4, y-14, 2, 2);
+        ctx.fillRect(x+2, y-14, 2, 2);
+
+        // 武器/装备
+        this.drawWeapon(ctx, x, y, characterConfig);
+
+        // 重装甲肩膀
+        if (characterConfig.armor === 'heavy') {
+            ctx.fillStyle = colorToHex('#AAA');
+            ctx.fillRect(x-10, y-10, 4, 8);
+            ctx.fillRect(x+6, y-10, 4, 8);
+        }
+        // 披风（绝地武士/骑士）
+        if (characterConfig.armor === 'robe') {
+            ctx.fillStyle = colorToHex('#222');
+            ctx.fillRect(x-8, y+8, 16, 10);
+        }
+
+        // 腿部动画
+        if (frame % 20 < 10) {
+            ctx.fillStyle = colorToHex(characterConfig.color || characterConfig.primary || '#888');
+            ctx.fillRect(x-6, y+8, 3, 4);
+            ctx.fillRect(x+3, y+8, 3, 4);
+        } else {
+            ctx.fillStyle = colorToHex(characterConfig.color || characterConfig.primary || '#888');
+            ctx.fillRect(x-6, y+8, 3, 6);
+            ctx.fillRect(x+3, y+8, 3, 2);
         }
     }
 
     // 🔫 武器绘制
     drawWeapon(ctx, x, y, characterConfig) {
-        ctx.fillStyle = characterConfig.accent;
-        
-        // 使用明确的角色类型标识符来判断武器类型
-        switch(characterConfig.role) {
-            case 'warrior':
-                // 能量剑
-                ctx.fillRect(x+8, y-4, 8, 2);
-                ctx.fillRect(x+12, y-6, 2, 6);
-                break;
-            case 'archer':
-                // 能量弓
-                ctx.beginPath();
-                ctx.arc(x+8, y, 6, 0, Math.PI, true);
-                ctx.stroke();
-                ctx.fillRect(x+8, y-2, 2, 4);
-                break;
-            case 'mage':
-                // 法杖
-                ctx.fillRect(x+8, y-8, 2, 12);
-                ctx.fillRect(x+6, y-10, 6, 4);
-                break;
-            case 'assassin':
-                // 能量匕首
-                ctx.fillRect(x+8, y-2, 6, 2);
-                ctx.fillRect(x+12, y-3, 2, 4);
-                break;
-            case 'tank':
-                // 能量盾
-                ctx.fillRect(x+8, y-6, 8, 8);
-                ctx.fillStyle = characterConfig.primary;
-                ctx.fillRect(x+10, y-4, 4, 4);
-                break;
-            default:
-                // 默认武器（能量剑）
-                ctx.fillRect(x+8, y-4, 8, 2);
-                ctx.fillRect(x+12, y-6, 2, 6);
-                break;
+        // 士兵：枪
+        if (characterConfig.weapon === 'gun') {
+            ctx.fillStyle = colorToHex('#222');
+            ctx.fillRect(x+6, y-2, 10, 3);
+            ctx.fillStyle = colorToHex('#666');
+            ctx.fillRect(x+14, y-1, 2, 1);
+        }
+        // 盾牌：大盾
+        else if (characterConfig.weapon === 'shield') {
+            ctx.fillStyle = colorToHex('#AAA');
+            ctx.fillRect(x+8, y-6, 8, 12);
+            ctx.strokeStyle = colorToHex('#333');
+            ctx.strokeRect(x+8, y-6, 8, 12);
+        }
+        // 骑士：剑
+        else if (characterConfig.weapon === 'sword') {
+            ctx.fillStyle = colorToHex('#FFD700');
+            ctx.fillRect(x+8, y-2, 10, 2);
+            ctx.fillStyle = colorToHex('#888');
+            ctx.fillRect(x+16, y-3, 2, 4);
+        }
+        // 绝地武士：光剑
+        else if (characterConfig.weapon === 'lightsaber') {
+            ctx.strokeStyle = colorToHex(characterConfig.accent || '#00FFEE');
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x+8, y-2);
+            ctx.lineTo(x+18, y-2);
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            ctx.fillStyle = colorToHex('#888');
+            ctx.fillRect(x+7, y-3, 3, 6);
         }
     }
 
