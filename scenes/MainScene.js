@@ -981,10 +981,16 @@ export class MainScene extends Phaser.Scene {
             return; // 游戏状态检查
         }
         
-        // 🆕 检查子弹是否足够
+        // 🆕 检查子弹是否足够，如果不足则尝试自动购买
         if (!this.currentWeapon.hasAmmo()) {
-            this.showNoBulletsMessage();
-            return;
+            // 🆕 尝试自动购买子弹
+            if (this.tryAutoBuyBullets()) {
+                // 购买成功，继续射击
+            } else {
+                // 购买失败，显示消息并返回
+                this.showNoBulletsMessage();
+                return;
+            }
         }
         
         // 🆕 检查射击冷却（应用角色射速倍数）
@@ -1263,16 +1269,6 @@ export class MainScene extends Phaser.Scene {
         // 🆕 增强导弹爆炸特效
         this.createMissileExplosionEffect(explosionCenter);
         // UI更新通过主循环自动处理
-        // 爆炸击杀的敌人也可能掉落道具
-        for (let enemy of enemies) {
-            if (enemy.active && distance <= explosionRadius) {
-                const enemyType = enemy.enemyData ? enemy.enemyData.name : '小兵';
-                if (Math.random() < 0.3) {
-                    if (this.powerUpManager) this.powerUpManager.spawnPowerUp(enemy.x, enemy.y, enemyType);
-                }
-                enemy.destroy();
-            }
-        }
     }
 
     // 🆕 增强导弹爆炸特效
@@ -1472,6 +1468,37 @@ export class MainScene extends Phaser.Scene {
         });
       
         console.log('⏰ 时间减慢效果启动');
+    }
+    
+    // 🆕 尝试自动购买子弹
+    tryAutoBuyBullets() {
+        const weapon = this.currentWeapon;
+        const bulletCost = weapon.bulletCost;
+        
+        // 如果武器不需要子弹（如AK47、沙漠之鹰），直接返回true
+        if (bulletCost === 0) {
+            return true;
+        }
+        
+        // 计算购买5发子弹的成本
+        const costFor5Bullets = bulletCost * 5;
+        
+        // 检查积分是否足够
+        if (this.score >= costFor5Bullets) {
+            // 扣除积分并购买子弹
+            this.score -= costFor5Bullets;
+            weapon.bulletCount = 5;
+            
+            // 显示自动购买消息
+            this.showBulletPurchaseMessage(weapon.name, 5, costFor5Bullets);
+            
+            console.log(`🛒 自动购买${weapon.name}子弹5发，消耗${costFor5Bullets}积分，剩余积分${this.score}`);
+            return true;
+        } else {
+            // 积分不足
+            console.log(`❌ 积分不足购买${weapon.name}子弹，需要${costFor5Bullets}积分，当前积分${this.score}`);
+            return false;
+        }
     }
     
     // 🆕 显示子弹不足提示
