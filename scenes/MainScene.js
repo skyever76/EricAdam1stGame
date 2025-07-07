@@ -194,8 +194,8 @@ export class MainScene extends Phaser.Scene {
     
         console.log('MainScene: 横版卷轴场景创建完成');
 
-        // 设置初始积分为5000
-        this.score = 5000;
+        // 设置初始积分（根据角色配置）
+        this.score = this.selectedPlayer ? (this.selectedPlayer.initPoints || 0) : 0;
 
         this.powerUpManager = new PowerUpManager(this);
         // 玩家与道具碰撞检测
@@ -929,8 +929,11 @@ export class MainScene extends Phaser.Scene {
             return;
         }
         
-        // 🆕 检查射击冷却
-        if (!this.currentWeapon.canFire(this.lastShootTime)) {
+        // 🆕 检查射击冷却（应用角色射速倍数）
+        const fireRateMultiplier = this.selectedPlayer ? (this.selectedPlayer.fireRateMultiplier || 1.0) : 1.0;
+        const adjustedFireRate = this.currentWeapon.fireRate / fireRateMultiplier;
+        const now = this.time.now;
+        if (now - this.lastShootTime < adjustedFireRate) {
             console.log('MainScene: 射击冷却中');
             return; // 冷却时间未到
         }
@@ -1846,7 +1849,6 @@ export class MainScene extends Phaser.Scene {
         
         if (this.selectedPlayer && this.selectedPlayer.key) {
             const characterMap = {
-                'elf': 'archer',
                 'soldier': 'warrior', 
                 'diver': 'mage',
                 'tank': 'tank',

@@ -105,14 +105,24 @@ export class TouchControls {
       
         // 摇杆外圈（背景）
         this.leftStickBg = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
-            .setStroke(config.COLORS.STROKE, 2)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
+        
+        // 摇杆外圈边框
+        const leftStickBorder = this.scene.add.graphics();
+        leftStickBorder.lineStyle(2, config.COLORS.STROKE);
+        leftStickBorder.strokeCircle(x, y, config.RADIUS);
+        leftStickBorder.setScrollFactor(0);
       
         // 摇杆内圈（控制点）
         this.leftStickKnob = this.scene.add.circle(x, y, config.KNOB_RADIUS, config.COLORS.KNOB, config.COLORS.KNOB_ALPHA)
-            .setStroke(config.COLORS.STROKE, 2)
             .setScrollFactor(0);
+        
+        // 摇杆内圈边框
+        const leftKnobBorder = this.scene.add.graphics();
+        leftKnobBorder.lineStyle(2, config.COLORS.STROKE);
+        leftKnobBorder.strokeCircle(x, y, config.KNOB_RADIUS);
+        leftKnobBorder.setScrollFactor(0);
       
         // 摇杆标签
         this.leftStickLabel = this.scene.add.text(x, y - 90, '移动', {
@@ -125,7 +135,7 @@ export class TouchControls {
         this.leftStick.baseX = x;
         this.leftStick.baseY = y;
       
-        this.uiElements.push(this.leftStickBg, this.leftStickKnob, this.leftStickLabel);
+        this.uiElements.push(this.leftStickBg, leftStickBorder, this.leftStickKnob, leftKnobBorder, this.leftStickLabel);
       
         console.log(`🕹️ 创建左摇杆: 位置(${x}, ${y})`);
     }
@@ -136,9 +146,14 @@ export class TouchControls {
       
         // 射击按钮外圈
         this.shootButtonBg = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
-            .setStroke(config.COLORS.STROKE, 3)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
+        
+        // 射击按钮边框
+        const shootButtonBorder = this.scene.add.graphics();
+        shootButtonBorder.lineStyle(3, config.COLORS.STROKE);
+        shootButtonBorder.strokeCircle(x, y, config.RADIUS);
+        shootButtonBorder.setScrollFactor(0);
       
         // 射击按钮图标
         this.shootButtonIcon = this.scene.add.text(x, y, config.ICON, {
@@ -156,7 +171,7 @@ export class TouchControls {
         this.rightButton.x = x;
         this.rightButton.y = y;
       
-        this.uiElements.push(this.shootButtonBg, this.shootButtonIcon, this.shootButtonLabel);
+        this.uiElements.push(this.shootButtonBg, shootButtonBorder, this.shootButtonIcon, this.shootButtonLabel);
       
         console.log(`🎯 创建射击按钮: 位置(${x}, ${y})`);
     }
@@ -170,9 +185,14 @@ export class TouchControls {
           
             // 武器按钮
             const button = this.scene.add.circle(x, buttonY, config.RADIUS, weapon.color, 0.8)
-                .setStroke(0xffffff, 1)
                 .setInteractive({ useHandCursor: true })
                 .setScrollFactor(0);
+            
+            // 武器按钮边框
+            const weaponButtonBorder = this.scene.add.graphics();
+            weaponButtonBorder.lineStyle(1, 0xffffff);
+            weaponButtonBorder.strokeCircle(x, buttonY, config.RADIUS);
+            weaponButtonBorder.setScrollFactor(0);
           
             // 武器图标
             const icon = this.scene.add.text(x, buttonY, weapon.icon, {
@@ -196,7 +216,7 @@ export class TouchControls {
                 y: buttonY
             });
           
-            this.uiElements.push(button, icon, number);
+            this.uiElements.push(button, weaponButtonBorder, icon, number);
         });
       
         console.log(`🔧 创建${config.WEAPONS.length}个武器切换按钮`);
@@ -208,15 +228,20 @@ export class TouchControls {
       
         // 暂停按钮
         this.pauseButton = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
-            .setStroke(config.COLORS.STROKE, 2)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
+        
+        // 暂停按钮边框
+        const pauseButtonBorder = this.scene.add.graphics();
+        pauseButtonBorder.lineStyle(2, config.COLORS.STROKE);
+        pauseButtonBorder.strokeCircle(x, y, config.RADIUS);
+        pauseButtonBorder.setScrollFactor(0);
       
         this.pauseIcon = this.scene.add.text(x, y, config.ICONS.PAUSE, {
             fontSize: '16px'
         }).setOrigin(0.5).setScrollFactor(0);
       
-        this.uiElements.push(this.pauseButton, this.pauseIcon);
+        this.uiElements.push(this.pauseButton, pauseButtonBorder, this.pauseIcon);
       
         console.log(`⏸️ 创建暂停按钮: 位置(${x}, ${y})`);
     }

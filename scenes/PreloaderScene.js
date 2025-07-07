@@ -103,19 +103,17 @@ export class PreloaderScene extends Phaser.Scene {
     }
 
     loadImages() {
-        ASSET_CONFIG.IMAGES.forEach(asset => {
-            this.load.image(asset.key, asset.path);
-        });
-        // 动态生成粒子图片
-        this.createParticleTexture();
+        // 角色、敌人、道具等纹理将由PixelArtSystem程序化生成。
+        // 此处只加载那些必须从外部文件读取的资源（如有）。
         // 创建子弹占位符纹理
         this.createBulletDummyTexture();
+        // 创建粒子纹理
+        this.createParticleTexture();
     }
 
     loadAudio() {
-        ASSET_CONFIG.AUDIO.forEach(asset => {
-            this.load.audio(asset.key, asset.path);
-        });
+        // 音频将由AudioManager程序化生成，此处无需加载任何文件。
+        console.log('🎵 音频资源将由AudioManager程序化生成。');
     }
 
     loadFonts() {

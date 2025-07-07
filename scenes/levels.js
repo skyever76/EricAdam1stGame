@@ -113,7 +113,7 @@ export const LEVELS_CONFIG = [
         description: "在迷雾森林中，敌人变得更加狡猾！",
         background: "forest",
         bgColor: 0xd4f0d4,
-        playerSkin: "elf",
+        playerSkin: "soldier",
         music: "forest_theme",
         spawnRate: 1600,
         maxEnemies: 7,

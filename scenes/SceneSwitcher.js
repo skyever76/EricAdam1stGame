@@ -18,7 +18,10 @@ class SceneSwitcher {
       
         // 背景
         const bg = this.scene.add.rectangle(0, 0, 300, 400, 0x000000, 0.8);
-        bg.setStroke(0xffffff, 2);
+        // 使用Graphics绘制边框，兼容性更好
+        const border = this.scene.add.graphics();
+        border.lineStyle(2, 0xffffff);
+        border.strokeRect(-150, -200, 300, 400);
       
         // 标题
         const title = this.scene.add.text(0, -180, '🌍 场景选择', {
@@ -27,7 +30,7 @@ class SceneSwitcher {
             align: 'center'
         }).setOrigin(0.5);
       
-        this.container.add([bg, title]);
+        this.container.add([bg, border, title]);
       
         // 创建场景按钮
         this.createSceneButtons();
@@ -56,7 +59,10 @@ class SceneSwitcher {
           
             // 按钮背景
             const btnBg = this.scene.add.rectangle(0, y, 260, 35, 0x333333);
-            btnBg.setStroke(0x666666, 1);
+            // 使用Graphics绘制按钮边框
+            const btnBorder = this.scene.add.graphics();
+            btnBorder.lineStyle(1, 0x666666);
+            btnBorder.strokeRect(-130, y - 17.5, 260, 35);
             btnBg.setInteractive({ cursor: 'pointer' });
           
             // 场景名称
@@ -87,7 +93,7 @@ class SceneSwitcher {
                 name.setFill('#ffffff');
             });
           
-            this.container.add([btnBg, name, desc]);
+            this.container.add([btnBg, btnBorder, name, desc]);
         });
     }
   
@@ -113,8 +119,11 @@ class SceneSwitcher {
       
         const notification = this.scene.add.container(640, 150);
       
-        const bg = this.scene.add.rectangle(0, 0, 400, 80, 0x000000, 0.8)
-            .setStroke(0x00ff00, 2);
+        const bg = this.scene.add.rectangle(0, 0, 400, 80, 0x000000, 0.8);
+        // 使用Graphics绘制通知边框
+        const notifBorder = this.scene.add.graphics();
+        notifBorder.lineStyle(2, 0x00ff00);
+        notifBorder.strokeRect(-200, -40, 400, 80);
       
         const text = this.scene.add.text(0, -15, `🌍 进入场景`, {
             fontSize: '18px',
@@ -128,7 +137,7 @@ class SceneSwitcher {
             align: 'center'
         }).setOrigin(0.5);
       
-        notification.add([bg, text, name]);
+        notification.add([bg, notifBorder, text, name]);
         notification.setDepth(2000);
         notification.setScrollFactor(0);
       

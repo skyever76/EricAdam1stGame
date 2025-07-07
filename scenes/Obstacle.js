@@ -71,11 +71,15 @@ export class Obstacle extends Phaser.Physics.Arcade.Sprite {
       
         // 边框
         this.healthBarBorder = this.scene.add.rectangle(x + barWidth/2, y, barWidth, barHeight);
-        this.healthBarBorder.setStrokeStyle(1, 0xffffff, 1);
-        this.healthBarBorder.setFillStyle();
+        this.healthBarBorder.setFillStyle(0x000000, 0); // 透明填充
+        
+        // 使用Graphics绘制边框
+        const border = this.scene.add.graphics();
+        border.lineStyle(1, 0xffffff, 1);
+        border.strokeRect(x, y - barHeight/2, barWidth, barHeight);
       
         // 将血条作为子对象添加到障碍物容器中
-        this.add([this.healthBarBg, this.healthBar, this.healthBarBorder]);
+        this.add([this.healthBarBg, this.healthBar, this.healthBarBorder, border]);
     }
   
     setupAnimations() {

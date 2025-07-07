@@ -69,11 +69,10 @@ export class PlayerSelectScene extends Phaser.Scene {
         });
         title.setOrigin(0.5);
         
-        // 添加标题动画
+        // 添加标题动画（移除缩放，只保留透明度变化）
         this.tweens.add({
             targets: title,
-            scaleX: 1.1,
-            scaleY: 1.1,
+            alpha: 0.7,
             duration: 2000,
             yoyo: true,
             repeat: -1,
@@ -168,9 +167,9 @@ export class PlayerSelectScene extends Phaser.Scene {
     getPlayerColor(key) {
         const colors = {
             soldier: 0x8B4513,
-            diver: 0x4169E1,
-            tank: 0x696969,
-            spaceship: 0xC0C0C0
+            defense: 0x4169E1,
+            attack: 0x696969,
+            score: 0xC0C0C0
         };
         return colors[key] || 0xffffff;
     }

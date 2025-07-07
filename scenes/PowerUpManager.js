@@ -198,8 +198,12 @@ export class PowerUpManager {
     }
     showPowerUpNotification(powerUpData) {
         const notification = this.scene.add.container(640, 100);
-        const bg = this.scene.add.rectangle(0, 0, 300, 60, 0x000000, 0.7)
-            .setStroke(powerUpData.color, 2);
+        const bg = this.scene.add.rectangle(0, 0, 300, 60, 0x000000, 0.7);
+        
+        // 使用Graphics绘制边框
+        const border = this.scene.add.graphics();
+        border.lineStyle(2, powerUpData.color);
+        border.strokeRect(-150, -30, 300, 60);
         const text = this.scene.add.text(0, -10, `获得道具: ${powerUpData.symbol} ${powerUpData.name}`, {
             fontSize: '16px',
             fill: '#ffffff',
@@ -210,7 +214,7 @@ export class PowerUpManager {
             fill: '#cccccc',
             align: 'center'
         }).setOrigin(0.5);
-        notification.add([bg, text, desc]);
+        notification.add([bg, border, text, desc]);
         notification.setDepth(1000);
         notification.setAlpha(0);
         this.scene.tweens.add({

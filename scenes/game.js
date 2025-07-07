@@ -70,10 +70,8 @@ function getGameConfig() {
         parent: 'game-container',
         backgroundColor: '#000',
         scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH,
-            width: gameWidth,
-            height: gameHeight
+            mode: Phaser.Scale.NONE,
+            autoCenter: Phaser.Scale.CENTER_BOTH
         },
         physics: {
             default: 'arcade',

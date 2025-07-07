@@ -340,8 +340,12 @@ export class UIManager {
             
             const bg = this.scene.add.rectangle(x, y, 200, 30, 0x000000, 0.6)
                 .setOrigin(0, 0.5)
-                .setStroke(0xffffff, 1)
                 .setScrollFactor(0);
+            // 使用Graphics绘制边框
+            const border = this.scene.add.graphics();
+            border.lineStyle(1, 0xffffff);
+            border.strokeRect(x - 100, y - 15, 200, 30);
+            border.setScrollFactor(0);
                 
             const text = this.scene.add.text(x + 10, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
                 fontSize: '14px',
@@ -357,7 +361,7 @@ export class UIManager {
                 .setOrigin(0, 0.5)
                 .setScrollFactor(0);
                 
-            this.powerUpHUDGroup.addMultiple([bg, text, progressBg, progressBar]);
+            this.powerUpHUDGroup.addMultiple([bg, border, text, progressBg, progressBar]);
         });
         
         this.powerUpHUDGroup.setDepth(1000);

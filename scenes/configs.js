@@ -340,19 +340,55 @@ export const LEVEL_CONFIG = {
 };
 
 export const PLAYER_CONFIGS = [
-    { key: 'soldier', name: '士兵', description: '平衡型，攻防兼备', speed: 400, health: 100 },
-    { key: 'diver', name: '坦克', description: '防御型，生命值高', speed: 350, health: 200 },
-    { key: 'tank', name: '骑士', description: '攻击型，伤害高', speed: 300, health: 90, damageMultiplier: 1.5 },
-    { key: 'spaceship', name: '战机', description: '特殊型，技能独特', speed: 500, health: 70, initPoints: 500 }
+    { 
+        key: 'soldier', 
+        name: '士兵', 
+        description: '平衡型，攻防兼备', 
+        speed: 400, 
+        health: 100,
+        damageMultiplier: 1.0,
+        fireRateMultiplier: 1.0,
+        initPoints: 0
+    },
+    { 
+        key: 'defense', 
+        name: '盾牌', 
+        description: '防御型，生命值高', 
+        speed: 350, 
+        health: 300, // 生命值X3 (100*3)
+        damageMultiplier: 1.0,
+        fireRateMultiplier: 1.0,
+        initPoints: 0
+    },
+    { 
+        key: 'attack', 
+        name: '骑士', 
+        description: '攻击型，伤害高，射速快', 
+        speed: 300, 
+        health: 90, 
+        damageMultiplier: 2.0, // 伤害威力X2
+        fireRateMultiplier: 2.0, // 开枪速度X2
+        initPoints: 0
+    },
+    { 
+        key: 'score', 
+        name: '绝地武士', 
+        description: '特殊型，初始积分高', 
+        speed: 500, 
+        health: 70, 
+        damageMultiplier: 1.0,
+        fireRateMultiplier: 1.0,
+        initPoints: 5000 // 初始积分5000
+    }
 ];
 
+// ASSET_CONFIG.IMAGES 和 AUDIO 仅供特殊情况使用，主流程不再依赖外部图片和音频文件。
 export const ASSET_CONFIG = {
     IMAGES: [
         { key: 'soldier', path: 'images/characters/soldier.png' },
-        { key: 'diver', path: 'images/characters/diver.png' },
-        { key: 'tank', path: 'images/characters/tank.png' },
-        { key: 'spaceship', path: 'images/characters/spaceship.png' },
-        { key: 'elf', path: 'images/characters/elf.png' },
+        { key: 'defense', path: 'images/characters/defense.png' },
+        { key: 'attack', path: 'images/characters/attack.png' },
+        { key: 'score', path: 'images/characters/score.png' },
         { key: 'alien', path: 'images/enemies/alien.png' },
         { key: 'robot', path: 'images/enemies/robot.png' },
         { key: 'scorpion', path: 'images/enemies/scorpion.png' },
