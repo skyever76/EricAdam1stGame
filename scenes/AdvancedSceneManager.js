@@ -254,23 +254,8 @@ export class AdvancedSceneManager {
   
     // 🔧 初始化可破坏管道
     initializeDestructiblePipes() {
-        const pipes = [];
-        for (let i = 0; i < 3; i++) {
-            const pipe = this.scene.add.graphics();
-            pipe.fillStyle(0x888888, 0.8);
-            pipe.fillRect(
-                300 + i * 400,
-                200 + (i % 2) * 300,
-                100,
-                200
-            );
-            pipe.setDepth(30);
-            pipe.health = 100;
-            pipe.active = true;
-            pipes.push(pipe);
-        }
-        this.mechanicStates.set('destructiblePipes', pipes);
-        console.log('🔧 初始化可破坏管道');
+        // 🚫 暂时取消可破坏管道的生成
+        console.log('🚫 可破坏管道生成已暂时取消');
     }
   
     // 🩸 初始化血液流动
@@ -437,15 +422,15 @@ export class AdvancedSceneManager {
   
     // ⚙️ 更新机制
     updateMechanics(time, delta) {
-        // 检查可破坏管道
-        const pipes = this.mechanicStates.get('destructiblePipes');
-        if (pipes) {
-            pipes.forEach(pipe => {
-                if (pipe.health <= 0 && pipe.active) {
-                    this.destroyPipe(pipe);
-                }
-            });
-        }
+        // 🚫 暂时取消可破坏管道检查
+        // const pipes = this.mechanicStates.get('destructiblePipes');
+        // if (pipes) {
+        //     pipes.forEach(pipe => {
+        //         if (pipe.health <= 0 && pipe.active) {
+        //             this.destroyPipe(pipe);
+        //         }
+        //     });
+        // }
         
         // 更新蒸汽喷射
         this.updateSteamJets(time, delta);

@@ -8,7 +8,7 @@ export class TouchControls {
         this.config = UI_LAYOUT.TOUCH_CONTROLS;
       
         // 控制状态
-        this.isEnabled = true;
+        this.isEnabled = false; // 暂时停用触摸控制
         this.leftStick = {
             active: false,
             startX: 0,
@@ -43,6 +43,12 @@ export class TouchControls {
   
     create() {
         console.log('🎮 TouchControls: 创建触摸控制UI');
+      
+        // 暂时停用触摸控制
+        if (!this.isEnabled) {
+            console.log('🚫 触摸控制已暂时停用');
+            return;
+        }
       
         // 检测设备类型
         this.isMobile = this.detectMobileDevice();
@@ -558,8 +564,13 @@ export class TouchControls {
   
     // 🎮 获取当前输入状态（供场景查询使用）
     getMovementInput() {
+        // 如果触摸控制已停用，返回零输入
+        if (!this.isEnabled) {
+            return { x: 0, y: 0, power: 0, angle: 0 };
+        }
+        
         if (!this.leftStick.active) {
-            return { x: 0, y: 0, power: 0 };
+            return { x: 0, y: 0, power: 0, angle: 0 };
         }
       
         return {
@@ -571,11 +582,20 @@ export class TouchControls {
     }
   
     isShootingActive() {
+        // 如果触摸控制已停用，返回false
+        if (!this.isEnabled) {
+            return false;
+        }
         return this.rightButton.isShooting;
     }
   
     // 🔄 更新方法（每帧调用）
     update() {
+        // 如果触摸控制已停用，直接返回
+        if (!this.isEnabled) {
+            return;
+        }
+        
         // 🆕 持续应用移动，确保触摸控制的移动能够正常工作
         this.applyMovement();
         

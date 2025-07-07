@@ -389,14 +389,36 @@ export class MainScene extends Phaser.Scene {
         }
           
         this.player = this.physics.add.sprite(100, 360, playerTexture)
-            .setCollideWorldBounds(false) // 🆕 移除世界边界限制，避免卡住
             .setDisplaySize(this.playerSize, this.playerSize);
+        
+        // 🆕 确保物理体正确设置
+        if (this.player.body) {
+            this.player.body.setCollideWorldBounds(false);
+            this.player.body.setBounce(0, 0);
+            this.player.body.setDrag(0, 0);
+            this.player.body.setFriction(0, 0);
+            this.player.body.setGravity(0, 0);
+            this.player.body.setImmovable(false);
+            this.player.body.setMass(1);
+            this.player.body.setSize(this.playerSize, this.playerSize);
+            
+            console.log('🎮 玩家物理体设置完成:', {
+                collideWorldBounds: this.player.body.collideWorldBounds,
+                bounce: this.player.body.bounce,
+                drag: this.player.body.drag,
+                friction: this.player.body.friction,
+                gravity: this.player.body.gravity,
+                immovable: this.player.body.immovable,
+                mass: this.player.body.mass,
+                size: `${this.player.body.width}x${this.player.body.height}`
+            });
+        }
     
         // 设置玩家属性到 sprite
         this.player.playerSpeed = this.playerSpeed;
         this.player.isInvincible = false;
     
-        console.log('MainScene: 玩家创建完成，速度:', this.playerSpeed);
+        console.log('🎮 横版卷轴玩家创建完成，类型:', this.selectedPlayer ? this.selectedPlayer.key : 'default');
     }
 
 
@@ -525,6 +547,12 @@ export class MainScene extends Phaser.Scene {
         // 基础检查
         if (!this.isGameActive()) return;
         
+        // 🆕 游戏结束时只更新UI系统，保持输入事件处理
+        if (this.isGameOver) {
+            this.updateUISystem();
+            return;
+        }
+        
         // 更新各个系统
         this.updatePlayerSystem();
         this.updateEnemySystem();
@@ -540,6 +568,10 @@ export class MainScene extends Phaser.Scene {
 
     // ✅ 检查游戏是否活跃
     isGameActive() {
+        // 🆕 游戏结束时仍然需要处理UI更新和输入事件
+        if (this.isGameOver) {
+            return this.player && this.player.active;
+        }
         return this.player && this.player.active && !this.scene.isPaused();
     }
 
@@ -599,34 +631,11 @@ export class MainScene extends Phaser.Scene {
 
     // 🎮 更新玩家移动
     updatePlayerMovement() {
-        // 🆕 添加调试信息
-        const keysPressed = [];
-        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) keysPressed.push('左');
-        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) keysPressed.push('右');
-        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) keysPressed.push('上');
-        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) keysPressed.push('下');
-        
-        // 🆕 只在按下按键时显示状态（减少日志噪音）
-        if (keysPressed.length > 0) {
-            console.log(`🎮 按键检测: ${keysPressed.join(',')} | 玩家位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
-        }
-        
-        // 🆕 检查玩家物理体状态（只在有问题时显示）
-        if (this.player.body) {
-            const body = this.player.body;
-            const isBodyNormal = body.enable && !body.immovable && !body.collideWorldBounds;
-            
-            // 🆕 只在物理体状态异常时显示警告
-            if (!isBodyNormal) {
-                console.warn(`⚠️ 玩家物理体状态异常: 启用=${body.enable}, 不可移动=${body.immovable}, 世界边界=${body.collideWorldBounds}`);
-            }
-        }
+        // 简化移动逻辑，移除复杂的调试和检查
+        if (!this.player || !this.player.body) return;
         
         // 重置速度
         this.player.setVelocity(0);
-        
-        // 🆕 重置加速度，确保没有其他系统干扰玩家移动
-        this.player.body.setAcceleration(0, 0);
         
         // 水平移动
         if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
@@ -646,281 +655,27 @@ export class MainScene extends Phaser.Scene {
             }
         }
         
-        // 🆕 显示最终速度
+        // 简单的调试信息（只在按键时显示）
+        const keysPressed = [];
+        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) keysPressed.push('左');
+        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) keysPressed.push('右');
+        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) keysPressed.push('上');
+        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) keysPressed.push('下');
+        
         if (keysPressed.length > 0) {
-            console.log(`🎮 最终速度: X=${this.player.body.velocity.x.toFixed(0)}, Y=${this.player.body.velocity.y.toFixed(0)}`);
-        }
-        
-        // 🆕 检查玩家是否被卡住（只在有问题时显示）
-        if (this.player.body.velocity.x === 0 && this.player.body.velocity.y === 0 && keysPressed.length > 0) {
-            console.warn(`⚠️ 玩家可能被卡住！按键: ${keysPressed.join(',')} | 位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
-            
-            // 🆕 检查周围是否有障碍物
-            if (this.obstacleManager && this.obstacleManager.obstacles) {
-                const nearbyObstacles = [];
-                this.obstacleManager.obstacles.getChildren().forEach(obstacle => {
-                    if (obstacle.active) {
-                        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, obstacle.x, obstacle.y);
-                        if (distance < 100) {
-                            nearbyObstacles.push({
-                                name: obstacle.name,
-                                distance: distance.toFixed(0),
-                                position: `(${obstacle.x.toFixed(0)}, ${obstacle.y.toFixed(0)})`,
-                                size: `${obstacle.body.width}x${obstacle.body.height}`
-                            });
-                        }
-                    }
-                });
-                
-                if (nearbyObstacles.length > 0) {
-                    console.warn(`🪨 附近障碍物:`, nearbyObstacles);
-                }
-            }
-            
-            // 🆕 尝试强制移动玩家
-            console.log(`🔧 尝试强制移动玩家...`);
-            this.player.body.reset(this.player.x, this.player.y);
-        }
-        
-        // 🆕 新增：检查玩家是否被卡住（即使有速度但位置不变）
-        if (keysPressed.length > 0 && this.player.body.velocity.x !== 0) {
-            // 记录上一帧的位置
-            if (!this.lastPlayerPosition) {
-                this.lastPlayerPosition = { x: this.player.x, y: this.player.y };
-            } else {
-                const distance = Phaser.Math.Distance.Between(
-                    this.lastPlayerPosition.x, this.lastPlayerPosition.y,
-                    this.player.x, this.player.y
-                );
-                
-                // 如果位置几乎没有变化但有速度，说明被卡住了
-                if (distance < 1) {
-                    console.warn(`⚠️ 玩家被卡住！有速度但位置不变: 速度=(${this.player.body.velocity.x.toFixed(0)}, ${this.player.body.velocity.y.toFixed(0)}), 位置=(${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})`);
-                    
-                    // 🆕 检查周围是否有障碍物
-                    if (this.obstacleManager && this.obstacleManager.obstacles) {
-                        const nearbyObstacles = [];
-                        this.obstacleManager.obstacles.getChildren().forEach(obstacle => {
-                            if (obstacle.active) {
-                                const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, obstacle.x, obstacle.y);
-                                if (distance < 150) {
-                                    nearbyObstacles.push({
-                                        name: obstacle.name,
-                                        distance: distance.toFixed(0),
-                                        position: `(${obstacle.x.toFixed(0)}, ${obstacle.y.toFixed(0)})`,
-                                        size: `${obstacle.body.width}x${obstacle.body.height}`,
-                                        destructible: obstacle.destructible
-                                    });
-                                }
-                            }
-                        });
-                        
-                        if (nearbyObstacles.length > 0) {
-                            console.warn(`🪨 附近障碍物:`, nearbyObstacles);
-                        }
-                    }
-                    
-                    // 🆕 尝试强制移动玩家
-                    console.log(`🔧 尝试强制移动玩家...`);
-                    
-                    // 🆕 详细检查玩家物理状态
-                    console.log(`🔍 玩家物理状态检查:`);
-                    console.log(`  - 物理体启用: ${this.player.body.enable}`);
-                    console.log(`  - 物理体类型: ${this.player.body.type}`);
-                    console.log(`  - 物理体大小: ${this.player.body.width}x${this.player.body.height}`);
-                    console.log(`  - 物理体位置: (${this.player.body.x}, ${this.player.body.y})`);
-                    console.log(`  - 物理体速度: (${this.player.body.velocity.x}, ${this.player.body.velocity.y})`);
-                    console.log(`  - 物理体加速度: (${this.player.body.acceleration.x}, ${this.player.body.acceleration.y})`);
-                    console.log(`  - 物理体阻力: (${this.player.body.drag.x}, ${this.player.body.drag.y})`);
-                    console.log(`  - 物理体质量: ${this.player.body.mass}`);
-                    console.log(`  - 物理体不可移动: ${this.player.body.immovable}`);
-                    console.log(`  - 物理体碰撞世界边界: ${this.player.body.collideWorldBounds}`);
-                    
-                    // 🆕 检查是否有其他系统在干扰玩家移动
-                    if (this.advancedSceneManager && this.advancedSceneManager.bloodFlow) {
-                        console.log(`🌊 血液流动系统状态:`, this.advancedSceneManager.bloodFlow);
-                    }
-                    
-                    // 🆕 检查玩家是否在血液流动区域内
-                    const bloodCurrent = this.advancedSceneManager?.mechanicStates.get('bloodCurrent');
-                    if (bloodCurrent) {
-                        bloodCurrent.forEach((zone, index) => {
-                            if (this.player.x >= zone.x - zone.width/2 && 
-                                this.player.x <= zone.x + zone.width/2 &&
-                                this.player.y >= zone.y && 
-                                this.player.y <= zone.y + zone.height) {
-                                console.log(`⚠️ 玩家在血液流动区域 ${index} 内，可能被干扰移动`);
-                                console.log(`  区域位置: (${zone.x}, ${zone.y})`);
-                                console.log(`  区域大小: ${zone.width}x${zone.height}`);
-                                console.log(`  施加的力: (${zone.forceX}, ${zone.forceY})`);
-                            }
-                        });
-                    }
-                    
-                    // 🆕 检查触摸控制系统状态
-                    if (this.touchControls) {
-                        console.log(`📱 触摸控制系统状态:`, {
-                            enabled: this.touchControls.enabled,
-                            isActive: this.touchControls.isActive,
-                            joystickActive: this.touchControls.joystickActive
-                        });
-                    }
-                    
-                    // 🆕 检查场景状态
-                    console.log(`🎬 场景状态:`, {
-                        paused: this.scene.isPaused(),
-                        active: this.scene.isActive(),
-                        visible: this.scene.isVisible()
-                    });
-                    
-                    // 🆕 尝试多种方法解除卡住状态
-                    this.player.body.reset(this.player.x, this.player.y);
-                    this.player.body.setVelocity(0, 0);
-                    this.player.body.setAcceleration(0, 0);
-                    this.player.body.setDrag(0, 0);
-                    
-                    // 🚫 确保清除任何累积的加速度
-                    console.log(`🚫 清除玩家加速度: (${this.player.body.acceleration.x}, ${this.player.body.acceleration.y})`);
-                    this.player.body.setAcceleration(0, 0);
-                    
-                    // 🆕 临时禁用血液流动系统（如果存在）
-                    if (this.advancedSceneManager) {
-                        const bloodCurrent = this.advancedSceneManager.mechanicStates.get('bloodCurrent');
-                        if (bloodCurrent) {
-                            console.log(`🔧 临时禁用血液流动系统以避免干扰`);
-                            this.advancedSceneManager.mechanicStates.delete('bloodCurrent');
-                        }
-                        
-                        // 🚫 标记血液流动系统为禁用状态
-                        this.advancedSceneManager.bloodFlowDisabled = true;
-                        console.log(`🚫 血液流动系统已标记为禁用`);
-                    }
-                    
-                    // 🆕 强制设置位置
-                    this.player.setPosition(this.player.x + 1, this.player.y);
-                    console.log(`🔧 强制移动玩家到: (${this.player.x}, ${this.player.y})`);
-                    
-                    // 🆕 检查是否有隐藏的障碍物在玩家位置
-                    this.checkForInvisibleObstacles();
-                    
-                    // 🆕 检查AdvancedSceneManager的伤害区域
-                    this.checkAdvancedSceneManagerZones();
-                }
-                
-                this.lastPlayerPosition = { x: this.player.x, y: this.player.y };
-            }
-        } else {
-            this.lastPlayerPosition = null;
+            console.log(`🎮 移动: ${keysPressed.join(',')} | 位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)}) | 速度: (${this.player.body.velocity.x.toFixed(0)}, ${this.player.body.velocity.y.toFixed(0)})`);
         }
     }
     
-    // 🆕 检查隐藏的障碍物
-    checkForInvisibleObstacles() {
-        console.log(`🔍 检查玩家位置 (${this.player.x}, ${this.player.y}) 附近的隐藏障碍物:`);
-        
-        // 检查场景中的所有对象
-        this.children.entries.forEach(child => {
-            if (child.body && child !== this.player) {
-                const distance = Phaser.Math.Distance.Between(
-                    this.player.x, this.player.y,
-                    child.x, child.y
-                );
-                
-                if (distance < 100) {
-                    console.log(`  - 发现对象: ${child.constructor.name}`);
-                    console.log(`    位置: (${child.x}, ${child.y})`);
-                    console.log(`    距离: ${distance.toFixed(1)}`);
-                    console.log(`    物理体: ${child.body.width}x${child.body.height}`);
-                    console.log(`    可见: ${child.visible}`);
-                    console.log(`    激活: ${child.active}`);
-                    console.log(`    名称: ${child.name || 'unnamed'}`);
-                    
-                    // 检查是否与玩家物理体重叠
-                    const playerBounds = this.player.body;
-                    const childBounds = child.body;
-                    
-                    const overlapX = Math.max(0, 
-                        Math.min(playerBounds.x + playerBounds.width, childBounds.x + childBounds.width) -
-                        Math.max(playerBounds.x, childBounds.x)
-                    );
-                    const overlapY = Math.max(0,
-                        Math.min(playerBounds.y + playerBounds.height, childBounds.y + childBounds.height) -
-                        Math.max(playerBounds.y, childBounds.y)
-                    );
-                    
-                    if (overlapX > 0 && overlapY > 0) {
-                        console.log(`    ⚠️ 与玩家物理体重叠: ${overlapX}x${overlapY}`);
-                    }
-                }
-            }
-        });
-    }
-    
-    // 🆕 检查AdvancedSceneManager的伤害区域
-    checkAdvancedSceneManagerZones() {
-        if (!this.advancedSceneManager) return;
-        
-        console.log(`🌍 检查AdvancedSceneManager状态:`);
-        console.log(`  - 当前场景: ${this.advancedSceneManager.currentSceneData?.name || 'None'}`);
-        console.log(`  - 伤害区域数量: ${this.advancedSceneManager.damageZones.size}`);
-        console.log(`  - 机制状态数量: ${this.advancedSceneManager.mechanicStates.size}`);
-        
-        // 检查伤害区域
-        this.advancedSceneManager.damageZones.forEach((data, zone) => {
-            const distance = Phaser.Math.Distance.Between(
-                this.player.x, this.player.y,
-                zone.x, zone.y
-            );
-            
-            if (distance < 150) {
-                console.log(`  - 发现伤害区域: ${data.type}`);
-                console.log(`    位置: (${zone.x}, ${zone.y})`);
-                console.log(`    距离: ${distance.toFixed(1)}`);
-                console.log(`    伤害: ${data.damage}`);
-                console.log(`    创建时间: ${data.created}`);
-                
-                // 检查是否与玩家重叠
-                const playerBounds = this.player.body;
-                const zoneBounds = zone.body || { x: zone.x - zone.width/2, y: zone.y - zone.height/2, width: zone.width, height: zone.height };
-                
-                const overlapX = Math.max(0, 
-                    Math.min(playerBounds.x + playerBounds.width, zoneBounds.x + zoneBounds.width) -
-                    Math.max(playerBounds.x, zoneBounds.x)
-                );
-                const overlapY = Math.max(0,
-                    Math.min(playerBounds.y + playerBounds.height, zoneBounds.y + zoneBounds.height) -
-                    Math.max(playerBounds.y, zoneBounds.y)
-                );
-                
-                if (overlapX > 0 && overlapY > 0) {
-                    console.log(`    ⚠️ 与玩家重叠: ${overlapX}x${overlapY}`);
-                }
-            }
-        });
-        
-        // 检查血液流动区域
-        const bloodCurrent = this.advancedSceneManager.mechanicStates.get('bloodCurrent');
-        if (bloodCurrent) {
-            bloodCurrent.forEach((zone, index) => {
-                const distance = Phaser.Math.Distance.Between(
-                    this.player.x, this.player.y,
-                    zone.x, zone.y
-                );
-                
-                if (distance < 200) {
-                    console.log(`  - 发现血液流动区域 ${index}:`);
-                    console.log(`    位置: (${zone.x}, ${zone.y})`);
-                    console.log(`    大小: ${zone.width}x${zone.height}`);
-                    console.log(`    距离: ${distance.toFixed(1)}`);
-                    console.log(`    力: (${zone.forceX}, ${zone.forceY})`);
-                }
-            });
-        }
-    }
+
 
     // 👾 更新敌人系统
     updateEnemySystem() {
         // 更新所有敌人AI
+        if (!this.enemies || !this.enemies.children || !this.enemies.children.entries) {
+            return;
+        }
+        
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active && enemy.update) {
                 enemy.update(this.time.now, this.game.loop.delta);
@@ -983,8 +738,7 @@ export class MainScene extends Phaser.Scene {
     // 🎯 检查游戏状态
     checkGameState() {
         if (this.isGameOver) {
-            this.updateUISystem();
-            return;
+            return; // 🆕 UI更新已在update方法中处理
         }
       
         // 检查关卡完成条件
@@ -999,7 +753,7 @@ export class MainScene extends Phaser.Scene {
         if (!this.advancedSceneManager || !this.player) return;
         
         const damageZones = this.advancedSceneManager.damageZones;
-        if (!damageZones) return;
+        if (!damageZones || !damageZones.forEach) return;
         
         damageZones.forEach((data, zone) => {
             if (zone.active && this.player.active) {
@@ -1827,15 +1581,22 @@ export class MainScene extends Phaser.Scene {
                 this.gameOverUI = null;
             }
             
-            // 如果场景被暂停，先恢复
+            // 🆕 确保场景恢复运行状态
             if (this.scene.isPaused()) {
                 this.scene.resume();
             }
             
-            // 重新开始场景，保持当前关卡
-            this.scene.restart({ 
-                player: this.selectedPlayer, 
-                level: this.currentLevelIndex 
+            // 🆕 重置游戏状态
+            this.isGameOver = false;
+            this.isLevelCompleted = false;
+            
+            // 🆕 延迟一帧后重新开始场景，确保状态完全重置
+            this.time.delayedCall(100, () => {
+                console.log('🔄 执行场景重启');
+                this.scene.restart({ 
+                    player: this.selectedPlayer, 
+                    level: this.currentLevelIndex 
+                });
             });
         }
     }
@@ -2048,6 +1809,12 @@ export class MainScene extends Phaser.Scene {
                     startHint.destroy();
                     countdownText.destroy();
                     console.log('MainScene: 关卡介绍结束，游戏开始');
+                    
+                    // 🆕 启动敌人生成器
+                    this.startEnemySpawner();
+                    
+                    // 🆕 启动关卡敌人生成器
+                    this.startLevelEnemySpawner();
                 }
             });
         });
