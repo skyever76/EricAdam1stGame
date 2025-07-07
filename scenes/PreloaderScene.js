@@ -1,5 +1,7 @@
 // scenes/PreloaderScene.js - ES6模块预加载场景
 
+import { ASSET_CONFIG } from './configs.js';
+
 export class PreloaderScene extends Phaser.Scene {
     constructor() {
         super('PreloaderScene');
@@ -101,77 +103,19 @@ export class PreloaderScene extends Phaser.Scene {
     }
 
     loadImages() {
-        // 加载角色图片
-        this.load.image('soldier', 'images/characters/soldier.png');
-        this.load.image('diver', 'images/characters/diver.png');
-        this.load.image('tank', 'images/characters/tank.png');
-        this.load.image('spaceship', 'images/characters/spaceship.png');
-        this.load.image('elf', 'images/characters/elf.png');
-        
-        // 加载敌人图片
-        this.load.image('alien', 'images/enemies/alien.png');
-        this.load.image('robot', 'images/enemies/robot.png');
-        this.load.image('scorpion', 'images/enemies/scorpion.png');
-        this.load.image('shark', 'images/enemies/shark.png');
-        this.load.image('wolf', 'images/enemies/wolf.png');
-        
-        // 加载武器图片
-        this.load.image('ak47', 'images/ak47.png');
-        this.load.image('pistol', 'images/pistol.png');
-        this.load.image('gatling', 'images/gatling.png');
-        this.load.image('tesla', 'images/tesla.png');
-        this.load.image('missile', 'images/missile.png');
-        this.load.image('nuke', 'images/nuke.png');
-        
-        // 加载道具图片
-        this.load.image('health', 'images/health.png');
-        this.load.image('power', 'images/power.png');
-        
-        // 加载背景图片
-        this.load.image('background', 'images/background.png');
-        this.load.image('city', 'images/backgrounds/city.png');
-        this.load.image('desert', 'images/backgrounds/desert.png');
-        this.load.image('forest', 'images/backgrounds/forest.png');
-        this.load.image('ocean', 'images/backgrounds/ocean.png');
-        this.load.image('space', 'images/backgrounds/space.png');
-        
-        // 加载BOSS图片
-        this.load.image('cosmic-lord', 'images/bosses/cosmic-lord.png');
-        this.load.image('deep-sea-lord', 'images/bosses/deep-sea-lord.png');
-        this.load.image('desert-king', 'images/bosses/desert-king.png');
-        this.load.image('forest-king', 'images/bosses/forest-king.png');
-        this.load.image('mecha-beast', 'images/bosses/mecha-beast.png');
-        
-        // 加载障碍物图片
-        this.load.image('asteroid', 'images/obstacles/asteroid.png');
-        this.load.image('building', 'images/obstacles/building.png');
-        this.load.image('coral', 'images/obstacles/coral.png');
-        this.load.image('rock', 'images/obstacles/rock.png');
-        this.load.image('tree', 'images/obstacles/tree.png');
-        
-        // 加载粒子效果
-        this.load.image('particle', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-        
+        ASSET_CONFIG.IMAGES.forEach(asset => {
+            this.load.image(asset.key, asset.path);
+        });
+        // 动态生成粒子图片
+        this.createParticleTexture();
         // 创建子弹占位符纹理
         this.createBulletDummyTexture();
     }
 
     loadAudio() {
-        // 加载音效文件
-        this.load.audio('shoot', 'audio/shoot.mp3');
-        this.load.audio('hit', 'audio/hit.mp3');
-        this.load.audio('explosion', 'audio/explosion.mp3');
-        this.load.audio('damage', 'audio/damage.mp3');
-        this.load.audio('death', 'audio/death.mp3');
-        this.load.audio('powerup', 'audio/powerup.mp3');
-        this.load.audio('game_over', 'audio/game_over.mp3');
-        
-        // 加载背景音乐
-        this.load.audio('bgm_forest', 'audio/bgm_forest.mp3');
-        this.load.audio('bgm_city', 'audio/bgm_city.mp3');
-        this.load.audio('bgm_ocean', 'audio/bgm_ocean.mp3');
-        this.load.audio('bgm_desert', 'audio/bgm_desert.mp3');
-        this.load.audio('bgm_space', 'audio/bgm_space.mp3');
+        ASSET_CONFIG.AUDIO.forEach(asset => {
+            this.load.audio(asset.key, asset.path);
+        });
     }
 
     loadFonts() {
@@ -185,6 +129,14 @@ export class PreloaderScene extends Phaser.Scene {
         graphics.fillStyle(0x000000, 0); // 透明
         graphics.fillRect(0, 0, 1, 1);
         graphics.generateTexture('bullet_dummy', 1, 1);
+        graphics.destroy();
+    }
+
+    createParticleTexture() {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xffffff, 1); // 白色
+        graphics.fillRect(0, 0, 1, 1);
+        graphics.generateTexture('particle', 1, 1);
         graphics.destroy();
     }
 

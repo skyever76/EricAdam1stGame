@@ -1,16 +1,12 @@
 // scenes/PlayerSelectScene.js - ES6模块玩家选择场景
 
+import { PLAYER_CONFIGS } from './configs.js';
+
 export class PlayerSelectScene extends Phaser.Scene {
     constructor() {
         super('PlayerSelectScene');
         this.selectedPlayer = null;
-
-        this.players = [
-            { key: 'soldier', name: '士兵', description: '平衡型，攻防兼备', speed: 400, health: 100 },
-            { key: 'diver', name: '坦克', description: '防御型，生命值高', speed: 350, health: 200 },
-            { key: 'tank', name: '骑士', description: '攻击型，伤害高', speed: 300, health: 90, damageMultiplier: 1.5 },
-            { key: 'spaceship', name: '战机', description: '特殊型，技能独特', speed: 500, health: 70, initPoints: 500 }
-        ];
+        this.players = PLAYER_CONFIGS;
     }
 
     create() {
@@ -203,19 +199,19 @@ export class PlayerSelectScene extends Phaser.Scene {
         this.updateStartButton();
     }
 
+    _drawCardBackground(graphics, fillColor, fillAlpha, strokeColor) {
+        graphics.clear();
+        graphics.fillStyle(fillColor, fillAlpha);
+        graphics.fillRoundedRect(-80, -100, 160, 200, 10);
+        graphics.lineStyle(3, strokeColor);
+        graphics.strokeRoundedRect(-80, -100, 160, 200, 10);
+    }
+
     highlightCard(card, isHighlighted) {
         if (isHighlighted) {
-            card.background.clear();
-            card.background.fillStyle(0x444444, 0.9);
-            card.background.fillRoundedRect(-80, -100, 160, 200, 10);
-            card.background.lineStyle(3, 0x888888);
-            card.background.strokeRoundedRect(-80, -100, 160, 200, 10);
+            this._drawCardBackground(card.background, 0x444444, 0.9, 0x888888);
         } else {
-            card.background.clear();
-            card.background.fillStyle(0x333333, 0.8);
-            card.background.fillRoundedRect(-80, -100, 160, 200, 10);
-            card.background.lineStyle(3, 0x666666);
-            card.background.strokeRoundedRect(-80, -100, 160, 200, 10);
+            this._drawCardBackground(card.background, 0x333333, 0.8, 0x666666);
         }
     }
 
@@ -252,22 +248,12 @@ export class PlayerSelectScene extends Phaser.Scene {
     }
 
     updateStartButton() {
-        if (this.selectedPlayer) {
-            this.startButtonText.setText('开始游戏');
-            this.startButtonText.setColor('#ffffff');
-            this.startButton.background.clear();
-            this.startButton.background.fillStyle(0x00aa00, 0.8);
-            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
-            this.startButton.background.lineStyle(3, 0x00ff00);
-            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+        if (!this.startButton) return;
+        const isActive = !!this.selectedPlayer;
+        if (isActive) {
+            this._drawCardBackground(this.startButton.background, 0x00cc66, 0.95, 0xffffff);
         } else {
-            this.startButtonText.setText('请选择角色');
-            this.startButtonText.setColor('#888888');
-            this.startButton.background.clear();
-            this.startButton.background.fillStyle(0x666666, 0.8);
-            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
-            this.startButton.background.lineStyle(3, 0x888888);
-            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+            this._drawCardBackground(this.startButton.background, 0x666666, 0.7, 0x999999);
         }
     }
 

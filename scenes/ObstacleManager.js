@@ -1,8 +1,18 @@
 // ObstacleManager.js - 障碍物管理器
-class ObstacleManager {
+import { Obstacle } from './Obstacle.js';
+import { OBSTACLE_TYPES, LEVEL_OBSTACLE_CONFIG, OBSTACLE_SPAWN_PATTERNS } from './obstacleTypes.js';
+
+export class ObstacleManager {
     constructor(scene) {
         this.scene = scene;
-        this.obstacles = scene.add.group();
+        
+        // 使用对象池创建障碍物组
+        this.obstacles = this.scene.physics.add.group({
+            classType: Obstacle,
+            maxSize: 50, // 最大对象池大小
+            runChildUpdate: true
+        });
+        
         this.currentLevel = 'forest';
         this.obstaclesSpawned = 0;
         this.maxObstacles = 20;
@@ -24,7 +34,12 @@ class ObstacleManager {
   
     // 🔄 重置障碍物
     resetObstacles() {
-        this.obstacles.clear(true, true);
+        // 回收所有活跃的障碍物
+        this.obstacles.children.entries.forEach(obstacle => {
+            if (obstacle.active) {
+                obstacle.recycle();
+            }
+        });
         this.obstaclesSpawned = 0;
     }
   
@@ -92,17 +107,19 @@ class ObstacleManager {
         return null;
     }
   
-    // ✅ 检查位置是否有效
+    // ✅ 检查位置是否有效 - 修复循环逻辑错误
     isPositionValid(x, y) {
         const minObstacleDistance = 80;
       
-        // 检查与现有障碍物的距离
-        this.obstacles.children.entries.forEach(obstacle => {
-            const distance = Phaser.Math.Distance.Between(x, y, obstacle.x, obstacle.y);
-            if (distance < minObstacleDistance) {
-                return false;
+        // 检查与现有障碍物的距离 - 使用 for...of 循环
+        for (const obstacle of this.obstacles.getChildren()) {
+            if (obstacle.active) {
+                const distance = Phaser.Math.Distance.Between(x, y, obstacle.x, obstacle.y);
+                if (distance < minObstacleDistance) {
+                    return false; // ✅ 正确中断并返回值
+                }
             }
-        });
+        }
       
         // 检查与玩家的距离
         const player = this.scene.player;
@@ -133,7 +150,7 @@ class ObstacleManager {
         }
     }
   
-    // 🪨 创建单个障碍物
+    // 🪨 创建单个障碍物 - 专注生成，移除碰撞设置
     createSingleObstacle(x, y) {
         // 随机选择障碍物类型
         const availableTypes = this.spawnConfig.types;
@@ -147,279 +164,48 @@ class ObstacleManager {
       
         console.log(`🪨 生成障碍物: ${obstacleData.name} 在位置 (${x}, ${y})`);
       
-        // 创建障碍物
-        const obstacle = new Obstacle(this.scene, x, y, obstacleData);
-        this.obstacles.add(obstacle);
+        // group.get() 会自动处理创建新实例的情况
+        const obstacle = this.obstacles.get(x, y);
+        
+        if (obstacle) {
+            // 不论是获取的还是新建的，都调用 spawn 来初始化/重置
+            obstacle.spawn(x, y, obstacleData);
+        }
+        
         this.obstaclesSpawned++;
-      
-        // 设置碰撞
-        this.setupObstacleCollisions(obstacle);
     }
   
-    // ⚙️ 设置障碍物碰撞
-    setupObstacleCollisions(obstacle) {
-        // 玩家与障碍物碰撞
-        this.scene.physics.add.collider(
-            this.scene.player,
-            obstacle,
-            this.handlePlayerObstacleCollision,
-            null,
-            this.scene
-        );
-      
-        // 敌人与障碍物碰撞
-        if (this.scene.enemies) {
-            this.scene.physics.add.collider(
-                this.scene.enemies,
-                obstacle,
-                this.handleEnemyObstacleCollision,
-                null,
-                this.scene
-            );
-        }
-      
-        // 玩家子弹与障碍物碰撞
-        if (this.scene.bullets) {
-            this.scene.physics.add.overlap(
-                this.scene.bullets,
-                obstacle,
-                this.handleBulletObstacleCollision,
-                null,
-                this.scene
-            );
-        }
-      
-        // 敌人子弹与障碍物碰撞
-        if (this.scene.enemyBullets) {
-            this.scene.physics.add.overlap(
-                this.scene.enemyBullets,
-                obstacle,
-                this.handleEnemyBulletObstacleCollision,
-                null,
-                this.scene
-            );
-        }
-    }
-  
-    // 💥 玩家与障碍物碰撞
-    handlePlayerObstacleCollision(player, obstacle) {
-        console.log(`💥 玩家撞击障碍物: ${obstacle.name}`);
-      
-        // 击退玩家
-        const angle = Phaser.Math.Angle.Between(obstacle.x, obstacle.y, player.x, player.y);
-        const knockbackForce = 200;
-      
-        player.body.setVelocity(
-            Math.cos(angle) * knockbackForce,
-            Math.sin(angle) * knockbackForce
-        );
-      
-        // 如果障碍物可摧毁，造成伤害
-        if (obstacle.isDestructible && player.takeDamage) {
-            player.takeDamage(10); // 撞击伤害
-        }
-    }
-  
-    // 🤖 敌人与障碍物碰撞
-    handleEnemyObstacleCollision(enemy, obstacle) {
-        // 击退敌人
-        const angle = Phaser.Math.Angle.Between(obstacle.x, obstacle.y, enemy.x, enemy.y);
-        const knockbackForce = 150;
-      
-        enemy.body.setVelocity(
-            Math.cos(angle) * knockbackForce,
-            Math.sin(angle) * knockbackForce
-        );
-      
-        // 敌人受到伤害
-        if (enemy.takeDamage) {
-            enemy.takeDamage(20);
-        }
-    }
-  
-    // 🔫 玩家子弹与障碍物碰撞
-    handleBulletObstacleCollision(bullet, obstacle) {
-        if (!bullet.active || !obstacle.isDestructible) return;
-      
-        console.log(`🔫 ${bullet.weaponType} 击中障碍物: ${obstacle.name}`);
-      
-        // 计算伤害
-        let damage = bullet.damage || 20;
-      
-        // 武器类型加成
-        switch (bullet.weaponType) {
-            case '狙击枪':
-                damage *= 1.5;
-                break;
-            case '火箭筒':
-                damage *= 2.0;
-                break;
-            case '激光枪':
-                damage *= 1.3;
-                break;
-            case '导弹':
-                damage *= 3.0;
-                break;
-            case '核弹':
-                damage *= 5.0;
-                break;
-        }
-      
-        // 对障碍物造成伤害
-        obstacle.takeDamage(damage, 'bullet', bullet);
-      
-        // 销毁子弹
-        bullet.destroy();
-      
-        // 创建撞击特效
-        this.createObstacleHitEffect(bullet.x, bullet.y, bullet.weaponType);
-    }
-  
-    // 💀 敌人子弹与障碍物碰撞
-    handleEnemyBulletObstacleCollision(bullet, obstacle) {
-        if (!bullet.active) return;
-      
-        console.log(`💀 敌人子弹击中障碍物: ${obstacle.name}`);
-      
-        // 回收子弹到对象池
-        bullet.kill();
-      
-        // 创建撞击特效
-        this.createObstacleHitEffect(bullet.x, bullet.y, 'enemy');
-    }
-  
-    // ✨ 创建障碍物受击特效
-    createObstacleHitEffect(x, y, weaponType) {
-        let tintColor = 0xffff00;
-        let quantity = 8;
-      
-        switch (weaponType) {
-            case '狙击枪':
-                tintColor = 0xff0000;
-                quantity = 10;
-                break;
-            case '激光枪':
-                tintColor = 0x00ffff;
-                quantity = 8;
-                break;
-            case '火箭筒':
-                tintColor = 0xff4444;
-                quantity = 12;
-                break;
-            case 'enemy':
-                tintColor = 0xff6666;
-                quantity = 6;
-                break;
-        }
-      
-        const hitEffect = this.scene.add.particles(x, y, 'bullet', {
-            speed: { min: 40, max: 100 },
-            scale: { start: 0.4, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 500,
-            blendMode: 'ADD',
-            angle: { min: 0, max: 360 },
-            quantity: quantity,
-            tint: tintColor
-        }).setDepth(150);
-      
-        this.scene.time.delayedCall(600, () => {
-            hitEffect.destroy();
-        });
-    }
-  
-    // 🏆 障碍物被摧毁
+    // 💀 障碍物被摧毁时的回调
     onObstacleDestroyed(obstacle) {
-        console.log(`🏆 障碍物被摧毁: ${obstacle.name}`);
-      
-        // 从组中移除
-        this.obstacles.remove(obstacle);
         this.obstaclesSpawned--;
+        console.log(`💀 障碍物被摧毁: ${obstacle.name}, 剩余: ${this.obstaclesSpawned}`);
       
-        // 显示摧毁通知
-        this.showDestructionNotification(obstacle.name);
-      
-        // 可能生成新的障碍物
+        // 在这里调用，时机最精确
         this.checkSpawnNewObstacles();
     }
   
-    // 📢 显示摧毁通知
-    showDestructionNotification(obstacleName) {
-        const notification = this.scene.add.container(640, 100);
-      
-        // 背景
-        const bg = this.scene.add.rectangle(0, 0, 300, 60, 0x000000, 0.7)
-            .setStroke(0xff8800, 2);
-      
-        // 文字
-        const text = this.scene.add.text(0, 0, `💥 ${obstacleName} 被摧毁！`, {
-            fontSize: '16px',
-            fill: '#ff8800',
-            align: 'center'
-        }).setOrigin(0.5);
-      
-        notification.add([bg, text]);
-        notification.setDepth(1500);
-      
-        // 动画
-        notification.setScale(0);
-        this.scene.tweens.add({
-            targets: notification,
-            scaleX: 1,
-            scaleY: 1,
-            duration: 300,
-            ease: 'Back'
-        });
-      
-        // 3秒后消失
-        this.scene.time.delayedCall(3000, () => {
-            this.scene.tweens.add({
-                targets: notification,
-                alpha: 0,
-                scaleX: 0.5,
-                scaleY: 0.5,
-                duration: 500,
-                ease: 'Power2',
-                onComplete: () => {
-                    notification.destroy();
-                }
-            });
-        });
-    }
-  
-    // 🔄 检查生成新障碍物
+    // 🔄 检查是否需要生成新的障碍物
     checkSpawnNewObstacles() {
         // 如果障碍物数量低于阈值，生成新的
-        const threshold = this.maxObstacles * 0.7;
-        if (this.obstaclesSpawned < threshold) {
+        const minObstacles = Math.max(5, this.maxObstacles * 0.3);
+        if (this.obstaclesSpawned < minObstacles) {
             this.spawnObstacles();
         }
-    }
-  
-    // 🔄 更新障碍物系统
-    update(time, delta) {
-        // 更新所有障碍物
-        this.obstacles.children.entries.forEach(obstacle => {
-            if (obstacle.update) {
-                obstacle.update(time, delta);
-            }
-        });
     }
   
     // 📊 获取障碍物状态
     getObstacleStatus() {
         return {
-            count: this.obstaclesSpawned,
-            maxCount: this.maxObstacles,
+            active: this.obstaclesSpawned, // 直接使用这个计数器
+            max: this.maxObstacles,
             level: this.currentLevel
         };
     }
   
-    // 🧹 清理障碍物系统
+    // 💀 销毁障碍物管理器
     destroy() {
+        // 清理所有障碍物
         this.obstacles.clear(true, true);
-        this.resetObstacles();
+        console.log('💀 障碍物管理器已销毁');
     }
-}
-
-window.ObstacleManager = ObstacleManager; 
+} 

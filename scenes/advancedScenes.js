@@ -1,281 +1,595 @@
 // advancedScenes.js - 高级场景配置
-const ADVANCED_SCENES = {
-    // 🔧 巨型机械内部
-    INSIDE_GOLEM: {
-        id: 'inside_golem',
-        name: '巨型机械内部',
-        description: '在运作的古代魔像内部战斗',
-        backgroundColor: 0x2a1810,
-        ambientColor: 0xff8800,
-        music: 'mechanicalAmbient',
-      
-        // 视觉特效
-        effects: {
-            steam: true,
-            electricArcs: true,
-            rotatingGears: true,
-            pistons: true,
-            energyFlow: true
-        },
-      
-        // 环境危害
-        hazards: {
-            steamJets: { damage: 15, interval: 3000 },
-            electricShock: { damage: 25, probability: 0.1 },
-            crushingPistons: { damage: 50, warningTime: 1000 }
-        },
-      
-        // 特殊机制
-        mechanics: {
-            destructiblePipes: true,
-            movingPlatforms: true,
-            powerNodes: true
-        },
-      
-        enemies: ['REPAIR_DRONE', 'MECHANICAL_SPIDER', 'STEAM_GOLEM'],
-        boss: 'CORE_BRAIN',
-      
-        obstacles: ['GEAR_OBSTACLE', 'STEAM_PIPE', 'ELECTRIC_CONDUIT']
+
+// 🎨 绘图工具对象 - 封装所有辅助绘图函数
+const DrawingUtils = {
+    // 绘制闪电效果
+    drawLightning(graphics, x1, y1, x2, y2) {
+        const segments = 8;
+        const noise = 20;
+        
+        graphics.moveTo(x1, y1);
+        
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const x = x1 + (x2 - x1) * t + (Math.random() - 0.5) * noise;
+            const y = y1 + (y2 - y1) * t + (Math.random() - 0.5) * noise;
+            graphics.lineTo(x, y);
+        }
+        
+        graphics.lineTo(x2, y2);
+        graphics.stroke();
     },
-  
-    // 🔬 微观人体世界
-    MICROSCOPIC_WORLD: {
+
+    // 创建齿轮图形
+    createGearGraphic(scene, size) {
+        const gear = scene.add.graphics();
+        gear.lineStyle(3, 0x888888, 0.8);
+        
+        const teeth = 12;
+        const innerRadius = size * 0.3;
+        const outerRadius = size;
+        
+        for (let i = 0; i < teeth; i++) {
+            const angle = (i / teeth) * Math.PI * 2;
+            const nextAngle = ((i + 1) / teeth) * Math.PI * 2;
+            
+            const x1 = Math.cos(angle) * innerRadius;
+            const y1 = Math.sin(angle) * innerRadius;
+            const x2 = Math.cos(angle) * outerRadius;
+            const y2 = Math.sin(angle) * outerRadius;
+            const x3 = Math.cos(nextAngle) * outerRadius;
+            const y3 = Math.sin(nextAngle) * outerRadius;
+            const x4 = Math.cos(nextAngle) * innerRadius;
+            const y4 = Math.sin(nextAngle) * innerRadius;
+            
+            gear.lineBetween(x1, y1, x2, y2);
+            gear.lineBetween(x2, y2, x3, y3);
+            gear.lineBetween(x3, y3, x4, y4);
+        }
+        
+        gear.stroke();
+        return gear;
+    }
+};
+
+export const ADVANCED_SCENES = {
+    // 🔧 机械内部场景
+    mechanical_interior: {
+        id: 'mechanical_interior',
+        name: '机械内部',
+        type: 'mechanical',
+        description: '蒸汽管道和齿轮的世界',
+        backgroundColor: 0x2c3e50,
+        ambientColor: 0x34495e,
+        effects: {
+            steam: { 
+                enabled: true,
+                count: 5,
+                frequency: 500,
+                tint: 0xeeeeee,
+                speed: { min: 20, max: 50 }
+            },
+            electricArcs: { 
+                enabled: true,
+                count: 8,
+                color: 0x00ffff,
+                alpha: 0.8
+            },
+            rotatingGears: { 
+                enabled: true,
+                count: 6,
+                minSize: 30,
+                maxSize: 80,
+                color: 0x888888
+            }
+        },
+        hazards: {
+            steamJets: {
+                enabled: true,
+                positions: [
+                    { x: 400, y: 300, damage: 15, interval: 3000 },
+                    { x: 800, y: 500, damage: 15, interval: 4000 },
+                    { x: 1200, y: 200, damage: 15, interval: 3500 }
+                ]
+            }
+        },
+        mechanics: {
+            destructiblePipes: true
+        },
+        enemies: [
+            { type: 'REPAIR_DRONE', weight: 0.6 },
+            { type: 'MECHANICAL_SPIDER', weight: 0.4 }
+        ],
+        obstacles: [
+            { type: 'building', count: 3, weight: 1.0 }
+        ],
+        boss: null
+    },
+
+    // 🔬 微观世界场景
+    microscopic_world: {
         id: 'microscopic_world',
-        name: '微观人体世界',
-        description: '在生物体内的纳米战场',
-        backgroundColor: 0x8b0000,
-        ambientColor: 0xff6b6b,
-        music: 'biologicalAmbient',
-      
+        name: '微观世界',
+        type: 'microscopic',
+        description: '病毒和细菌的战场',
+        backgroundColor: 0x1a472a,
+        ambientColor: 0x2d5016,
         effects: {
-            bloodFlow: true,
-            cellDivision: true,
-            organicPulse: true,
-            dnaStrands: true
+            bloodFlow: { 
+                enabled: true,
+                count: 4,
+                color: 0x8b0000,
+                alpha: 0.6,
+                thickness: 8
+            }
         },
-      
-        hazards: {
-            antibodies: { damage: 20, trackingSpeed: 100 },
-            toxicArea: { damage: 5, tickRate: 500 },
-            bloodClot: { obstruction: true, health: 100 }
-        },
-      
+        hazards: {},
         mechanics: {
-            bloodCurrent: true,
-            cellAbsorption: true,
-            immuneResponse: true
+            bloodCurrent: true
         },
-      
-        enemies: ['VIRUS', 'BACTERIA', 'CANCER_CELL', 'NANO_ROBOT'],
-        boss: 'GIANT_PHAGE',
-      
-        obstacles: ['BLOOD_CLOT', 'TISSUE_WALL', 'NERVE_FIBER']
+        enemies: [
+            { type: 'VIRUS', weight: 0.7 },
+            { type: 'BACTERIA', weight: 0.3 }
+        ],
+        obstacles: [
+            { type: 'coral', count: 4, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // 💻 赛博数据洪流
-    CYBERSPACE: {
+
+    // 💻 赛博空间场景
+    cyberspace: {
         id: 'cyberspace',
-        name: '赛博数据洪流',
-        description: '在虚拟世界中对抗AI',
-        backgroundColor: 0x000022,
-        ambientColor: 0x00ffff,
-        music: 'cyberspaceAmbient',
-      
+        name: '赛博空间',
+        type: 'cyberspace',
+        description: '数据流和故障的世界',
+        backgroundColor: 0x000033,
+        ambientColor: 0x000066,
         effects: {
-            dataStream: true,
-            glitchArt: true,
-            codeRain: true,
-            gridLines: true,
-            digitalNoise: true
+            dataStream: { 
+                enabled: true,
+                count: 10,
+                speed: { min: 30, max: 80 },
+                tint: 0x00ffff,
+                frequency: 200
+            },
+            glitchArt: { 
+                enabled: true,
+                count: 3,
+                color: 0xff00ff,
+                alpha: 0.1,
+                size: 200
+            }
         },
-      
-        hazards: {
-            glitchZone: { effect: 'confusion', duration: 2000 },
-            firewall: { damage: 30, blockage: true },
-            virusCloud: { damage: 10, spreading: true }
-        },
-      
+        hazards: {},
         mechanics: {
-            realityGlitch: true,
-            dataNodeHacking: true,
-            quantumTunnel: true
+            realityGlitch: true
         },
-      
-        enemies: ['TROJAN_HORSE', 'WORM_VIRUS', 'FIREWALL_GUARDIAN', 'AI_SENTINEL'],
-        boss: 'MASTER_AI',
-      
-        obstacles: ['DATA_WALL', 'ENCRYPTION_BARRIER', 'QUANTUM_GATE']
+        enemies: [
+            { type: 'TROJAN_HORSE', weight: 0.5 },
+            { type: 'WORM_VIRUS', weight: 0.5 }
+        ],
+        obstacles: [
+            { type: 'asteroid', count: 5, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // 🍄 废土异变丛林
-    MUTATED_JUNGLE: {
+
+    // 🍄 变异丛林场景
+    mutated_jungle: {
         id: 'mutated_jungle',
-        name: '废土异变丛林',
-        description: '核辐射后的变异植物世界',
-        backgroundColor: 0x1a4d1a,
-        ambientColor: 0x90ee90,
-        music: 'mutatedAmbient',
-      
+        name: '变异丛林',
+        type: 'mutant',
+        description: '有毒孢子和变异生物',
+        backgroundColor: 0x2d5016,
+        ambientColor: 0x1a472a,
         effects: {
-            toxicSpores: true,
-            bioluminescence: true,
-            radioactiveGlow: true,
-            mutatedGrowth: true
+            toxicSpores: { 
+                enabled: true,
+                count: 8,
+                speed: { min: 10, max: 30 },
+                tint: 0x90ee90,
+                frequency: 1000
+            }
         },
-      
         hazards: {
-            poisonSpores: { damage: 8, duration: 5000 },
-            acidSap: { damage: 15, corrosive: true },
-            carnivoriousPlant: { grab: true, damage: 25 }
+            sporePoison: {
+                enabled: true,
+                damage: 8,
+                interval: 1000
+            }
         },
-      
-        mechanics: {
-            plantGrowth: true,
-            sporeInfection: true,
-            lightInteraction: true
-        },
-      
-        enemies: ['MUTANT_BUG', 'WALKING_PLANT', 'FUNGAL_ZOMBIE', 'SPORE_MOTHER'],
-        boss: 'PLANT_OVERLORD',
-      
-        obstacles: ['MUTANT_TREE', 'ACID_POOL', 'THORNY_VINE']
+        mechanics: {},
+        enemies: [
+            { type: 'MUTANT_BUG', weight: 0.6 },
+            { type: 'WALKING_PLANT', weight: 0.4 }
+        ],
+        obstacles: [
+            { type: 'tree', count: 6, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // 🌀 梦境潜意识
-    DREAM_REALM: {
+
+    // 🌀 梦境场景
+    dream_realm: {
         id: 'dream_realm',
-        name: '梦境潜意识',
-        description: '超现实的梦境世界',
-        backgroundColor: 0x2d1b69,
-        ambientColor: 0x9d4edd,
-        music: 'dreamAmbient',
-      
+        name: '梦境领域',
+        type: 'dream',
+        description: '现实扭曲的梦境世界',
+        backgroundColor: 0x4b0082,
+        ambientColor: 0x800080,
         effects: {
-            realityWarp: true,
-            floatingObjects: true,
-            colorShift: true,
-            meltingClocks: true,
-            impossible_geometry: true
+            realityWarp: { 
+                enabled: true,
+                count: 5,
+                color: 0x800080,
+                alpha: 0.7,
+                size: 100
+            }
         },
-      
-        hazards: {
-            nightmare: { fear: true, damage: 20 },
-            realityTear: { teleport: true, damage: 15 },
-            memoryFog: { confusion: true, vision: 0.5 }
-        },
-      
-        mechanics: {
-            gravityShift: true,
-            shapeShifting: true,
-            thoughtManifestation: true
-        },
-      
-        enemies: ['SHADOW_PERSON', 'NIGHTMARE', 'MEMORY_FRAGMENT', 'FEAR_INCARNATE'],
-        boss: 'DREAM_DEVOURER',
-      
-        obstacles: ['FLOATING_PLATFORM', 'THOUGHT_BARRIER', 'TIME_DISTORTION']
+        hazards: {},
+        mechanics: {},
+        enemies: [
+            { type: 'SHADOW_PERSON', weight: 0.5 },
+            { type: 'NIGHTMARE', weight: 0.5 }
+        ],
+        obstacles: [
+            { type: 'rock', count: 4, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // ⚡ 神话天界
-    CELESTIAL_REALM: {
+
+    // ⚡ 天界场景
+    celestial_realm: {
         id: 'celestial_realm',
-        name: '神话天界',
-        description: '神明居住的天界领域',
-        backgroundColor: 0x87ceeb,
-        ambientColor: 0xffd700,
-        music: 'celestialAmbient',
-      
+        name: '天界领域',
+        type: 'celestial',
+        description: '神圣光芒和空中生物',
+        backgroundColor: 0x4169e1,
+        ambientColor: 0x87ceeb,
         effects: {
-            divineLight: true,
-            cloudFormation: true,
-            rainbowBridge: true,
-            holyAura: true,
-            celestialRunes: true
+            divineLight: { 
+                enabled: true,
+                count: 6,
+                color: 0xffffff,
+                alpha: 0.8,
+                thickness: 6
+            }
         },
-      
-        hazards: {
-            divineLightning: { damage: 40, chain: true },
-            holyFire: { damage: 25, purifying: true },
-            celestialStorm: { knockback: 200, damage: 20 }
-        },
-      
+        hazards: {},
         mechanics: {
-            divineBlessing: true,
-            skyWalking: true,
-            mythicPower: true
+            lightReflection: true
         },
-      
-        enemies: ['HARPY', 'GRYPHON', 'ANGEL_GUARDIAN', 'TITAN_GUARD'],
-        boss: 'FALLEN_GOD',
-      
-        obstacles: ['CLOUD_PLATFORM', 'DIVINE_BARRIER', 'CELESTIAL_PILLAR']
+        enemies: [
+            { type: 'HARPY', weight: 0.6 },
+            { type: 'GRYPHON', weight: 0.4 }
+        ],
+        obstacles: [
+            { type: 'building', count: 3, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // ⏰ 时空古战场
-    TIME_WARPED_BATTLEFIELD: {
-        id: 'time_warped_battlefield',
-        name: '时空错乱古战场',
-        description: '未来科技入侵古代战场',
-        backgroundColor: 0x4a4a4a,
-        ambientColor: 0xff6600,
-        music: 'timeWarpAmbient',
-      
+
+    // ⏰ 时空战场场景
+    temporal_battlefield: {
+        id: 'temporal_battlefield',
+        name: '时空战场',
+        type: 'temporal',
+        description: '时间裂隙和时空战士',
+        backgroundColor: 0xff6600,
+        ambientColor: 0xff8c00,
         effects: {
-            temporalRift: true,
-            anachronism: true,
-            timeDistortion: true,
-            culturalClash: true
+            temporalRift: { 
+                enabled: true,
+                count: 4,
+                color: 0xff6600,
+                alpha: 0.8,
+                size: 80
+            }
         },
-      
-        hazards: {
-            timeStorm: { displacement: true, damage: 30 },
-            ancientCurse: { debuff: true, duration: 10000 },
-            futureTech: { overload: true, damage: 35 }
-        },
-      
-        mechanics: {
-            timeTech: true,
-            culturalFusion: true,
-            paradoxEffect: true
-        },
-      
-        enemies: ['CYBER_SAMURAI', 'ROBO_GLADIATOR', 'TIME_SOLDIER', 'TECH_SHAMAN'],
-        boss: 'TEMPORAL_OVERLORD',
-      
-        obstacles: ['ANCIENT_WALL', 'FUTURE_SHIELD', 'TIME_CRYSTAL']
+        hazards: {},
+        mechanics: {},
+        enemies: [
+            { type: 'CYBER_SAMURAI', weight: 0.5 },
+            { type: 'TIME_SOLDIER', weight: 0.5 }
+        ],
+        obstacles: [
+            { type: 'asteroid', count: 4, weight: 1.0 }
+        ],
+        boss: null
     },
-  
-    // 💎 水晶溶洞
-    CRYSTAL_CAVERNS: {
-        id: 'crystal_caverns',
-        name: '水晶溶洞',
-        description: '发光水晶构成的地心世界',
-        backgroundColor: 0x1a1a2e,
-        ambientColor: 0x9370db,
-        music: 'crystalAmbient',
-      
+
+    // 💎 水晶洞穴场景
+    crystal_cavern: {
+        id: 'crystal_cavern',
+        name: '水晶洞穴',
+        type: 'crystal',
+        description: '水晶光芒和元素生物',
+        backgroundColor: 0x9370db,
+        ambientColor: 0xda70d6,
         effects: {
-            crystalGlow: true,
-            lightRefraction: true,
-            resonance: true,
-            prismaticRainbow: true
+            crystalGlow: { 
+                enabled: true,
+                count: 7,
+                color: 0x9370db,
+                alpha: 0.6
+            }
         },
-      
-        hazards: {
-            crystalSpike: { piercing: true, damage: 35 },
-            lightBeam: { reflected: true, damage: 20 },
-            resonanceShock: { sonic: true, damage: 25 }
-        },
-      
-        mechanics: {
-            lightReflection: true,
-            crystalDestruction: true,
-            energyConduction: true
-        },
-      
-        enemies: ['CRYSTAL_GOLEM', 'LIGHT_ELEMENTAL', 'PRISM_GUARDIAN', 'ECHO_SPIRIT'],
-        boss: 'CRYSTAL_CORE',
-      
-        obstacles: ['CRYSTAL_WALL', 'PRISM_BLOCK', 'ENERGY_CRYSTAL']
+        hazards: {},
+        mechanics: {},
+        enemies: [
+            { type: 'CRYSTAL_GOLEM', weight: 0.4 },
+            { type: 'LIGHT_ELEMENTAL', weight: 0.6 }
+        ],
+        obstacles: [
+            { type: 'rock', count: 5, weight: 1.0 }
+        ],
+        boss: null
+    }
+};
+
+// 🎨 场景特效配置
+export const SCENE_EFFECTS = {
+    steam: (scene, config = {}) => {
+        const steamEmitters = [];
+        const count = config.count || 5;
+        const frequency = config.frequency || 500;
+        const tint = config.tint || 0xeeeeee;
+        const speed = config.speed || { min: 20, max: 50 };
+        
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * 2000;
+            const y = Math.random() * 2000;
+            
+            const steam = scene.add.particles(x, y, 'bullet', {
+                speed: speed,
+                scale: { start: 0.3, end: 0.8 },
+                alpha: { start: 0.6, end: 0 },
+                lifespan: 3000,
+                blendMode: 'ADD',
+                angle: { min: 260, max: 280 },
+                quantity: 2,
+                frequency: frequency,
+                tint: tint
+            }).setDepth(50);
+            
+            steamEmitters.push(steam);
+        }
+        return steamEmitters;
+    },
+
+    electricArcs: (scene, config = {}) => {
+        const arcCount = config.count || 8;
+        const color = config.color || 0x00ffff;
+        const alpha = config.alpha || 0.8;
+        const arcs = [];
+        
+        for (let i = 0; i < arcCount; i++) {
+            const arc = scene.add.graphics();
+            arc.lineStyle(3, color, alpha);
+            
+            const startX = Math.random() * 2000;
+            const startY = Math.random() * 2000;
+            const endX = startX + (Math.random() - 0.5) * 200;
+            const endY = startY + (Math.random() - 0.5) * 200;
+            
+            DrawingUtils.drawLightning(arc, startX, startY, endX, endY);
+            arc.setDepth(60);
+            arcs.push(arc);
+        }
+        
+        return arcs;
+    },
+
+    rotatingGears: (scene, config = {}) => {
+        const gears = [];
+        const count = config.count || 6;
+        const minSize = config.minSize || 30;
+        const maxSize = config.maxSize || 80;
+        const color = config.color || 0x888888;
+        
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * 2000;
+            const y = Math.random() * 2000;
+            const size = Phaser.Math.Between(minSize, maxSize);
+            
+            const gear = DrawingUtils.createGearGraphic(scene, size);
+            gear.setPosition(x, y);
+            gear.setDepth(40);
+            
+            gears.push(gear);
+        }
+        return gears;
+    },
+
+    bloodFlow: (scene, config = {}) => {
+        const bloodStreams = [];
+        const count = config.count || 4;
+        const color = config.color || 0x8b0000;
+        const alpha = config.alpha || 0.6;
+        const thickness = config.thickness || 8;
+        
+        for (let i = 0; i < count; i++) {
+            const stream = scene.add.graphics();
+            stream.lineStyle(thickness, color, alpha);
+            
+            const startX = Math.random() * 2000;
+            const startY = Math.random() * 2000;
+            const endX = startX + (Math.random() - 0.5) * 400;
+            const endY = startY + (Math.random() - 0.5) * 400;
+            
+            stream.lineBetween(startX, startY, endX, endY);
+            stream.setDepth(45);
+            bloodStreams.push(stream);
+        }
+        return bloodStreams;
+    },
+
+    dataStream: (scene, config = {}) => {
+        const dataParticles = [];
+        const count = config.count || 10;
+        const speed = config.speed || { min: 30, max: 80 };
+        const tint = config.tint || 0x00ffff;
+        const frequency = config.frequency || 200;
+        
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * 2000;
+            const y = Math.random() * 2000;
+            
+            const data = scene.add.particles(x, y, 'bullet', {
+                speed: speed,
+                scale: { start: 0.2, end: 0 },
+                alpha: { start: 0.8, end: 0 },
+                lifespan: 2000,
+                blendMode: 'ADD',
+                angle: { min: 0, max: 360 },
+                quantity: 1,
+                frequency: frequency,
+                tint: tint
+            }).setDepth(55);
+            
+            dataParticles.push(data);
+        }
+        return dataParticles;
+    },
+
+    glitchArt: (scene, config = {}) => {
+        const glitchZones = [];
+        const count = config.count || 3;
+        const color = config.color || 0xff00ff;
+        const alpha = config.alpha || 0.1;
+        const size = config.size || 200;
+        
+        for (let i = 0; i < count; i++) {
+            const zone = scene.add.graphics();
+            zone.fillStyle(color, alpha);
+            zone.fillRect(
+                Math.random() * 1800,
+                Math.random() * 1000,
+                size,
+                size
+            );
+            zone.setDepth(70);
+            glitchZones.push(zone);
+        }
+        return glitchZones;
+    },
+
+    toxicSpores: (scene, config = {}) => {
+        const sporeEmitters = [];
+        const count = config.count || 8;
+        const speed = config.speed || { min: 10, max: 30 };
+        const tint = config.tint || 0x90ee90;
+        const frequency = config.frequency || 1000;
+        
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * 2000;
+            const y = Math.random() * 2000;
+            
+            const spores = scene.add.particles(x, y, 'bullet', {
+                speed: speed,
+                scale: { start: 0.3, end: 0 },
+                alpha: { start: 0.5, end: 0 },
+                lifespan: 4000,
+                blendMode: 'ADD',
+                angle: { min: 0, max: 360 },
+                quantity: 1,
+                frequency: frequency,
+                tint: tint
+            }).setDepth(50);
+            
+            sporeEmitters.push(spores);
+        }
+        return sporeEmitters;
+    },
+
+    realityWarp: (scene, config = {}) => {
+        const warpEffects = [];
+        const count = config.count || 5;
+        const color = config.color || 0x800080;
+        const alpha = config.alpha || 0.7;
+        const size = config.size || 100;
+        
+        for (let i = 0; i < count; i++) {
+            const warp = scene.add.graphics();
+            warp.lineStyle(4, color, alpha);
+            warp.strokeCircle(
+                Math.random() * 2000,
+                Math.random() * 1000,
+                size
+            );
+            warp.setDepth(65);
+            
+            warpEffects.push(warp);
+        }
+        return warpEffects;
+    },
+
+    divineLight: (scene, config = {}) => {
+        const lightBeams = [];
+        const count = config.count || 6;
+        const color = config.color || 0xffffff;
+        const alpha = config.alpha || 0.8;
+        const thickness = config.thickness || 6;
+        
+        for (let i = 0; i < count; i++) {
+            const beam = scene.add.graphics();
+            beam.lineStyle(thickness, color, alpha);
+            
+            const startX = Math.random() * 2000;
+            const startY = 0;
+            const endX = startX + (Math.random() - 0.5) * 200;
+            const endY = 1000;
+            
+            beam.lineBetween(startX, startY, endX, endY);
+            beam.setDepth(60);
+            lightBeams.push(beam);
+        }
+        return lightBeams;
+    },
+
+    temporalRift: (scene, config = {}) => {
+        const rifts = [];
+        const count = config.count || 4;
+        const color = config.color || 0xff6600;
+        const alpha = config.alpha || 0.8;
+        const size = config.size || 80;
+        
+        for (let i = 0; i < count; i++) {
+            const rift = scene.add.graphics();
+            rift.lineStyle(5, color, alpha);
+            rift.strokeCircle(
+                Math.random() * 2000,
+                Math.random() * 1000,
+                size
+            );
+            rift.setDepth(65);
+            
+            rifts.push(rift);
+        }
+        return rifts;
+    },
+
+    crystalGlow: (scene, config = {}) => {
+        const crystals = [];
+        const count = config.count || 7;
+        const color = config.color || 0x9370db;
+        const alpha = config.alpha || 0.6;
+        
+        for (let i = 0; i < count; i++) {
+            const crystal = scene.add.graphics();
+            crystal.fillStyle(color, alpha);
+            crystal.fillTriangle(
+                Math.random() * 2000,
+                Math.random() * 1000,
+                Math.random() * 2000,
+                Math.random() * 1000,
+                Math.random() * 2000,
+                Math.random() * 1000
+            );
+            crystal.setDepth(55);
+            crystals.push(crystal);
+        }
+        return crystals;
     }
 }; 

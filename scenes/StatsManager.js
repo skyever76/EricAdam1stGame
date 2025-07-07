@@ -61,6 +61,20 @@ export const StatsManager = {
             avgScore: Math.round(this.stats.totalScore / Math.max(1, this.stats.gamesPlayed)),
             killDeathRatio: (this.stats.totalKills / Math.max(1, this.stats.totalDeaths)).toFixed(2)
         };
+    },
+
+    // 重置所有统计数据
+    reset() {
+        this.stats = {
+            totalKills: 0,
+            totalScore: 0,
+            totalPlayTime: 0,
+            totalDeaths: 0,
+            gamesPlayed: 0,
+            highestScore: 0,
+            longestSurvival: 0
+        };
+        this.saveStats();
     }
 };
 

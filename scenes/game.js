@@ -1,6 +1,7 @@
 // game.js - ES6模块游戏入口
 
 import { SCENE_CONFIG } from './sceneConfig.js';
+import { AudioManager } from './AudioManager.js';
 
 console.log('开始初始化游戏配置...');
 
@@ -101,6 +102,10 @@ console.log('场景列表:', SCENE_CONFIG.getSceneInfo().map(info => `${info.key
 
 const game = new Phaser.Game(config);
 console.log('游戏实例已创建');
+
+// 🎵 初始化音频管理器（单例）
+AudioManager.init();
+console.log('🎵 AudioManager 已初始化');
 
 // 🆕 处理屏幕方向变化
 window.addEventListener('orientationchange', () => {

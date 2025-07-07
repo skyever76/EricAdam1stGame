@@ -4,6 +4,12 @@ import { PreloaderScene } from './PreloaderScene.js';
 import { PlayerSelectScene } from './PlayerSelectScene.js';
 import { MainScene } from './MainScene.js';
 
+// 🆕 导入高级敌人配置（确保模块被加载）
+import { ADVANCED_ENEMY_TYPES } from './advancedEnemies.js';
+
+// 🆕 导入高级场景配置（确保模块被加载）
+import { ADVANCED_SCENES } from './advancedScenes.js';
+
 // 🎬 场景配置
 export const SCENE_CONFIG = {
     // 场景列表（按加载顺序）

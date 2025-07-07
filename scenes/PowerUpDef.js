@@ -1,4 +1,4 @@
-// powerUps.js - 道具配置
+// PowerUpDef.js - 道具定义配置
 const POWER_UP_TYPES = {
     HEALTH_PACK: {
         type: 'health_pack',
@@ -58,6 +58,7 @@ const POWER_UP_TYPES = {
         }
     }
 };
+
 const ENEMY_DROP_RATES = {
     '小兵': 0.15,
     '士兵': 0.20,
@@ -67,5 +68,5 @@ const ENEMY_DROP_RATES = {
     '直升机': 0.40,
     'BOSS': 0.60
 };
-window.POWER_UP_TYPES = POWER_UP_TYPES;
-window.ENEMY_DROP_RATES = ENEMY_DROP_RATES; 
+
+export { POWER_UP_TYPES, ENEMY_DROP_RATES }; 

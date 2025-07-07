@@ -1,5 +1,5 @@
 // advancedEnemies.js - 高级场景专用敌人
-const ADVANCED_ENEMY_TYPES = {
+export const ADVANCED_ENEMY_TYPES = {
     // 🔧 机械内部敌人
     REPAIR_DRONE: {
         name: '维修无人机',

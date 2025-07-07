@@ -16,9 +16,12 @@ import { TouchControls } from './TouchControls.js';
 import { PixelArtSystem } from './PixelArtSystem.js';
 import { AdvancedSceneManager } from './AdvancedSceneManager.js';
 import { SceneSwitcher } from './SceneSwitcher.js';
+import { ADVANCED_SCENES } from './advancedScenes.js';
 import { StatsManager } from './StatsManager.js';
 import { AchievementManager } from './AchievementManager.js';
 import { SaveManager } from './SaveManager.js';
+import { LEVELS_CONFIG } from './levels.js';
+import { LEVEL_THEMES } from './levelThemes.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -60,8 +63,10 @@ export class MainScene extends Phaser.Scene {
         this.pixelArtSystem = new PixelArtSystem(this);
         this.pixelArtSystem.initAllTextures();
       
-        // 🔊 初始化音效系统
-        this.audioManager = new AudioManager(this);
+        // 🔊 检查音频系统状态（单例模式）
+        if (!AudioManager.audioUnlocked) {
+            AudioManager.promptToUnlock(this);
+        }
       
         // 🆕 加载当前关卡配置
         this.loadLevelConfig();
@@ -114,6 +119,9 @@ export class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.bullets, this.enemies, this.handleBulletHit, null, this);
         this.physics.add.collider(this.player, this.enemies, this.handlePlayerHit, null, this);
         this.physics.add.overlap(this.player, this.enemyBullets, this.handleEnemyBulletHit, null, this);
+        
+        // 🪨 障碍物碰撞检测（在障碍物管理器初始化后设置）
+        this.setupObstacleCollisions();
   
         // 🆕 初始化触摸控制系统
         this.touchControls = new TouchControls(this);
@@ -146,7 +154,7 @@ export class MainScene extends Phaser.Scene {
         this.advancedSceneManager = new AdvancedSceneManager(this);
         
         // 🌍 初始化场景切换器
-        this.sceneSwitcher = new SceneSwitcher(this);
+        this.sceneSwitcher = new SceneSwitcher(this, ADVANCED_SCENES);
         
         // 🌍 添加场景切换快捷键
         this.sceneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
@@ -658,10 +666,9 @@ export class MainScene extends Phaser.Scene {
 
     // 🪨 更新障碍物系统
     updateObstacleSystem() {
-        if (this.obstacleManager) {
-            this.obstacleManager.update(this.time.now, this.game.loop.delta);
-        }
-        }
+        // ObstacleManager 现在不需要每帧更新，只在障碍物被摧毁时自动处理
+        // 这里可以保留用于未来扩展
+    }
         
     // 🌍 更新场景系统
     updateSceneSystem() {
@@ -692,6 +699,65 @@ export class MainScene extends Phaser.Scene {
         
         // 检查关卡完成条件
         this.checkLevelComplete();
+        
+        // 🆕 检查伤害区域
+        this.checkDamageZones();
+    }
+    
+    // 🆕 检查伤害区域
+    checkDamageZones() {
+        if (!this.advancedSceneManager || !this.player) return;
+        
+        const damageZones = this.advancedSceneManager.damageZones;
+        if (!damageZones) return;
+        
+        damageZones.forEach((data, zone) => {
+            if (zone.active && this.player.active) {
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, this.player.y,
+                    zone.x, zone.y
+                );
+                
+                if (distance < zone.width / 2) {
+                    // 玩家在伤害区域内
+                    this.handleDamageZoneHit(data);
+                }
+            }
+        });
+    }
+    
+    // 🆕 处理伤害区域击中
+    handleDamageZoneHit(data) {
+        if (this.player.isInvincible) return;
+        
+        const damage = data.damage || 10;
+        this.currentHealth -= damage;
+        
+        if (this.currentHealth < 0) {
+            this.currentHealth = 0;
+        }
+        
+        console.log(`MainScene: 玩家受到${data.type}伤害 ${damage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
+        
+        // 🔊 播放受伤音效
+        AudioManager.play('hurt');
+        
+        // 显示受伤效果
+        this.showDamageEffect(damage, data.type);
+        
+        // 设置无敌状态
+        this.player.isInvincible = true;
+        this.player.setTint(0xff0000);
+        this.time.delayedCall(this.invincibilityTime, () => {
+            if (this.player && this.player.active) {
+                this.player.isInvincible = false;
+                this.player.clearTint();
+            }
+        });
+        
+        if (this.currentHealth <= 0) {
+            this.gameOver();
+        }
     }
 
     // 🆕 修改玩家受伤逻辑
@@ -711,9 +777,7 @@ export class MainScene extends Phaser.Scene {
         console.log(`MainScene: 玩家被撞击扣血 ${collisionDamage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
       
         // 🔊 播放受伤音效
-        if (this.audioManager) {
-            this.audioManager.play('hurt');
-        }
+        AudioManager.play('hurt');
       
         // 显示受伤效果
         this.showDamageEffect(this.collisionDamage, 'collision');
@@ -741,34 +805,31 @@ export class MainScene extends Phaser.Scene {
         console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
 
         // 🔊 播放击中音效
-        if (this.audioManager) {
-            this.audioManager.play('hit');
-        }
+        AudioManager.play('hit');
+
+        let isDead = false;
 
         // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
             console.log('MainScene: 执行导弹爆炸');
             this.executeMissileExplosion(bullet, enemy);
-            bullet.destroy();
-            return;
+            // 导弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else if (bullet.weaponType === '核弹') {
             console.log('MainScene: 执行核弹爆炸');
             this.executeNuclearStrike(bullet, enemy);
-            bullet.destroy();
-            return;
-        }
-
-        // 🔧 普通武器 - 让敌人类处理自己的伤害计算
-        let isDead = false;
-        if (enemy.takeDamage) {
-            isDead = enemy.takeDamage(bullet.damage);
+            // 核弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else {
-            // 兼容旧版敌人
-            isDead = true;
+            // 🔧 普通武器 - 让敌人类处理自己的伤害计算
+            if (enemy.takeDamage) {
+                isDead = enemy.takeDamage(bullet.damage);
+            } else {
+                // 兼容旧版敌人
+                isDead = true;
+            }
         }
         
-        // 销毁子弹
-        bullet.destroy();
+        // 🔧 统一在最后回收子弹（使用kill()而不是destroy()）
+        bullet.kill();
         
         if (isDead) {
             // 通过事件系统报告击杀，让事件处理器统一处理
@@ -805,9 +866,7 @@ export class MainScene extends Phaser.Scene {
         }
         
         // 🔊 播放游戏结束音效
-        if (this.audioManager) {
-            this.audioManager.play('gameOver');
-        }
+        AudioManager.play('gameOver');
         
         // 🆕 记录游戏结束时间
         this.levelEndTime = this.time.now;
@@ -959,6 +1018,9 @@ export class MainScene extends Phaser.Scene {
             this.time.delayedCall(100, () => {
                 this.shootEmitter.stop();
             });
+            
+            // 🔊 播放射击音效
+            AudioManager.play('shoot');
             
             // 🆕 特殊武器效果
             if (weapon.name === '声波枪' && weapon.isContinuous) {
@@ -1199,7 +1261,7 @@ export class MainScene extends Phaser.Scene {
         // 声波持续2秒
         this.time.delayedCall(this.currentWeapon.duration, () => {
             if (bullet && bullet.active) {
-                bullet.destroy();
+                bullet.kill(); // 🔧 使用kill()回收子弹到对象池
             }
         }, null, this);
     }
@@ -1497,8 +1559,8 @@ export class MainScene extends Phaser.Scene {
             console.log(`🎵 加载关卡 ${this.currentLevelIndex + 1}: ${this.currentLevel.name}`);
             
             // 🆕 播放背景音乐
-            if (this.audioManager && this.currentLevel.music) {
-                this.audioManager.playBackgroundMusic(this.currentLevel.music);
+            if (this.currentLevel.music) {
+                AudioManager.playBackgroundMusic(this.currentLevel.music);
             }
         } else {
             // 使用默认关卡配置
@@ -1514,9 +1576,7 @@ export class MainScene extends Phaser.Scene {
             };
             
             // 🆕 播放默认背景音乐
-            if (this.audioManager) {
-                this.audioManager.playBackgroundMusic('city_theme');
-            }
+            AudioManager.playBackgroundMusic('city_theme');
         }
     }
 
@@ -1855,37 +1915,24 @@ export class MainScene extends Phaser.Scene {
     spawnLevelEnemy() {
         if (this.isGameOver || this.currentEnemyCount >= this.maxEnemies) return;
       
-        // 使用简单敌人类型
-        const enemyTypes = ['enemy'];
-        const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-        const enemyTexture = enemyType;
+        // 从关卡配置中选择敌人类型
+        const enemyConfig = this.selectEnemyType();
+        if (!enemyConfig) return;
       
         const y = Phaser.Math.Between(50, 670);
         // 🆕 横版卷轴：在摄像机右侧生成敌人
         const spawnX = this.cameras.main.scrollX + 900;
-        const enemy = this.enemies.create(spawnX, y, enemyTexture);
-      
+        
+        // 从对象池获取敌人
+        const enemy = this.enemies.get();
         if (enemy) {
-            enemy.setDisplaySize(32, 32);
-            enemy.setVelocityX(-100); // 向左移动（相对世界坐标）
-          
-            if (enemy.body) {
-                enemy.body.enable = true;
-            }
-          
-            // 🆕 设置敌人数据
-            enemy.enemyData = {
-                name: '小兵',
-                ai: 'straight',
-                weight: 1
-            };
-          
-            enemy.checkBounds = true;
+            // 使用配置激活敌人
+            enemy.spawn(spawnX, y, enemyConfig);
             this.currentEnemyCount++;
             
-            console.log(`MainScene: 横版卷轴敌人生成成功，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
+            console.log(`MainScene: 横版卷轴敌人生成成功，类型: ${enemyConfig.name}，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
         } else {
-            console.error('MainScene: 无法创建敌人对象');
+            console.error('MainScene: 无法从对象池获取敌人对象');
         }
     }
 
@@ -1978,10 +2025,8 @@ export class MainScene extends Phaser.Scene {
             }
         }
         
-        // 销毁敌人对象
-        if (deathData.enemy) {
-            deathData.enemy.destroy();
-        }
+        // 敌人对象已通过recycle()方法回收到对象池
+        // 不需要手动销毁
       
         // UI更新通过主循环自动处理
       
@@ -2131,11 +2176,8 @@ export class MainScene extends Phaser.Scene {
             this.player.animationTimer.destroy();
         }
         
-        // 🔊 清理音效系统
-        if (this.audioManager) {
-            this.audioManager.stopBackgroundMusic(); // 🆕 停止背景音乐
-            this.audioManager.destroy();
-        }
+        // 🔊 停止背景音乐（单例模式）
+        AudioManager.stopBackgroundMusic();
         
         // 🕐 清理所有定时器
         if (this.enemySpawner) {
@@ -2279,7 +2321,200 @@ export class MainScene extends Phaser.Scene {
         // ... 其他关卡切换逻辑 ...
     }
     
+    // 🪨 设置障碍物碰撞检测
+    setupObstacleCollisions() {
+        // 等待障碍物管理器初始化完成后再设置碰撞
+        this.time.delayedCall(100, () => {
+            if (this.obstacleManager && this.obstacleManager.obstacles) {
+                // 玩家与障碍物碰撞
+                this.physics.add.collider(
+                    this.player, 
+                    this.obstacleManager.obstacles, 
+                    this.handlePlayerObstacleCollision, 
+                    null, 
+                    this
+                );
+                
+                // 敌人与障碍物碰撞
+                if (this.enemies) {
+                    this.physics.add.collider(
+                        this.enemies, 
+                        this.obstacleManager.obstacles, 
+                        this.handleEnemyObstacleCollision, 
+                        null, 
+                        this
+                    );
+                }
+                
+                // 玩家子弹与障碍物碰撞
+                if (this.bullets) {
+                    this.physics.add.overlap(
+                        this.bullets, 
+                        this.obstacleManager.obstacles, 
+                        this.handleBulletObstacleCollision, 
+                        null, 
+                        this
+                    );
+                }
+                
+                // 敌人子弹与障碍物碰撞
+                if (this.enemyBullets) {
+                    this.physics.add.overlap(
+                        this.enemyBullets, 
+                        this.obstacleManager.obstacles, 
+                        this.handleEnemyBulletObstacleCollision, 
+                        null, 
+                        this
+                    );
+                }
+                
+                console.log('🪨 障碍物碰撞检测设置完成');
+            }
+        });
+    }
+    
+    // 👤 处理玩家与障碍物碰撞
+    handlePlayerObstacleCollision(player, obstacle) {
+        if (!obstacle.isDestructible) {
+            // 不可摧毁的障碍物，阻止玩家移动
+            const playerBody = player.body;
+            const obstacleBody = obstacle.body;
+          
+            // 简单的碰撞响应
+            if (playerBody.x < obstacleBody.x) {
+                playerBody.x = obstacleBody.x - playerBody.width;
+            } else if (playerBody.x > obstacleBody.x) {
+                playerBody.x = obstacleBody.x + obstacleBody.width;
+            }
+        }
+    }
+    
+    // 👾 处理敌人与障碍物碰撞
+    handleEnemyObstacleCollision(enemy, obstacle) {
+        if (!obstacle.isDestructible) {
+            // 敌人遇到不可摧毁的障碍物时改变方向
+            if (enemy.body && enemy.body.velocity) {
+                enemy.body.velocity.x *= -0.5;
+                enemy.body.velocity.y *= -0.5;
+            }
+        }
+    }
+    
+    // 🔫 处理子弹与障碍物碰撞
+    handleBulletObstacleCollision(bullet, obstacle) {
+        if (!obstacle.isDestructible) {
+            // 不可摧毁的障碍物，只销毁子弹
+            bullet.destroy();
+            return;
+        }
+      
+        // 可摧毁的障碍物
+        const damage = bullet.damage || 10;
+        const weaponType = bullet.weaponType || 'bullet';
+      
+        // 对障碍物造成伤害
+        const destroyed = obstacle.takeDamage(damage, weaponType, bullet.owner);
+      
+        // 创建击中特效
+        this.createObstacleHitEffect(bullet.x, bullet.y, weaponType);
+      
+        // 销毁子弹
+        bullet.destroy();
+      
+        if (destroyed) {
+            console.log(`💥 障碍物被摧毁: ${obstacle.name}`);
+            // 通知障碍物管理器
+            if (this.obstacleManager) {
+                this.obstacleManager.onObstacleDestroyed(obstacle);
+            }
+            // 显示摧毁通知
+            this.showObstacleDestructionNotification(obstacle.name);
+        }
+    }
+    
+    // 🔫 处理敌人子弹与障碍物碰撞
+    handleEnemyBulletObstacleCollision(bullet, obstacle) {
+        // 敌人子弹通常不摧毁障碍物，只销毁子弹
+        bullet.destroy();
+    }
+    
+    // 💥 创建障碍物击中特效
+    createObstacleHitEffect(x, y, weaponType) {
+        // 根据武器类型创建不同的击中特效
+        let particleColor = 0xff6666;
+        let particleCount = 8;
+      
+        switch (weaponType) {
+            case 'laser':
+                particleColor = 0x00ffff;
+                particleCount = 12;
+                break;
+            case 'missile':
+                particleColor = 0xffaa00;
+                particleCount = 15;
+                break;
+            case 'nuke':
+                particleColor = 0xff0000;
+                particleCount = 20;
+                break;
+            default:
+                particleColor = 0xff6666;
+                particleCount = 8;
+        }
+      
+        // 创建击中粒子效果
+        const particles = this.add.particles('particle');
+        const emitter = particles.createEmitter({
+            x: x,
+            y: y,
+            speed: { min: 30, max: 80 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.4, end: 0 },
+            alpha: { start: 1, end: 0 },
+            tint: particleColor,
+            lifespan: 400,
+            quantity: particleCount
+        });
+      
+        // 清理粒子
+        this.time.delayedCall(400, () => {
+            particles.destroy();
+        });
+    }
+    
+    // 📢 显示障碍物摧毁通知
+    showObstacleDestructionNotification(obstacleName) {
+        // 创建通知文本
+        const notification = this.add.text(
+            this.cameras.main.centerX,
+            100,
+            `💥 ${obstacleName} 被摧毁！`,
+            {
+                fontSize: '20px',
+                fill: '#ffaa00',
+                stroke: '#000000',
+                strokeThickness: 3,
+                backgroundColor: '#000000',
+                padding: { x: 10, y: 5 }
+            }
+        );
+        notification.setOrigin(0.5);
+        notification.setDepth(1000);
+        notification.setScrollFactor(0); // 固定显示
+      
+        // 动画效果
+        this.tweens.add({
+            targets: notification,
+            y: notification.y - 50,
+            alpha: 0,
+            duration: 2000,
+            ease: 'Power2',
+            onComplete: () => {
+                notification.destroy();
+            }
+        });
+    }
 
 }
 
-    console.log('✅ MainScene.js ES6模块已加载'); 
+console.log('✅ MainScene.js ES6模块已加载'); 

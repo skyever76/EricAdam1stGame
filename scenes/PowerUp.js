@@ -1,28 +1,64 @@
 // PowerUp.js - 道具类
-class PowerUp extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, powerUpData) {
-        // 🎨 使用像素艺术道具纹理
-        const powerUpType = this.mapPowerUpType(powerUpData.type);
-        const textureKey = `${powerUpType}_0`; // 使用第一帧
-        
+import { POWERUP_DESIGNS } from './powerUpDesigns.js';
+
+export class PowerUp extends Phaser.GameObjects.Sprite {
+    constructor(scene, x, y, textureKey) {
         super(scene, x, y, textureKey);
         this.scene = scene;
-        this.powerUpData = powerUpData;
-        this.powerUpType = powerUpData.type;
-        this.pixelType = powerUpType;
-        this.animationFrame = 0;
         
+        // 基础属性
+        this.powerUpData = null;
+        this.powerUpType = null;
+        this.pixelType = null;
+        this.animationFrame = 0;
+        this.lifeTime = 15000;
+        this.collected = false;
+        this.magnetRange = 80;
+        
+        // 计时器引用
+        this.animationTimer = null;
+        this.lifeTimer = null;
+        this.warningTimer = null;
+        this.hoverTween = null;
+        this.warningTween = null;
+        
+        // 初始化物理属性
         scene.add.existing(this);
-        scene.physics.add.existing(this);
         this.body.setSize(30, 30);
         this.body.setCollideWorldBounds(true);
         this.body.setBounce(0.3);
         this.body.setDrag(100);
         this.setScale(0.8);
         this.setDepth(100);
+        
+        // 初始状态为禁用
+        this.setActive(false);
+        this.setVisible(false);
+    }
+
+    // 🎯 对象池激活方法
+    spawn(x, y, powerUpData) {
+        // 🎨 使用像素艺术道具纹理
+        const powerUpType = this.mapPowerUpType(powerUpData.type);
+        const textureKey = `${powerUpType}_0`; // 使用第一帧
+        
+        // 设置基础属性
+        this.powerUpData = powerUpData;
+        this.powerUpType = powerUpData.type;
+        this.pixelType = powerUpType;
+        this.animationFrame = 0;
         this.lifeTime = powerUpData.lifeTime || 15000;
         this.collected = false;
-        this.magnetRange = 80;
+        
+        // 设置位置和纹理
+        this.setPosition(x, y);
+        this.setTexture(textureKey);
+        this.setAlpha(1);
+        this.setScale(0.8);
+        
+        // 激活对象
+        this.setActive(true);
+        this.setVisible(true);
         
         // 🎨 设置道具动画
         this.animationTimer = this.scene.time.addEvent({
@@ -32,10 +68,63 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             loop: true
         });
         
-        this.setupAppearance();
         this.setupAnimations();
         this.setupLifeTimer();
+        
         console.log(`🎁 生成像素风道具: ${powerUpData.name} 在位置 (${x}, ${y})`);
+    }
+
+    // 🔄 对象池回收方法
+    recycle() {
+        // 停止所有计时器和动画
+        this.stopAllTimers();
+        this.stopAllTweens();
+        
+        // 重置状态
+        this.powerUpData = null;
+        this.powerUpType = null;
+        this.pixelType = null;
+        this.animationFrame = 0;
+        this.collected = false;
+        
+        // 重置物理属性
+        this.body.setVelocity(0, 0);
+        this.setAlpha(1);
+        this.setScale(0.8);
+        
+        // 禁用对象
+        this.setActive(false);
+        this.setVisible(false);
+        
+        console.log('🔄 道具已回收到对象池');
+    }
+
+    // 🛑 停止所有计时器
+    stopAllTimers() {
+        if (this.animationTimer) {
+            this.animationTimer.destroy();
+            this.animationTimer = null;
+        }
+        if (this.lifeTimer) {
+            this.lifeTimer.destroy();
+            this.lifeTimer = null;
+        }
+        if (this.warningTimer) {
+            this.warningTimer.destroy();
+            this.warningTimer = null;
+        }
+    }
+
+    // 🛑 停止所有补间动画
+    stopAllTweens() {
+        if (this.hoverTween) {
+            this.hoverTween.stop();
+            this.hoverTween = null;
+        }
+        if (this.warningTween) {
+            this.warningTween.stop();
+            this.warningTween = null;
+        }
     }
 
     // 🎨 映射道具类型到像素艺术类型
@@ -60,13 +149,10 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             this.setTexture(newTexture);
         }
     }
-    setupAppearance() {
-        // 🎨 像素艺术纹理已经包含发光效果和符号，不需要额外的视觉效果
-        // 只保留简单的悬停动画
-    }
+
     setupAnimations() {
         // 🎨 简单的悬停动画
-        this.scene.tweens.add({
+        this.hoverTween = this.scene.tweens.add({
             targets: this,
             y: this.y - 10,
             duration: 1000,
@@ -75,6 +161,7 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             ease: 'Sine.easeInOut'
         });
     }
+
     setupLifeTimer() {
         this.lifeTimer = this.scene.time.delayedCall(this.lifeTime, () => {
             this.expire();
@@ -83,8 +170,9 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             this.startWarningBlink();
         });
     }
+
     startWarningBlink() {
-        this.scene.tweens.add({
+        this.warningTween = this.scene.tweens.add({
             targets: this,
             alpha: 0.3,
             duration: 200,
@@ -93,19 +181,21 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             ease: 'Power2'
         });
     }
+
     update() {
-        if (this.collected) return;
+        if (this.collected || !this.active) return;
         this.checkMagnetEffect();
         
         // 🆕 横版卷轴：检查是否移出摄像机左侧
         if (this.scene && this.scene.cameras) {
             const cameraLeft = this.scene.cameras.main.scrollX;
             if (this.x < cameraLeft - 100) {
-                console.log(`⏰ 道具移出视野，自动销毁: ${this.powerUpData.name}`);
-                this.destroy();
+                console.log(`⏰ 道具移出视野，自动回收: ${this.powerUpData.name}`);
+                this.recycle();
             }
         }
     }
+
     checkMagnetEffect() {
         if (!this.scene.player) return;
         const distance = Phaser.Math.Distance.Between(
@@ -124,8 +214,9 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             );
         }
     }
+
     collect() {
-        if (this.collected) return false;
+        if (this.collected || !this.active) return false;
         this.collected = true;
         console.log(`🎁 收集道具: ${this.powerUpData.name}`);
         
@@ -136,11 +227,10 @@ class PowerUp extends Phaser.GameObjects.Sprite {
         
         this.createCollectEffect();
         this.applyEffect();
-        if (this.lifeTimer) this.lifeTimer.destroy();
-        if (this.warningTimer) this.warningTimer.destroy();
-        this.destroy();
+        this.recycle(); // 🔄 使用对象池回收而不是销毁
         return true;
     }
+
     createCollectEffect() {
         // 🎨 使用像素艺术道具的发光颜色
         const design = POWERUP_DESIGNS[this.pixelType];
@@ -160,11 +250,13 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             collectEffect.destroy();
         });
     }
+
     applyEffect() {
         if (this.scene.powerUpManager) {
             this.scene.powerUpManager.applyPowerUp(this.powerUpData);
         }
     }
+
     expire() {
         console.log(`⏰ 道具过期: ${this.powerUpData.name}`);
         this.scene.tweens.add({
@@ -175,15 +267,14 @@ class PowerUp extends Phaser.GameObjects.Sprite {
             duration: 300,
             ease: 'Power2',
             onComplete: () => {
-                this.destroy();
+                this.recycle(); // 🔄 使用对象池回收而不是销毁
             }
         });
     }
+
     destroy() {
-        if (this.lifeTimer) this.lifeTimer.destroy();
-        if (this.warningTimer) this.warningTimer.destroy();
-        if (this.animationTimer) this.animationTimer.destroy();
+        this.stopAllTimers();
+        this.stopAllTweens();
         super.destroy();
     }
-}
-window.PowerUp = PowerUp; 
+} 

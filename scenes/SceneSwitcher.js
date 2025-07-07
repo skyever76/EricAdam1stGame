@@ -1,7 +1,8 @@
 // SceneSwitcher.js - 场景切换UI
 class SceneSwitcher {
-    constructor(scene) {
+    constructor(scene, sceneConfig) {
         this.scene = scene;
+        this.sceneConfig = sceneConfig; // 保存注入的场景配置
         this.isVisible = false;
         this.container = null;
       
@@ -47,7 +48,8 @@ class SceneSwitcher {
   
     // 🔘 创建场景按钮
     createSceneButtons() {
-        const scenes = Object.values(ADVANCED_SCENES);
+        // 使用注入的场景配置而不是全局变量
+        const scenes = Object.values(this.sceneConfig);
       
         scenes.forEach((sceneData, index) => {
             const y = -120 + index * 45;
@@ -105,7 +107,8 @@ class SceneSwitcher {
   
     // 📢 显示切换通知
     showSwitchNotification(sceneId) {
-        const sceneData = ADVANCED_SCENES[sceneId];
+        // 使用注入的场景配置而不是全局变量
+        const sceneData = this.sceneConfig[sceneId];
         if (!sceneData) return;
       
         const notification = this.scene.add.container(640, 150);
@@ -191,4 +194,7 @@ class SceneSwitcher {
             this.show();
         }
     }
-} 
+}
+
+// ES6模块导出
+export { SceneSwitcher }; 

@@ -1,10 +1,18 @@
 // PowerUpManager.js - 道具管理器
-class PowerUpManager {
+import { PowerUp } from './PowerUp.js';
+import { POWER_UP_TYPES, ENEMY_DROP_RATES } from './PowerUpDef.js';
+
+export class PowerUpManager {
     constructor(scene) {
         this.scene = scene;
-        this.powerUps = scene.add.group();
+        // 🔄 使用对象池模式
+        this.powerUps = scene.physics.add.group({
+            classType: PowerUp,
+            maxSize: 20,
+            runChildUpdate: true
+        });
         this.activeBonuses = new Map();
-        console.log('🎁 道具管理器初始化完成');
+        console.log('🎁 道具管理器初始化完成（对象池模式）');
     }
     spawnPowerUp(x, y, enemyType = '小兵') {
         const dropRate = ENEMY_DROP_RATES[enemyType] || 0.15;
@@ -19,10 +27,16 @@ class PowerUpManager {
         const clampedX = Phaser.Math.Clamp(x, 0, 4000);
         const clampedY = Phaser.Math.Clamp(y, 50, 670);
         
-        const powerUp = new PowerUp(this.scene, clampedX, clampedY, powerUpType);
-        this.powerUps.add(powerUp);
-        console.log(`✅ 道具掉落成功: ${powerUpType.name}，位置: (${clampedX}, ${clampedY})，掉落率: ${(dropRate * 100).toFixed(1)}%`);
-        return powerUp;
+        // 🔄 从对象池获取道具实例
+        const powerUp = this.powerUps.get();
+        if (powerUp) {
+            powerUp.spawn(clampedX, clampedY, powerUpType);
+            console.log(`✅ 道具掉落成功: ${powerUpType.name}，位置: (${clampedX}, ${clampedY})，掉落率: ${(dropRate * 100).toFixed(1)}%`);
+            return powerUp;
+        } else {
+            console.warn('❌ 道具对象池已满，无法生成新道具');
+            return null;
+        }
     }
     selectPowerUpType(enemyType) {
         const powerUpList = Object.values(POWER_UP_TYPES);
@@ -52,28 +66,26 @@ class PowerUpManager {
         console.log(`🎁 应用道具效果: ${powerUpData.name}`);
         switch (effect.type) {
             case 'heal':
-                this.applyHealEffect(effect);
+                this.applyHealEffect(this.scene.player, effect);
                 break;
             case 'temporary_boost':
-                this.applyTemporaryBoost(powerUpData, effect);
+                this.applyTemporaryBoost(this.scene.player, powerUpData, effect);
                 break;
             default:
                 console.warn('未知道具效果类型:', effect.type);
         }
-        this.scene.updateHUD();
         this.showPowerUpNotification(powerUpData);
     }
-    applyHealEffect(effect) {
-        const player = this.scene.player;
+    applyHealEffect(player, effect) {
         if (!player) return;
         const oldHealth = player.health;
         const maxHealth = player.maxHealth || 100;
         player.health = Math.min(maxHealth, player.health + effect.amount);
         const actualHeal = player.health - oldHealth;
         console.log(`❤️ 治疗效果: +${actualHeal} HP，当前生命值: ${player.health}/${maxHealth}`);
-        this.createHealEffect();
+        this.createHealEffect(player);
     }
-    applyTemporaryBoost(powerUpData, effect) {
+    applyTemporaryBoost(player, powerUpData, effect) {
         const bonusId = `${powerUpData.type}_${Date.now()}`;
         const bonusData = {
             id: bonusId,
@@ -88,7 +100,7 @@ class PowerUpManager {
         this.scene.time.delayedCall(effect.duration, () => {
             this.removeBonusEffect(bonusId);
         });
-        this.createBoostEffect(powerUpData);
+        this.createBoostEffect(player, powerUpData);
     }
     applyBonusEffects() {
         const player = this.scene.player;
@@ -134,10 +146,8 @@ class PowerUpManager {
                 console.log('🔄 重置玩家状态');
             }
         }
-        this.scene.updateHUD();
     }
-    createHealEffect() {
-        const player = this.scene.player;
+    createHealEffect(player) {
         if (!player) return;
         const healEffect = this.scene.add.particles(player.x, player.y, 'bullet', {
             speed: { min: 30, max: 80 },
@@ -153,8 +163,7 @@ class PowerUpManager {
             healEffect.destroy();
         });
     }
-    createBoostEffect(powerUpData) {
-        const player = this.scene.player;
+    createBoostEffect(player, powerUpData) {
         if (!player) return;
         const boostEffect = this.scene.add.particles(player.x, player.y, 'bullet', {
             speed: { min: 50, max: 120 },
@@ -169,8 +178,12 @@ class PowerUpManager {
         this.scene.time.delayedCall(1800, () => {
             boostEffect.destroy();
         });
-        const playerGlow = this.scene.add.circle(player.x, player.y, 30, powerUpData.color, 0.3)
+        
+        // 使用子对象方式，避免onUpdate回调
+        const playerGlow = this.scene.add.circle(0, 0, 30, powerUpData.color, 0.3)
             .setDepth(player.depth - 1);
+        player.add(playerGlow); // 添加为子对象，自动跟随移动
+        
         this.scene.tweens.add({
             targets: playerGlow,
             alpha: 0,
@@ -178,11 +191,6 @@ class PowerUpManager {
             scaleY: 2,
             duration: 1000,
             ease: 'Power2',
-            onUpdate: () => {
-                if (player && playerGlow) {
-                    playerGlow.setPosition(player.x, player.y);
-                }
-            },
             onComplete: () => {
                 playerGlow.destroy();
             }
@@ -231,12 +239,6 @@ class PowerUpManager {
                 powerUp.update();
             }
         });
-        const now = Date.now();
-        for (const [bonusId, bonus] of this.activeBonuses) {
-            if (now >= bonus.endTime) {
-                this.removeBonusEffect(bonusId);
-            }
-        }
     }
     getActiveBonuses() {
         return Array.from(this.activeBonuses.values());
@@ -245,5 +247,4 @@ class PowerUpManager {
         this.powerUps.clear(true, true);
         this.activeBonuses.clear();
     }
-}
-window.PowerUpManager = PowerUpManager; 
+} 

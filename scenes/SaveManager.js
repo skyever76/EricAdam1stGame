@@ -2,6 +2,7 @@
 
 import { StatsManager } from './StatsManager.js';
 import { AchievementManager } from './AchievementManager.js';
+import { SAVE_KEY } from './configs.js';
 
 export const SaveManager = {
     // 保存所有游戏数据
@@ -17,13 +18,13 @@ export const SaveManager = {
             timestamp: Date.now()
         };
       
-        localStorage.setItem('gameData', JSON.stringify(gameData));
+        localStorage.setItem(SAVE_KEY, JSON.stringify(gameData));
         this.showMessage('游戏数据已保存！', 'success');
     },
 
     // 加载所有游戏数据
     loadAll() {
-        const saved = localStorage.getItem('gameData');
+        const saved = localStorage.getItem(SAVE_KEY);
         if (saved) {
             try {
                 const gameData = JSON.parse(saved);
@@ -42,19 +43,18 @@ export const SaveManager = {
     // 重置所有数据
     resetAll() {
         if (confirm('确定要重置所有游戏数据吗？此操作不可恢复！')) {
-            localStorage.removeItem('gameData');
+            // 清理所有相关的localStorage键
+            localStorage.removeItem(SAVE_KEY);
             localStorage.removeItem('gameStats');
             localStorage.removeItem('gameAchievements');
           
-            // 重置对象
-            StatsManager.stats = {
-                totalKills: 0, totalScore: 0, totalPlayTime: 0,
-                totalDeaths: 0, gamesPlayed: 0, highestScore: 0, longestSurvival: 0
-            };
-          
-            Object.keys(AchievementManager.achievements).forEach(key => {
-                AchievementManager.achievements[key].unlocked = false;
-            });
+            // 调用各自管理器的重置方法，遵循单一职责原则
+            if (StatsManager.reset) {
+                StatsManager.reset();
+            }
+            if (AchievementManager.resetAchievements) {
+                AchievementManager.resetAchievements();
+            }
           
             this.showMessage('所有数据已重置！', 'warning');
         }

@@ -1,5 +1,7 @@
 // Obstacle.js - 障碍物基类
-class Obstacle extends Phaser.GameObjects.Container {
+import { POWER_UP_TYPES } from './PowerUpDef.js';
+
+export class Obstacle extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, obstacleData) {
         super(scene, x, y);
       
@@ -10,7 +12,6 @@ class Obstacle extends Phaser.GameObjects.Container {
       
         // 添加到场景
         scene.add.existing(this);
-        scene.physics.add.existing(this);
       
         // 障碍物基础属性
         this.health = obstacleData.health;
@@ -34,140 +35,22 @@ class Obstacle extends Phaser.GameObjects.Container {
     createVisual() {
         const data = this.obstacleData;
       
-        // 主体
-        this.mainBody = this.scene.add.graphics();
-        this.mainBody.fillStyle(data.primaryColor, 1);
-        this.mainBody.lineStyle(3, data.secondaryColor, 1);
+        // 创建临时Graphics对象来绘制纹理
+        const graphics = this.scene.add.graphics();
+        graphics.fillStyle(data.primaryColor, 1);
+        graphics.lineStyle(3, data.secondaryColor, 1);
       
-        // 根据障碍物类型创建不同外观
-        switch (this.obstacleType) {
-            case 'rock':
-                this.createRock();
-                break;
-            case 'tree':
-                this.createTree();
-                break;
-            case 'building':
-                this.createBuilding();
-                break;
-            case 'coral':
-                this.createCoral();
-                break;
-            case 'asteroid':
-                this.createAsteroid();
-                break;
+        // 使用配置中的视觉绘制函数
+        if (data.visualizer) {
+            data.visualizer(graphics, data);
         }
       
-        this.add(this.mainBody);
+        // 将Graphics转换为纹理并应用到Sprite
+        graphics.generateTexture('obstacle_' + this.obstacleType, data.width, data.height);
+        this.setTexture('obstacle_' + this.obstacleType);
+        graphics.destroy();
+      
         this.setDepth(50);
-    }
-  
-    createRock() {
-        const data = this.obstacleData;
-      
-        // 不规则岩石形状
-        this.mainBody.beginPath();
-        this.mainBody.moveTo(-data.width/2, -data.height/2);
-        this.mainBody.lineTo(data.width/2, -data.height/3);
-        this.mainBody.lineTo(data.width/3, data.height/2);
-        this.mainBody.lineTo(-data.width/3, data.height/2);
-        this.mainBody.closePath();
-        this.mainBody.fillPath();
-        this.mainBody.strokePath();
-      
-        // 岩石纹理
-        for (let i = 0; i < 5; i++) {
-            const x = (Math.random() - 0.5) * data.width * 0.6;
-            const y = (Math.random() - 0.5) * data.height * 0.6;
-            this.mainBody.fillStyle(0x666666);
-            this.mainBody.fillCircle(x, y, 3);
-        }
-    }
-  
-    createTree() {
-        const data = this.obstacleData;
-      
-        // 树干
-        this.mainBody.fillRect(-data.width/4, -data.height/2, data.width/2, data.height);
-        this.mainBody.strokeRect(-data.width/4, -data.height/2, data.width/2, data.height);
-      
-        // 树冠
-        this.mainBody.fillStyle(0x2d5016);
-        this.mainBody.fillCircle(0, -data.height/2, data.width/2);
-        this.mainBody.strokeCircle(0, -data.height/2, data.width/2);
-      
-        // 树叶细节
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const x = Math.cos(angle) * (data.width * 0.3);
-            const y = -data.height/2 + Math.sin(angle) * (data.height * 0.3);
-            this.mainBody.fillStyle(0x4a5d23);
-            this.mainBody.fillCircle(x, y, 8);
-        }
-    }
-  
-    createBuilding() {
-        const data = this.obstacleData;
-      
-        // 建筑主体
-        this.mainBody.fillRect(-data.width/2, -data.height/2, data.width, data.height);
-        this.mainBody.strokeRect(-data.width/2, -data.height/2, data.width, data.height);
-      
-        // 窗户
-        const windowSize = 8;
-        const windows = [
-            { x: -data.width/4, y: -data.height/4 },
-            { x: data.width/4, y: -data.height/4 },
-            { x: -data.width/4, y: data.height/4 },
-            { x: data.width/4, y: data.height/4 }
-        ];
-      
-        windows.forEach(window => {
-            this.mainBody.fillStyle(0x87ceeb);
-            this.mainBody.fillRect(window.x - windowSize/2, window.y - windowSize/2, windowSize, windowSize);
-            this.mainBody.strokeRect(window.x - windowSize/2, window.y - windowSize/2, windowSize, windowSize);
-        });
-    }
-  
-    createCoral() {
-        const data = this.obstacleData;
-      
-        // 珊瑚主体
-        this.mainBody.fillStyle(0xff6b9d);
-        this.mainBody.fillCircle(0, 0, data.width/2);
-        this.mainBody.strokeCircle(0, 0, data.width/2);
-      
-        // 珊瑚分支
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const startX = Math.cos(angle) * (data.width * 0.2);
-            const startY = Math.sin(angle) * (data.height * 0.2);
-            const endX = Math.cos(angle) * (data.width * 0.4);
-            const endY = Math.sin(angle) * (data.height * 0.4);
-          
-            this.mainBody.lineStyle(4, 0xff8fab, 1);
-            this.mainBody.moveTo(startX, startY);
-            this.mainBody.lineTo(endX, endY);
-            this.mainBody.strokePath();
-        }
-    }
-  
-    createAsteroid() {
-        const data = this.obstacleData;
-      
-        // 小行星主体
-        this.mainBody.fillCircle(0, 0, data.width/2);
-        this.mainBody.strokeCircle(0, 0, data.width/2);
-      
-        // 陨石坑
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const x = Math.cos(angle) * (data.width * 0.3);
-            const y = Math.sin(angle) * (data.height * 0.3);
-          
-            this.mainBody.fillStyle(0x444444);
-            this.mainBody.fillCircle(x, y, 6);
-        }
     }
   
     createHealthBar() {
@@ -191,6 +74,7 @@ class Obstacle extends Phaser.GameObjects.Container {
         this.healthBarBorder.setStrokeStyle(1, 0xffffff, 1);
         this.healthBarBorder.setFillStyle();
       
+        // 将血条作为子对象添加到障碍物容器中
         this.add([this.healthBarBg, this.healthBar, this.healthBarBorder]);
     }
   
@@ -198,7 +82,7 @@ class Obstacle extends Phaser.GameObjects.Container {
         // 轻微浮动动画
         this.scene.tweens.add({
             targets: this,
-            y: this.y - 2,
+            y: this.y + 2,
             duration: 2000,
             yoyo: true,
             repeat: -1,
@@ -206,21 +90,55 @@ class Obstacle extends Phaser.GameObjects.Container {
         });
     }
   
-    // 🎯 受到伤害
+    // 🎯 对象池支持 - 重置障碍物
+    spawn(x, y, obstacleData) {
+        this.setPosition(x, y);
+        this.obstacleData = obstacleData;
+        this.obstacleType = obstacleData.type;
+        this.name = obstacleData.name;
+        this.health = obstacleData.health;
+        this.maxHealth = this.health;
+        this.isDestroyed = false;
+        this.isDestructible = obstacleData.destructible !== false;
+        
+        // 重新创建视觉效果
+        this.createVisual();
+        this.createHealthBar();
+        this.setupAnimations();
+        
+        this.setActive(true);
+        this.setVisible(true);
+        
+        console.log(`🪨 障碍物重生: ${this.name} (${this.health}HP)`);
+    }
+  
+    // 🔄 对象池支持 - 回收障碍物
+    recycle() {
+        this.setActive(false);
+        this.setVisible(false);
+        
+        // 停止动画
+        this.scene.tweens.killTweensOf(this);
+        
+        // 清理血条（子对象会自动被清理）
+        this.healthBarBg = null;
+        this.healthBar = null;
+        this.healthBarBorder = null;
+        
+        console.log(`🔄 障碍物回收: ${this.name}`);
+    }
+  
     takeDamage(damage, damageType = 'bullet', attacker = null) {
-        if (!this.isDestructible || this.isDestroyed) {
+        if (this.isDestroyed || !this.isDestructible) {
             return false;
         }
       
-        console.log(`🪨 ${this.name} 受到 ${damage} 点伤害`);
-      
         this.health -= damage;
         this.updateHealthBar();
-      
-        // 受击效果
         this.createDamageEffect(damage);
       
-        // 检查是否被摧毁
+        console.log(`💥 障碍物受伤: ${this.name} -${damage}HP (剩余: ${this.health})`);
+      
         if (this.health <= 0) {
             this.startDestructionSequence();
             return true;
@@ -229,28 +147,35 @@ class Obstacle extends Phaser.GameObjects.Container {
         return false;
     }
   
-    // 🩸 更新血条
     updateHealthBar() {
         if (!this.isDestructible || !this.healthBar) return;
       
-        const healthRatio = Math.max(0, this.health / this.maxHealth);
+        const healthPercent = this.health / this.maxHealth;
         const barWidth = 60;
       
-        this.healthBar.setSize(barWidth * healthRatio, 6);
+        this.healthBar.width = barWidth * healthPercent;
       
-        // 血条颜色变化
-        if (healthRatio > 0.6) {
+        // 根据血量改变颜色
+        if (healthPercent > 0.6) {
             this.healthBar.setFillStyle(0x00ff00);
-        } else if (healthRatio > 0.3) {
+        } else if (healthPercent > 0.3) {
             this.healthBar.setFillStyle(0xffff00);
         } else {
             this.healthBar.setFillStyle(0xff0000);
         }
     }
   
-    // 💥 创建受击效果
     createDamageEffect(damage) {
-        // 受击闪烁
+        // 伤害数字
+        const damageText = this.scene.add.text(this.x, this.y - 30, `-${damage}`, {
+            fontSize: '16px',
+            fill: '#ff0000',
+            stroke: '#ffffff',
+            strokeThickness: 2
+        });
+        damageText.setOrigin(0.5);
+      
+        // 闪烁效果
         this.scene.tweens.add({
             targets: this,
             alpha: 0.5,
@@ -259,113 +184,83 @@ class Obstacle extends Phaser.GameObjects.Container {
             repeat: 2
         });
       
-        // 伤害数字
-        const damageText = this.scene.add.text(
-            this.x + (Math.random() - 0.5) * 30,
-            this.y - 30,
-            `-${damage}`,
-            {
-                fontSize: '16px',
-                fill: '#ff0000',
-                stroke: '#ffffff',
-                strokeThickness: 2
-            }
-        ).setDepth(200);
-      
+        // 伤害数字动画
         this.scene.tweens.add({
             targets: damageText,
             y: damageText.y - 30,
             alpha: 0,
-            duration: 800,
-            ease: 'Power2',
+            duration: 1000,
             onComplete: () => {
                 damageText.destroy();
             }
         });
       
-        // 受击粒子
-        const hitEffect = this.scene.add.particles(this.x, this.y, 'bullet', {
-            speed: { min: 30, max: 80 },
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 400,
-            blendMode: 'ADD',
+        // 受击粒子效果
+        this.createHitParticles();
+    }
+  
+    createHitParticles() {
+        const particles = this.scene.add.particles('particle');
+        const emitter = particles.createEmitter({
+            x: this.x,
+            y: this.y,
+            speed: { min: 50, max: 100 },
             angle: { min: 0, max: 360 },
-            quantity: 8,
-            tint: 0xff4444
-        }).setDepth(150);
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            tint: 0xff6666,
+            lifespan: 500,
+            quantity: 8
+        });
       
         this.scene.time.delayedCall(500, () => {
-            hitEffect.destroy();
+            particles.destroy();
         });
     }
   
-    // 💀 开始摧毁序列
     startDestructionSequence() {
-        console.log(`💀 ${this.name} 开始摧毁序列`);
+        if (this.isDestroyed) return;
       
         this.isDestroyed = true;
+        console.log(`💥 障碍物开始摧毁: ${this.name}`);
       
-        // 摧毁动画
+        // 创建摧毁特效
         this.createDestructionEffect();
       
-        // 1.5秒后完成摧毁
-        this.scene.time.delayedCall(1500, () => {
+        // 延迟完成摧毁
+        this.scene.time.delayedCall(1000, () => {
             this.completeDestruction();
         });
     }
   
-    // 🔥 创建摧毁特效
     createDestructionEffect() {
-        // 爆炸效果
-        const explosion = this.scene.add.particles(this.x, this.y, 'bullet', {
-            speed: { min: 60, max: 150 },
-            scale: { start: 0.6, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 600,
-            blendMode: 'ADD',
+        // 爆炸粒子效果
+        const particles = this.scene.add.particles('particle');
+        const emitter = particles.createEmitter({
+            x: this.x,
+            y: this.y,
+            speed: { min: 100, max: 200 },
             angle: { min: 0, max: 360 },
-            quantity: 15,
-            tint: [0xff8800, 0xffff00, 0xff4444]
-        }).setDepth(200);
+            scale: { start: 1, end: 0 },
+            alpha: { start: 1, end: 0 },
+            tint: 0xffaa00,
+            lifespan: 1000,
+            quantity: 15
+        });
       
-        // 碎片效果
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const fragment = this.scene.add.rectangle(
-                this.x + Math.cos(angle) * 20,
-                this.y + Math.sin(angle) * 20,
-                8, 8, this.obstacleData.primaryColor
-            );
-          
-            this.scene.tweens.add({
-                targets: fragment,
-                x: fragment.x + Math.cos(angle) * 100,
-                y: fragment.y + Math.sin(angle) * 100,
-                alpha: 0,
-                rotation: Math.PI * 2,
-                duration: 1000,
-                ease: 'Power2',
-                onComplete: () => {
-                    fragment.destroy();
-                }
-            });
-        }
+        // 震动效果
+        this.scene.cameras.main.shake(300, 0.01);
       
-        // 摄像机震动
-        this.scene.cameras.main.shake(300, 0.02);
-      
-        // 清理效果
-        this.scene.time.delayedCall(800, () => {
-            explosion.destroy();
+        // 清理粒子
+        this.scene.time.delayedCall(1000, () => {
+            particles.destroy();
         });
     }
   
-    // ✅ 完成摧毁
     completeDestruction() {
-        console.log(`✅ ${this.name} 摧毁完成`);
+        console.log(`✅ 障碍物摧毁完成: ${this.name}`);
       
-        // 可能掉落道具
+        // 掉落物品
         this.dropLoot();
       
         // 通知管理器
@@ -373,58 +268,43 @@ class Obstacle extends Phaser.GameObjects.Container {
             this.scene.obstacleManager.onObstacleDestroyed(this);
         }
       
-        // 销毁障碍物
-        this.destroy();
+        // 使用对象池回收而不是销毁
+        this.recycle();
     }
   
-    // 🎁 掉落道具
     dropLoot() {
-        if (!this.obstacleData.loot || Math.random() > 0.3) return; // 30%概率掉落
+        if (!this.obstacleData.loot) return;
       
         const loot = this.obstacleData.loot;
-        const player = this.scene.player;
+        console.log(`🎁 障碍物掉落物品: ${this.name}`);
       
-        if (!player) return;
-      
-        console.log(`🎁 ${this.name} 掉落道具`);
-      
-        // 经验奖励
-        if (loot.experience && player.gainExperience) {
-            player.gainExperience(loot.experience);
+        // 掉落经验
+        if (loot.experience && this.scene.statsManager) {
+            this.scene.statsManager.addExperience(loot.experience);
         }
       
-        // 金币奖励
-        if (loot.coins && this.scene.gameState) {
-            this.scene.gameState.coins += loot.coins;
+        // 掉落金币
+        if (loot.coins && this.scene.statsManager) {
+            this.scene.statsManager.addCoins(loot.coins);
         }
       
-        // 道具奖励
+        // 掉落道具
         if (loot.powerUps && this.scene.powerUpManager) {
-            loot.powerUps.forEach((powerUpType, index) => {
-                const x = this.x + (Math.random() - 0.5) * 60;
-                const y = this.y + (Math.random() - 0.5) * 60;
-              
-                this.scene.time.delayedCall(index * 150, () => {
+            loot.powerUps.forEach(powerUpType => {
+                if (Math.random() < 0.3) { // 30%概率掉落
                     const powerUpData = POWER_UP_TYPES[powerUpType];
                     if (powerUpData) {
-                        this.scene.powerUpManager.spawnPowerUp(x, y, powerUpType);
+                        this.scene.powerUpManager.spawnPowerUp(this.x, this.y, powerUpData);
                     }
-                });
+                }
             });
         }
     }
   
-    // 🔄 更新障碍物
-    update(time, delta) {
-        // 障碍物通常不需要复杂的更新逻辑
-        // 可以在这里添加特殊效果或状态更新
-    }
-  
-    // 💀 销毁障碍物
     destroy() {
-        console.log(`💀 ${this.name} 已被销毁`);
+        // 停止动画
+        this.scene.tweens.killTweensOf(this);
+        
         super.destroy();
     }
-}
-
-window.Obstacle = Obstacle; 
+} 

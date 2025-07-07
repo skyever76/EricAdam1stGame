@@ -1,70 +1,73 @@
-// AudioManager.js - 程序生成音效系统
+// AudioManager.js - 程序生成音效系统（单例模式）
 
-class AudioManager {
-    constructor(scene) {
-        this.scene = scene;
-        this.audioContext = null;
-        this.masterGain = null;
-        this.isMuted = false;
-        this.volume = 0.5;
-        this.isInitialized = false;
-        this.audioUnlocked = false;
-        
-        // 背景音乐相关
-        this.currentMusic = null;
-        this.musicGain = null;
-        this.musicVolume = 0.3; // 背景音乐音量较低
-        
-        // 音效参数配置
-        this.soundConfigs = {
-            shoot: {
-                type: 'sawtooth',
-                startFreq: 800,
-                endFreq: 200,
-                duration: 0.1,
-                volume: 0.3
-            },
-            hit: {
-                type: 'square',
-                startFreq: 1200,
-                endFreq: 600,
-                duration: 0.05,
-                volume: 0.4
-            },
-            explosion: {
-                type: 'noise',
-                startFreq: 2000,
-                endFreq: 100,
-                duration: 0.5,
-                volume: 0.6
-            },
-            hurt: {
-                type: 'triangle',
-                startFreq: 200,
-                endFreq: 100,
-                duration: 0.3,
-                volume: 0.5
-            },
-            powerup: {
-                type: 'sine',
-                startFreq: 440,
-                endFreq: 880,
-                duration: 0.2,
-                volume: 0.4
-            },
-            gameOver: {
-                type: 'chord',
-                startFreq: 440,
-                endFreq: 220,
-                duration: 1.0,
-                volume: 0.7
-            }
-        };
-        
-        this.init();
-    }
+export const AudioManager = {
+    // 核心属性
+    audioContext: null,
+    masterGain: null,
+    musicGain: null,
+    isMuted: false,
+    volume: 0.5,
+    isInitialized: false,
+    audioUnlocked: false,
     
+    // 背景音乐相关
+    currentMusic: null,
+    musicVolume: 0.3, // 背景音乐音量较低
+    musicTimerId: null, // 背景音乐定时器ID
+    
+    // 临时场景引用（用于UI提示）
+    tempScene: null,
+    
+    // 音效参数配置
+    soundConfigs: {
+        shoot: {
+            type: 'sawtooth',
+            startFreq: 800,
+            endFreq: 200,
+            duration: 0.1,
+            volume: 0.3
+        },
+        hit: {
+            type: 'square',
+            startFreq: 1200,
+            endFreq: 600,
+            duration: 0.05,
+            volume: 0.4
+        },
+        explosion: {
+            type: 'noise',
+            startFreq: 2000,
+            endFreq: 100,
+            duration: 0.5,
+            volume: 0.6
+        },
+        hurt: {
+            type: 'triangle',
+            startFreq: 200,
+            endFreq: 100,
+            duration: 0.3,
+            volume: 0.5
+        },
+        powerup: {
+            type: 'sine',
+            startFreq: 440,
+            endFreq: 880,
+            duration: 0.2,
+            volume: 0.4
+        },
+        gameOver: {
+            type: 'chord',
+            startFreq: 440,
+            endFreq: 220,
+            duration: 1.0,
+            volume: 0.7
+        }
+    },
+    
+    // 初始化方法
     init() {
+        if (this.isInitialized) return; // 防止重复初始化
+        
         try {
             // 创建音频上下文
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -90,37 +93,41 @@ class AudioManager {
             console.error('❌ AudioManager initialization failed:', error);
             this.isInitialized = false;
         }
-    }
+    },
     
+    // 检查音频上下文状态
     checkAudioContext() {
         if (!this.audioContext) return;
         
         if (this.audioContext.state === 'suspended') {
             console.log('🔇 Audio context suspended, waiting for user interaction');
-            this.showAudioUnlockPrompt();
         } else if (this.audioContext.state === 'running') {
             console.log('🔊 Audio context running');
             this.audioUnlocked = true;
         }
-    }
+    },
     
-    showAudioUnlockPrompt() {
+    // 提示用户解锁音频（需要传入scene）
+    promptToUnlock(scene) {
+        if (this.audioUnlocked || !scene || !scene.add) return;
+        
+        this.tempScene = scene;
+        
         // 在游戏界面显示音频解锁提示
-        if (this.scene && this.scene.add) {
-            this.audioUnlockText = this.scene.add.text(400, 200, '点击屏幕启用音效', {
-                fontSize: '24px',
-                fill: '#ffffff',
-                backgroundColor: '#000000',
-                padding: { x: 10, y: 5 }
-            }).setOrigin(0.5).setDepth(1000);
-            
-            // 添加点击事件
-            this.scene.input.on('pointerdown', () => {
-                this.unlockAudio();
-            }, this);
-        }
-    }
+        this.audioUnlockText = scene.add.text(400, 200, '点击屏幕启用音效', {
+            fontSize: '24px',
+            fill: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(0.5).setDepth(1000);
+        
+        // 使用 once 避免重复监听
+        scene.input.once('pointerdown', () => {
+            this.unlockAudio();
+        });
+    },
     
+    // 解锁音频
     unlockAudio() {
         if (!this.audioContext || this.audioContext.state !== 'suspended') return;
         
@@ -134,13 +141,15 @@ class AudioManager {
                 this.audioUnlockText = null;
             }
             
-            // 移除点击事件
-            this.scene.input.off('pointerdown', this.unlockAudio, this);
+            // 清除临时场景引用
+            this.tempScene = null;
+            
         }).catch(error => {
             console.error('❌ Failed to unlock audio:', error);
         });
-    }
+    },
     
+    // 播放音效
     play(soundType) {
         if (!this.isInitialized || !this.audioUnlocked || this.isMuted) {
             return;
@@ -181,7 +190,7 @@ class AudioManager {
         } catch (error) {
             console.error(`❌ Error playing ${soundType}:`, error);
         }
-    }
+    },
     
     playSawtooth(config) {
         const oscillator = this.audioContext.createOscillator();
@@ -205,7 +214,7 @@ class AudioManager {
         
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + config.duration);
-    }
+    },
     
     playSquare(config) {
         const oscillator = this.audioContext.createOscillator();
@@ -236,7 +245,7 @@ class AudioManager {
         
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + config.duration);
-    }
+    },
     
     playTriangle(config) {
         const oscillator = this.audioContext.createOscillator();
@@ -260,7 +269,7 @@ class AudioManager {
         
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + config.duration);
-    }
+    },
     
     playSine(config) {
         const oscillator = this.audioContext.createOscillator();
@@ -284,7 +293,7 @@ class AudioManager {
         
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + config.duration);
-    }
+    },
     
     playNoise(config) {
         const bufferSize = this.audioContext.sampleRate * config.duration;
@@ -321,7 +330,7 @@ class AudioManager {
         gainNode.connect(this.masterGain);
         
         noise.start(this.audioContext.currentTime);
-    }
+    },
     
     playChord(config) {
         const time = this.audioContext.currentTime;
@@ -352,7 +361,7 @@ class AudioManager {
             oscillator.start(time);
             oscillator.stop(time + config.duration);
         });
-    }
+    },
     
     setVolume(volume) {
         this.volume = Math.max(0, Math.min(1, volume));
@@ -360,7 +369,7 @@ class AudioManager {
             this.masterGain.gain.value = this.isMuted ? 0 : this.volume;
         }
         console.log(`🔊 Volume set to: ${Math.round(this.volume * 100)}%`);
-    }
+    },
     
     toggleMute() {
         this.isMuted = !this.isMuted;
@@ -372,15 +381,15 @@ class AudioManager {
         }
         console.log(`🔊 ${this.isMuted ? 'Muted' : 'Unmuted'}`);
         return this.isMuted;
-    }
+    },
     
     getVolume() {
         return this.volume;
-    }
+    },
     
     isAudioMuted() {
         return this.isMuted;
-    }
+    },
     
     // 🆕 背景音乐系统
     playBackgroundMusic(musicType) {
@@ -401,15 +410,21 @@ class AudioManager {
             this.currentMusic.connect(this.musicGain);
             this.currentMusic.start();
         }
-    }
+    },
     
     stopBackgroundMusic() {
         if (this.currentMusic) {
             this.currentMusic.stop();
             this.currentMusic = null;
+            
+            // 清除等待中的定时器
+            if (this.musicTimerId) {
+                clearTimeout(this.musicTimerId);
+                this.musicTimerId = null;
+            }
             console.log('🔇 Background music stopped');
         }
-    }
+    },
     
     createBackgroundMusic(musicType) {
         // 简单的背景音乐生成
@@ -478,15 +493,15 @@ class AudioManager {
             
             noteIndex++;
             
-            // 安排下一个音符
-            setTimeout(playNote, noteDuration * 1000);
+            // 安排下一个音符并保存定时器ID
+            this.musicTimerId = setTimeout(playNote, noteDuration * 1000);
         };
         
-        // 开始播放
-        setTimeout(playNote, 0);
+        // 开始播放并保存第一个定时器ID
+        this.musicTimerId = setTimeout(playNote, 0);
         
         return oscillator;
-    }
+    },
     
     setMusicVolume(volume) {
         this.musicVolume = Math.max(0, Math.min(1, volume));
@@ -494,7 +509,7 @@ class AudioManager {
             this.musicGain.gain.value = this.isMuted ? 0 : this.musicVolume;
         }
         console.log(`🎵 Music volume set to: ${Math.round(this.musicVolume * 100)}%`);
-    }
+    },
     
     destroy() {
         this.stopBackgroundMusic();
@@ -504,7 +519,4 @@ class AudioManager {
         this.isInitialized = false;
         console.log('🎵 AudioManager destroyed');
     }
-}
-
-// 导出到全局作用域
-window.AudioManager = AudioManager; 
+}; 
