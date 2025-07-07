@@ -146,10 +146,13 @@ export class MainScene extends Phaser.Scene {
             }
         }, this);
         
-        this.input.keyboard.on('keydown-SPACE', () => {
+        // 创建SPACE键射击的包装函数，以便正确移除绑定
+        this.spaceShootHandler = () => {
             // 键盘射击时，默认朝右射击（角度0）
             this.shoot(0);
-        }, this);
+        };
+        
+        this.input.keyboard.on('keydown-SPACE', this.spaceShootHandler, this);
         this.input.keyboard.on('keydown-P', this.togglePause, this);
         
         // 🆕 武器切换按键
@@ -1033,7 +1036,21 @@ export class MainScene extends Phaser.Scene {
                     this.fireSingleBullet(startX, startY, bulletAngle, weapon);
                 }
             }
+        } else if (weapon.name === '声波枪') {
+            // 🆕 声波枪半圆弧射击
+            const arcAngle = Math.PI; // 180度半圆弧
+            const bulletCount = 12; // 12发子弹形成半圆弧
+            const angleStep = arcAngle / (bulletCount - 1);
+            const startAngle = angle - arcAngle / 2; // 从目标角度左侧90度开始
             
+            // 🆕 同时发射12发半圆弧子弹
+            for (let i = 0; i < bulletCount; i++) {
+                const bulletAngle = startAngle + angleStep * i;
+                if (!this.isGameOver && this.player && this.player.active) {
+                    this.fireSingleBullet(startX, startY, bulletAngle, weapon);
+                }
+            }
+        } else {
             // 其他武器的普通连发
             // 发射第一发
             this.fireSingleBullet(startX, startY, angle, weapon);
@@ -1156,52 +1173,49 @@ export class MainScene extends Phaser.Scene {
             { x: hitEnemy.x, y: hitEnemy.y } : 
             { x: bullet.x, y: bullet.y };
       
-        const explosionRadius = (weapon && weapon.config && weapon.config.damageRadius) ? 
-            weapon.config.damageRadius : 400;
+        // 🆕 使用武器配置中的爆炸半径，如果没有则使用默认值
+        const explosionRadius = (weapon && weapon.damageRadius) ? 
+            weapon.damageRadius : 800;
       
-        console.log(`🔥 核弹爆炸开始：中心(${explosionCenter.x}, ${explosionCenter.y})，半径${explosionRadius}`);
+        console.log(`🔥 核弹全屏爆炸开始：中心(${explosionCenter.x}, ${explosionCenter.y})`);
       
         // 🆕 立即开始全屏特效
         this.createNuclearExplosionEffects(explosionCenter);
       
-        let killedEnemies = 0;
-        const enemies = this.enemies.getChildren();
-        const totalEnemies = enemies.filter(e => e.active).length;
-      
-        console.log(`核弹爆炸前总敌人数量：${totalEnemies}`);
-      
         // 🆕 延迟爆炸伤害，配合视觉效果
         this.time.delayedCall(300, () => {
-            for (let enemy of enemies) {
+            let killedEnemies = 0;
+            // 🆕 重新获取当前活跃的敌人列表
+            const currentEnemies = this.enemies.getChildren();
+            const totalEnemies = currentEnemies.filter(e => e.active).length;
+            
+            console.log(`核弹爆炸检查：当前活跃敌人数量：${totalEnemies}`);
+            
+            // 🆕 核弹全屏爆炸 - 击杀所有敌人
+            for (let enemy of currentEnemies) {
                 if (enemy.active) {
-                    const distance = Phaser.Math.Distance.Between(
-                        explosionCenter.x, explosionCenter.y, 
-                        enemy.x, enemy.y
-                    );
                     const enemyName = enemy.enemyData ? enemy.enemyData.name : 'Unknown';
                   
-                    if (distance <= explosionRadius) {
-                        killedEnemies++;
-                        this.killCount++;
-                      
-                        // 🆕 增加核弹特殊得分
-                        const baseScore = 150; // 核弹基础分数更高
-                        const distanceFactor = Math.max(0.3, 1 - distance / explosionRadius);
-                        const scoreGain = Math.floor(baseScore * distanceFactor);
-                        this.score += scoreGain;
-                      
-                        console.log(`☢️ 核弹击杀：${enemyName}，距离${distance.toFixed(2)}，得分${scoreGain}`);
-                      
-                        // 🆕 敌人消失特效
-                        this.createEnemyVaporizeEffect(enemy);
-                      
-                        enemy.destroy();
-                    }
+                    console.log(`☢️ 核弹全屏击杀：${enemyName}`);
+                  
+                    killedEnemies++;
+                    this.killCount++;
+                  
+                    // 🆕 核弹全屏得分 - 固定高分
+                    const scoreGain = 200; // 核弹全屏固定200分
+                    this.score += scoreGain;
+                  
+                    console.log(`☢️ 核弹全屏击杀：${enemyName}，得分${scoreGain}`);
+                  
+                    // 🆕 敌人消失特效
+                    this.createEnemyVaporizeEffect(enemy);
+                  
+                    enemy.destroy();
                 }
             }
           
             const remainingEnemies = this.enemies.getChildren().filter(e => e.active).length;
-            console.log(`☢️ 核弹爆炸完成：击杀${killedEnemies}/${totalEnemies}个敌人，剩余${remainingEnemies}个敌人`);
+            console.log(`☢️ 核弹全屏爆炸完成：击杀${killedEnemies}/${totalEnemies}个敌人，剩余${remainingEnemies}个敌人`);
           
             // UI更新通过主循环自动处理
         });
@@ -1751,8 +1765,6 @@ export class MainScene extends Phaser.Scene {
     initLevelSystem() {
         this.gameStartTime = this.time.now;
         this.killCount = 0;
-        this.levelCompleteTime = this.currentLevel.levelDuration;
-        this.levelCompleteKills = this.currentLevel.targetKills;
         this.levelEndTime = null;
         this.levelComplete = false;
         this.isLevelCompleted = false;
@@ -2141,61 +2153,9 @@ export class MainScene extends Phaser.Scene {
 
     // 🆕 修改关卡完成检查
     // 🆕 关卡完成检查（横版卷轴版本）
-    checkLevelComplete() {
-        if (this.isGameOver || this.isLevelCompleted) return;
-      
-        const currentTime = this.time.now;
-        const survivalTime = currentTime - this.gameStartTime;
-      
-        // 🆕 检查BOSS是否被击败（唯一过关条件）
-        if (this.bossDefeated) {
-            this.completeLevel(`击败关卡BOSS`);
-            return;
-        }
-      
-        // 🆕 横版卷轴：检查距离条件 - 到达世界右边界（备用条件）
-        if (this.player && this.player.x >= 3800) { // 接近4000像素时触发
-            this.completeLevel(`到达关卡终点`);
-            return;
-        }
-      
-        // 🆕 移除击杀数和生存时间条件，只保留BOSS击败作为主要过关条件
-        // 检查生存时间条件（备用条件）
-        if (survivalTime >= this.levelCompleteTime) {
-            this.completeLevel(`生存时间达到${this.levelCompleteTime/1000}秒`);
-            return;
-        }
-      
-        // 🆕 注释掉击杀数条件，确保只有击败BOSS才能过关
-        // if (this.killCount >= this.levelCompleteKills) {
-        //     this.completeLevel(`击杀${this.levelCompleteKills}个敌人`);
-        //     return;
-        // }
-    }
 
-    // 🆕 完成关卡
-    completeLevel(reason) {
-        if (this.isLevelCompleted) return;
-      
-        this.isLevelCompleted = true;
-        console.log(`MainScene: 关卡 ${this.currentLevel.name} 完成！原因: ${reason}`);
-      
-        this.levelEndTime = this.time.now;
-        this.levelComplete = true;
-      
-        // 停止敌人生成
-        if (this.enemySpawner) {
-            this.enemySpawner.remove();
-            this.enemySpawner = null;
-        }
-      
-        // 清除所有敌人和子弹
-        this.enemies.clear(true, true);
-        this.enemyBullets.clear(true, true);
-      
-        // 显示关卡完成界面
-        this.showLevelCompleteScreen(reason);
-    }
+
+
 
     // 🆕 显示关卡完成界面
     showLevelCompleteScreen(reason) {
@@ -2322,7 +2282,7 @@ export class MainScene extends Phaser.Scene {
         this.input.keyboard.off('keydown-N', this.nextLevel, this);
         
         // 清理其他事件监听器
-        this.input.keyboard.off('keydown-SPACE', this.shoot, this);
+        this.input.keyboard.off('keydown-SPACE', this.spaceShootHandler, this);
         this.input.keyboard.off('keydown-P', this.togglePause, this);
         this.input.keyboard.off('keydown-ONE', () => this.switchWeapon(0), this);
         this.input.keyboard.off('keydown-TWO', () => this.switchWeapon(1), this);
