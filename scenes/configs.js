@@ -94,7 +94,78 @@ export const UI_LAYOUT = {
     AUDIO_CONTROLS_POS: { x: 1200, y: 300 },
     
     // 统计按钮位置
-    STATS_BUTTON_POS: { x: 1200, y: 400 }
+    STATS_BUTTON_POS: { x: 1200, y: 400 },
+    
+    // 🎮 触摸控制UI布局
+    TOUCH_CONTROLS: {
+        // 左摇杆配置
+        JOYSTICK: {
+            POS: { x: 120, y: 600 },
+            RADIUS: 60,
+            KNOB_RADIUS: 25,
+            MAX_DISTANCE: 50,
+            TOUCH_AREA: 80,
+            COLORS: {
+                BG: 0x333333,
+                BG_ALPHA: 0.4,
+                KNOB: 0x666666,
+                KNOB_ALPHA: 0.7,
+                STROKE: 0xffffff
+            }
+        },
+        
+        // 射击按钮配置
+        SHOOT_BUTTON: {
+            POS: { x: 1160, y: 600 },
+            RADIUS: 50,
+            TOUCH_AREA: 70,
+            COLORS: {
+                BG: 0xff4444,
+                BG_ALPHA: 0.6,
+                STROKE: 0xffffff
+            },
+            ICON: '🔫',
+            LABEL: '射击'
+        },
+        
+        // 武器按钮配置
+        WEAPON_BUTTONS: {
+            POS: { x: 1160, y: 280 },
+            SPACING: 45,
+            RADIUS: 18,
+            TOUCH_AREA: 25,
+            WEAPONS: [
+                { name: 'AK47', icon: '🔫', color: 0xcc6600 },
+                { name: '沙鹰', icon: '🔫', color: 0xcc3300 },
+                { name: '加特林', icon: '💥', color: 0x990000 },
+                { name: '声波', icon: '⚡', color: 0x0066cc },
+                { name: '导弹', icon: '🚀', color: 0x006600 },
+                { name: '核弹', icon: '☢️', color: 0x660066 }
+            ]
+        },
+        
+        // 暂停按钮配置
+        PAUSE_BUTTON: {
+            POS: { x: 1160, y: 60 },
+            RADIUS: 25,
+            TOUCH_AREA: 35,
+            COLORS: {
+                BG: 0x444444,
+                BG_ALPHA: 0.8,
+                STROKE: 0xffffff
+            },
+            ICONS: {
+                PAUSE: '⏸️',
+                PLAY: '▶️'
+            }
+        },
+        
+        // 射击配置
+        SHOOTING: {
+            CONTINUOUS_DELAY: 150,
+            MIN_DRAG_DISTANCE: 5
+        }
+    }
 };
 
 // 🔫 武器配置

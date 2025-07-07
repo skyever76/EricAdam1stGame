@@ -44,10 +44,7 @@ export class MainScene extends Phaser.Scene {
         this.events.off('enemyDied');
         this.events.off('enemyEscaped');
       
-        // 📊 初始化统计系统
-        if (StatsManager) {
-            StatsManager.init();
-        }
+        // 📊 统计系统由SaveManager统一管理
         
         // 🏆 初始化成就系统
         if (AchievementManager) {
@@ -865,6 +862,11 @@ export class MainScene extends Phaser.Scene {
             StatsManager.gameEnd(this.score, survivalTime);
         }
         
+        // 💾 保存游戏数据
+        if (SaveManager) {
+            SaveManager.saveAll();
+        }
+        
         // 🔊 播放游戏结束音效
         AudioManager.play('gameOver');
         
@@ -1526,6 +1528,11 @@ export class MainScene extends Phaser.Scene {
         this.enemies.clear(true, true);
         this.enemyBullets.clear(true, true);
       
+        // 💾 保存游戏数据
+        if (SaveManager) {
+            SaveManager.saveAll();
+        }
+        
         // 显示关卡完成界面
         this.showLevelCompleteScreen(reason);
     }
@@ -2218,9 +2225,11 @@ export class MainScene extends Phaser.Scene {
             this.backgroundManager.destroy();
         }
         
-        // 📊 清理统计系统
-        if (StatsManager) {
-            StatsManager.saveStats();
+        // 📊 统计系统由SaveManager统一管理
+        
+        // 💾 保存游戏数据
+        if (SaveManager) {
+            SaveManager.saveAll();
         }
         
         // 清理自定义事件监听器

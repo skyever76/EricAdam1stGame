@@ -11,15 +11,9 @@ export const StatsManager = {
         longestSurvival: 0
     },
 
-    // 初始化
-    init() {
-        this.loadStats();
-    },
-
     // 记录击杀
     addKill() {
         this.stats.totalKills++;
-        this.saveStats();
     },
 
     // 记录得分
@@ -28,7 +22,6 @@ export const StatsManager = {
         if (score > this.stats.highestScore) {
             this.stats.highestScore = score;
         }
-        this.saveStats();
     },
 
     // 记录游戏结束
@@ -37,20 +30,6 @@ export const StatsManager = {
         this.stats.totalDeaths++;
         if (survivalTime > this.stats.longestSurvival) {
             this.stats.longestSurvival = survivalTime;
-        }
-        this.saveStats();
-    },
-
-    // 保存数据
-    saveStats() {
-        localStorage.setItem('gameStats', JSON.stringify(this.stats));
-    },
-
-    // 加载数据
-    loadStats() {
-        const saved = localStorage.getItem('gameStats');
-        if (saved) {
-            this.stats = {...this.stats, ...JSON.parse(saved)};
         }
     },
 
@@ -74,7 +53,6 @@ export const StatsManager = {
             highestScore: 0,
             longestSurvival: 0
         };
-        this.saveStats();
     }
 };
 

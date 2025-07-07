@@ -1,8 +1,11 @@
-// TouchControls.js - iPad触摸控制系统
+// TouchControls.js - ES6模块触摸控制系统
 
-class TouchControls {
+import { UI_LAYOUT } from './configs.js';
+
+export class TouchControls {
     constructor(scene) {
         this.scene = scene;
+        this.config = UI_LAYOUT.TOUCH_CONTROLS;
       
         // 控制状态
         this.isEnabled = true;
@@ -17,12 +20,16 @@ class TouchControls {
             distance: 0,
             angle: 0,
             power: 0, // 0-1之间的力度
-            maxDistance: 50
+            maxDistance: this.config.JOYSTICK.MAX_DISTANCE
         };
       
         this.rightButton = {
             active: false,
-            isShooting: false
+            isShooting: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0
         };
       
         this.weaponButtons = [];
@@ -73,16 +80,16 @@ class TouchControls {
         const height = this.scene.cameras.main.height;
       
         // 1. 📍 左侧虚拟摇杆
-        this.createLeftJoystick(120, height - 120);
+        this.createLeftJoystick();
       
         // 2. 🎯 右侧射击按钮
-        this.createShootButton(width - 120, height - 120);
+        this.createShootButton();
       
         // 3. 🔧 武器切换按钮
-        this.createWeaponButtons(width - 80, height - 280);
+        this.createWeaponButtons();
       
         // 4. ⏸️ 暂停按钮
-        this.createPauseButton(width - 60, 60);
+        this.createPauseButton();
       
         // 设置UI深度
         this.uiElements.forEach(element => {
@@ -92,16 +99,19 @@ class TouchControls {
         console.log('🎨 触摸UI创建完成');
     }
   
-    createLeftJoystick(x, y) {
+    createLeftJoystick() {
+        const config = this.config.JOYSTICK;
+        const { x, y } = config.POS;
+      
         // 摇杆外圈（背景）
-        this.leftStickBg = this.scene.add.circle(x, y, 60, 0x333333, 0.4)
-            .setStroke(0xffffff, 2)
+        this.leftStickBg = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
+            .setStroke(config.COLORS.STROKE, 2)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
       
         // 摇杆内圈（控制点）
-        this.leftStickKnob = this.scene.add.circle(x, y, 25, 0x666666, 0.7)
-            .setStroke(0xffffff, 2)
+        this.leftStickKnob = this.scene.add.circle(x, y, config.KNOB_RADIUS, config.COLORS.KNOB, config.COLORS.KNOB_ALPHA)
+            .setStroke(config.COLORS.STROKE, 2)
             .setScrollFactor(0);
       
         // 摇杆标签
@@ -120,20 +130,23 @@ class TouchControls {
         console.log(`🕹️ 创建左摇杆: 位置(${x}, ${y})`);
     }
   
-    createShootButton(x, y) {
+    createShootButton() {
+        const config = this.config.SHOOT_BUTTON;
+        const { x, y } = config.POS;
+      
         // 射击按钮外圈
-        this.shootButtonBg = this.scene.add.circle(x, y, 50, 0xff4444, 0.6)
-            .setStroke(0xffffff, 3)
+        this.shootButtonBg = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
+            .setStroke(config.COLORS.STROKE, 3)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
       
         // 射击按钮图标
-        this.shootButtonIcon = this.scene.add.text(x, y, '🔫', {
+        this.shootButtonIcon = this.scene.add.text(x, y, config.ICON, {
             fontSize: '24px'
         }).setOrigin(0.5).setScrollFactor(0);
       
         // 射击按钮标签
-        this.shootButtonLabel = this.scene.add.text(x, y - 70, '射击', {
+        this.shootButtonLabel = this.scene.add.text(x, y - 70, config.LABEL, {
             fontSize: '16px',
             fill: '#ffffff',
             backgroundColor: '#000000',
@@ -148,22 +161,21 @@ class TouchControls {
         console.log(`🎯 创建射击按钮: 位置(${x}, ${y})`);
     }
   
-    createWeaponButtons(x, startY) {
-        const weapons = ['AK47', '沙鹰', '加特林', '声波', '导弹', '核弹'];
-        const colors = [0xcc6600, 0xcc3300, 0x990000, 0x0066cc, 0x006600, 0x660066];
-        const icons = ['🔫', '🔫', '💥', '⚡', '🚀', '☢️'];
+    createWeaponButtons() {
+        const config = this.config.WEAPON_BUTTONS;
+        const { x, y } = config.POS;
       
-        weapons.forEach((weapon, index) => {
-            const buttonY = startY - index * 45;
+        config.WEAPONS.forEach((weapon, index) => {
+            const buttonY = y - index * config.SPACING;
           
             // 武器按钮
-            const button = this.scene.add.circle(x, buttonY, 18, colors[index], 0.8)
+            const button = this.scene.add.circle(x, buttonY, config.RADIUS, weapon.color, 0.8)
                 .setStroke(0xffffff, 1)
                 .setInteractive({ useHandCursor: true })
                 .setScrollFactor(0);
           
             // 武器图标
-            const icon = this.scene.add.text(x, buttonY, icons[index], {
+            const icon = this.scene.add.text(x, buttonY, weapon.icon, {
                 fontSize: '14px'
             }).setOrigin(0.5).setScrollFactor(0);
           
@@ -187,17 +199,20 @@ class TouchControls {
             this.uiElements.push(button, icon, number);
         });
       
-        console.log(`🔧 创建${weapons.length}个武器切换按钮`);
+        console.log(`🔧 创建${config.WEAPONS.length}个武器切换按钮`);
     }
   
-    createPauseButton(x, y) {
+    createPauseButton() {
+        const config = this.config.PAUSE_BUTTON;
+        const { x, y } = config.POS;
+      
         // 暂停按钮
-        this.pauseButton = this.scene.add.circle(x, y, 25, 0x444444, 0.8)
-            .setStroke(0xffffff, 2)
+        this.pauseButton = this.scene.add.circle(x, y, config.RADIUS, config.COLORS.BG, config.COLORS.BG_ALPHA)
+            .setStroke(config.COLORS.STROKE, 2)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0);
       
-        this.pauseIcon = this.scene.add.text(x, y, '⏸️', {
+        this.pauseIcon = this.scene.add.text(x, y, config.ICONS.PAUSE, {
             fontSize: '16px'
         }).setOrigin(0.5).setScrollFactor(0);
       
@@ -207,19 +222,12 @@ class TouchControls {
     }
   
     setupTouchEvents() {
-        // 监听触摸开始
         this.scene.input.on('pointerdown', this.handleTouchStart, this);
-      
-        // 监听触摸移动
         this.scene.input.on('pointermove', this.handleTouchMove, this);
-      
-        // 监听触摸结束
         this.scene.input.on('pointerup', this.handleTouchEnd, this);
-      
-        // 监听触摸取消（离开屏幕边界）
         this.scene.input.on('pointerout', this.handleTouchEnd, this);
       
-        console.log('👆 触摸事件监听器设置完成');
+        console.log('🎮 触摸事件监听器设置完成');
     }
   
     handleTouchStart(pointer) {
@@ -238,7 +246,7 @@ class TouchControls {
       
         // 检查射击按钮区域
         if (this.isInShootButtonArea(x, y)) {
-            this.startShooting(pointerId);
+            this.startShooting(x, y, pointerId);
             return;
         }
       
@@ -266,6 +274,11 @@ class TouchControls {
         if (this.leftStick.active && this.leftStick.pointerId === pointerId) {
             this.updateLeftStick(x, y);
         }
+      
+        // 更新射击方向
+        if (this.rightButton.active && this.rightButton.pointerId === pointerId) {
+            this.updateShootDirection(x, y);
+        }
     }
   
     handleTouchEnd(pointer) {
@@ -292,7 +305,7 @@ class TouchControls {
     // 🕹️ 左摇杆控制逻辑
     isInLeftStickArea(x, y) {
         const distance = Phaser.Math.Distance.Between(x, y, this.leftStick.baseX, this.leftStick.baseY);
-        return distance <= 80; // 允许稍大的触摸区域
+        return distance <= this.config.JOYSTICK.TOUCH_AREA;
     }
   
     startLeftStick(x, y, pointerId) {
@@ -347,7 +360,7 @@ class TouchControls {
       
         // 重置摇杆UI位置
         this.leftStickKnob.setPosition(this.leftStick.baseX, this.leftStick.baseY);
-        this.leftStickBg.setAlpha(0.4);
+        this.leftStickBg.setAlpha(this.config.JOYSTICK.COLORS.BG_ALPHA);
       
         // 停止玩家移动
         if (this.scene.player) {
@@ -365,21 +378,22 @@ class TouchControls {
         const velocityY = this.leftStick.deltaY * (speed / this.leftStick.maxDistance);
       
         this.scene.player.setVelocity(velocityX, velocityY);
-      
-        // 调试输出（可选）
-        // console.log(`🚶 移动应用: vx=${velocityX.toFixed(2)}, vy=${velocityY.toFixed(2)}, power=${this.leftStick.power.toFixed(2)}`);
     }
   
     // 🎯 射击按钮控制逻辑
     isInShootButtonArea(x, y) {
         const distance = Phaser.Math.Distance.Between(x, y, this.rightButton.x, this.rightButton.y);
-        return distance <= 70; // 允许稍大的触摸区域
+        return distance <= this.config.SHOOT_BUTTON.TOUCH_AREA;
     }
   
-    startShooting(pointerId) {
+    startShooting(x, y, pointerId) {
         this.rightButton.active = true;
         this.rightButton.isShooting = true;
         this.rightButton.pointerId = pointerId;
+        this.rightButton.startX = x;
+        this.rightButton.startY = y;
+        this.rightButton.currentX = x;
+        this.rightButton.currentY = y;
         this.activePointers.set(pointerId, 'shootButton');
       
         // 视觉反馈
@@ -392,13 +406,18 @@ class TouchControls {
         console.log(`🎯 射击开始: ID=${pointerId}`);
     }
   
+    updateShootDirection(x, y) {
+        this.rightButton.currentX = x;
+        this.rightButton.currentY = y;
+    }
+  
     stopShooting() {
         this.rightButton.active = false;
         this.rightButton.isShooting = false;
         this.rightButton.pointerId = null;
       
         // 恢复视觉状态
-        this.shootButtonBg.setAlpha(0.6);
+        this.shootButtonBg.setAlpha(this.config.SHOOT_BUTTON.COLORS.BG_ALPHA);
         this.shootButtonBg.setScale(1.0);
       
         // 停止连续射击
@@ -413,7 +432,7 @@ class TouchControls {
       
         // 设置连续射击定时器
         this.shootTimer = this.scene.time.addEvent({
-            delay: 150, // 每150ms射击一次
+            delay: this.config.SHOOTING.CONTINUOUS_DELAY,
             callback: this.performShoot,
             callbackScope: this,
             repeat: -1 // 无限重复
@@ -430,15 +449,20 @@ class TouchControls {
     performShoot() {
         if (!this.rightButton.isShooting || !this.scene.shoot) return;
       
-        // 🆕 计算射击角度（朝向屏幕右侧）
-        const player = this.scene.player;
-        if (player) {
-            // 默认朝向右侧射击
-            this.shootAngle = 0;
-            
-            // 🆕 调用场景的射击方法，传递射击角度
-            this.scene.shoot(this.shootAngle);
+        // 计算射击角度
+        const deltaX = this.rightButton.currentX - this.rightButton.startX;
+        const deltaY = this.rightButton.currentY - this.rightButton.startY;
+        const minDragDistance = this.config.SHOOTING.MIN_DRAG_DISTANCE;
+
+        // 如果没有拖动，则默认朝右
+        if (Math.abs(deltaX) < minDragDistance && Math.abs(deltaY) < minDragDistance) {
+            this.shootAngle = 0; // 0代表正右方
+        } else {
+            this.shootAngle = Math.atan2(deltaY, deltaX);
         }
+        
+        // 调用场景的射击方法，传递射击角度
+        this.scene.shoot(this.shootAngle);
     }
   
     // 🔧 武器切换逻辑
@@ -446,7 +470,7 @@ class TouchControls {
         for (let i = 0; i < this.weaponButtons.length; i++) {
             const weapon = this.weaponButtons[i];
             const distance = Phaser.Math.Distance.Between(x, y, weapon.x, weapon.y);
-            if (distance <= 25) {
+            if (distance <= this.config.WEAPON_BUTTONS.TOUCH_AREA) {
                 return i;
             }
         }
@@ -490,7 +514,7 @@ class TouchControls {
     // ⏸️ 暂停按钮逻辑
     isInPauseButtonArea(x, y) {
         const distance = Phaser.Math.Distance.Between(x, y, this.pauseButton.x, this.pauseButton.y);
-        return distance <= 35;
+        return distance <= this.config.PAUSE_BUTTON.TOUCH_AREA;
     }
   
     togglePause() {
@@ -499,7 +523,7 @@ class TouchControls {
           
             // 更新暂停按钮图标
             const isPaused = this.scene.scene.isPaused();
-            this.pauseIcon.setText(isPaused ? '▶️' : '⏸️');
+            this.pauseIcon.setText(isPaused ? this.config.PAUSE_BUTTON.ICONS.PLAY : this.config.PAUSE_BUTTON.ICONS.PAUSE);
           
             console.log(`⏸️ 游戏${isPaused ? '暂停' : '继续'}`);
         }
@@ -577,7 +601,4 @@ class TouchControls {
     }
 }
 
-// 导出到全局作用域
-window.TouchControls = TouchControls;
-
-console.log('📱 TouchControls.js 加载完成'); 
+console.log('✅ TouchControls.js ES6模块已加载'); 
