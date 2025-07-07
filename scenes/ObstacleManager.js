@@ -281,9 +281,8 @@ class ObstacleManager {
       
         console.log(`💀 敌人子弹击中障碍物: ${obstacle.name}`);
       
-        // 销毁子弹
-        this.scene.enemyBullets.remove(bullet);
-        bullet.destroy();
+        // 回收子弹到对象池
+        bullet.kill();
       
         // 创建撞击特效
         this.createObstacleHitEffect(bullet.x, bullet.y, 'enemy');

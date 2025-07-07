@@ -1,619 +1,704 @@
-// scenes/BackgroundManager.js - 背景管理器
+// scenes/BackgroundManager.js - ES6模块背景管理系统
 
-class BackgroundManager {
+import { LEVEL_CONFIG, COLOR_CONFIG } from './configs.js';
+
+export class BackgroundManager {
     constructor(scene) {
         this.scene = scene;
-        this.backgroundLayers = [];
+        this.backgrounds = {};
         this.currentTheme = null;
         this.parallaxLayers = [];
-    }
-
-    // 🎨 创建关卡背景
-    createLevelBackground() {
-        console.log('BackgroundManager: 创建关卡背景');
+        this.environmentEffects = [];
         
-        // 清除现有背景
+        this.initBackgrounds();
+    }
+    
+    initBackgrounds() {
+        // 初始化各种背景类型
+        this.backgrounds = {
+            parallax: this.createParallaxBackground.bind(this),
+            pixel_art: this.createPixelArtBackground.bind(this),
+            simple: this.createSimpleBackground.bind(this)
+        };
+        
+        // 初始化主题
+        this.themes = {
+            tech_grid: this.createTechGridTheme.bind(this),
+            cloud: this.createCloudTheme.bind(this),
+            circuit: this.createCircuitTheme.bind(this),
+            star_field: this.createStarFieldTheme.bind(this),
+            hexagon: this.createHexagonTheme.bind(this),
+            wave: this.createWaveTheme.bind(this)
+        };
+        
+        // 初始化环境效果
+        this.effects = {
+            sandstorm: this.createSandstormEffect.bind(this),
+            fog: this.createFogEffect.bind(this),
+            bubbles: this.createBubbleEffect.bind(this),
+            stars: this.createStarEffect.bind(this)
+        };
+    }
+    
+    createBackground(type, theme, levelType) {
+        // 清理现有背景
         this.clearBackground();
         
-        // 根据关卡配置创建背景
-        if (this.scene.currentLevel && this.scene.currentLevel.background) {
-            this.createBackgroundByConfig(this.scene.currentLevel.background);
-        } else {
-            // 默认背景
-            this.createDefaultBackground();
+        // 创建新背景
+        if (this.backgrounds[type]) {
+            this.backgrounds[type](theme, levelType);
         }
         
         // 添加环境效果
-        this.addEnvironmentEffects();
+        this.addEnvironmentEffect(levelType);
+        
+        this.currentTheme = theme;
     }
-
-    // 🎨 根据配置创建背景
-    createBackgroundByConfig(config) {
-        const { type, theme } = config;
+    
+    createParallaxBackground(theme, levelType) {
+        const worldWidth = 4000;
+        const worldHeight = 720;
         
-        switch (type) {
-            case LEVEL_CONFIG.BACKGROUND_TYPES.PARALLAX:
-                this.createParallaxBackground(theme);
-                break;
-            case LEVEL_CONFIG.BACKGROUND_TYPES.PIXEL_ART:
-                this.createPixelArtBackground();
-                break;
-            case LEVEL_CONFIG.BACKGROUND_TYPES.SIMPLE:
-                this.createSimpleBackground();
-                break;
-            default:
-                this.createDefaultBackground();
-        }
+        // 创建三层视差背景
+        const layers = [
+            { speed: 0.1, alpha: 0.3 }, // 远景
+            { speed: 0.3, alpha: 0.6 }, // 中景
+            { speed: 0.6, alpha: 0.8 }  // 近景
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            // 根据主题绘制背景
+            this.drawThemeBackground(bg, theme, worldWidth, worldHeight, layer.alpha);
+            
+            // 设置视差速度
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
     }
-
-    // 🌊 创建视差背景
-    createParallaxBackground(theme) {
-        console.log(`BackgroundManager: 创建视差背景，主题: ${theme}`);
+    
+    createPixelArtBackground(theme, levelType) {
+        const bg = this.scene.add.graphics();
+        bg.setPosition(0, 0);
         
-        // 创建多层视差背景
-        this.createParallaxLayers(theme);
+        // 创建像素艺术背景
+        this.drawPixelArtBackground(bg, theme, levelType);
         
-        // 设置视差滚动
-        this.setupParallaxScrolling();
+        this.parallaxLayers.push(bg);
     }
-
-    // 🎨 创建像素艺术背景
-    createPixelArtBackground() {
-        console.log('BackgroundManager: 创建像素艺术背景');
+    
+    createSimpleBackground(theme, levelType) {
+        const bg = this.scene.add.graphics();
+        bg.setPosition(0, 0);
         
-        // 创建基础背景
-        const graphics = this.scene.add.graphics();
+        // 创建简单背景
+        this.drawSimpleBackground(bg, theme, levelType);
         
-        // 根据关卡类型选择颜色主题
-        const colors = this.getLevelColors();
-        
-        // 创建渐变背景
-        this.createGradientBackground(graphics, colors);
-        
-        // 添加像素艺术元素
-        this.addPixelArtElements(graphics, colors);
-        
-        this.backgroundLayers.push(graphics);
+        this.parallaxLayers.push(bg);
     }
-
-    // 🌊 创建视差层
-    createParallaxLayers(theme) {
-        // 远景层（滚动速度 0.3）
-        const farLayer = this.createParallaxLayer(theme, 0.3, 'far');
+    
+    createLevelBackground() {
+        // 根据关卡类型创建背景
+        const levelType = this.scene.currentLevelConfig?.type || 'forest';
+        const theme = this.getThemeForLevelType(levelType);
         
-        // 中景层（滚动速度 0.6）
-        const midLayer = this.createParallaxLayer(theme, 0.6, 'mid');
-        
-        // 近景层（滚动速度 0.9）
-        const nearLayer = this.createParallaxLayer(theme, 0.9, 'near');
-        
-        this.parallaxLayers = [farLayer, midLayer, nearLayer];
+        this.createBackground('parallax', theme, levelType);
     }
-
-    // 🎨 创建视差层
-    createParallaxLayer(theme, scrollFactor, layerType) {
-        const graphics = this.scene.add.graphics();
-        graphics.setScrollFactor(scrollFactor);
-        
-        switch (theme) {
-            case LEVEL_CONFIG.THEME_TYPES.TECH_GRID:
-                this.generateTechGridLayer(graphics, layerType);
-                break;
-            case LEVEL_CONFIG.THEME_TYPES.CLOUD:
-                this.generateCloudLayer(graphics, layerType);
-                break;
-            case LEVEL_CONFIG.THEME_TYPES.CIRCUIT:
-                this.generateCircuitLayer(graphics, layerType);
-                break;
-            case LEVEL_CONFIG.THEME_TYPES.STAR_FIELD:
-                this.generateStarFieldLayer(graphics, layerType);
-                break;
-            case LEVEL_CONFIG.THEME_TYPES.HEXAGON:
-                this.generateHexagonLayer(graphics, layerType);
-                break;
-            case LEVEL_CONFIG.THEME_TYPES.WAVE:
-                this.generateWaveLayer(graphics, layerType);
-                break;
-            default:
-                this.generateSimpleLayer(graphics, layerType);
-        }
-        
-        return graphics;
+    
+    getThemeForLevelType(levelType) {
+        const themeMap = {
+            forest: 'hexagon',
+            desert: 'wave',
+            ocean: 'cloud',
+            space: 'star_field',
+            city: 'tech_grid'
+        };
+        return themeMap[levelType] || 'hexagon';
     }
-
-    // 🔧 生成科技网格层
-    generateTechGridLayer(graphics, layerType) {
-        const colors = this.getTechGridColors(layerType);
+    
+    // 添加视差背景生成方法
+    generateParallaxTechGridBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
         
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
+        // 创建三层视差背景
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
         
-        // 网格线
-        graphics.lineStyle(1, colors.grid, 0.3);
-        const gridSize = layerType === 'far' ? 100 : layerType === 'mid' ? 50 : 25;
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            // 绘制科技网格背景
+            this.drawTechGridBackground(bg, worldWidth, worldHeight, layer.alpha);
+            
+            // 设置视差速度
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    generateParallaxCloudBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
         
-        for (let x = 0; x <= GAME_CONFIG.WORLD_WIDTH; x += gridSize) {
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            this.drawCloudBackground(bg, worldWidth, worldHeight, layer.alpha);
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    generateParallaxCircuitBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
+        
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            this.drawCircuitBackground(bg, worldWidth, worldHeight, layer.alpha);
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    generateParallaxStarFieldBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
+        
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            this.drawStarFieldBackground(bg, worldWidth, worldHeight, layer.alpha);
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    generateParallaxHexagonBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
+        
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            this.drawHexagonBackground(bg, worldWidth, worldHeight, layer.alpha);
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    generateParallaxWaveBackground() {
+        const worldWidth = 4000;
+        const worldHeight = 720;
+        
+        const layers = [
+            { speed: 0.1, alpha: 0.3 },
+            { speed: 0.3, alpha: 0.6 },
+            { speed: 0.6, alpha: 0.8 }
+        ];
+        
+        layers.forEach((layer, index) => {
+            const bg = this.scene.add.graphics();
+            bg.setPosition(0, 0);
+            
+            this.drawWaveBackground(bg, worldWidth, worldHeight, layer.alpha);
+            bg.setScrollFactor(layer.speed);
+            
+            this.parallaxLayers.push(bg);
+        });
+    }
+    
+    // 绘制方法
+    drawTechGridBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
+        
+        graphics.lineStyle(1, COLOR_CONFIG.CYAN, alpha * 0.5);
+        
+        // 绘制网格
+        for (let x = 0; x < width; x += 50) {
             graphics.moveTo(x, 0);
-            graphics.lineTo(x, GAME_CONFIG.WORLD_HEIGHT);
+            graphics.lineTo(x, height);
         }
-        
-        for (let y = 0; y <= GAME_CONFIG.WORLD_HEIGHT; y += gridSize) {
+        for (let y = 0; y < height; y += 50) {
             graphics.moveTo(0, y);
-            graphics.lineTo(GAME_CONFIG.WORLD_WIDTH, y);
+            graphics.lineTo(width, y);
         }
-        
-        // 添加科技元素
-        this.addTechElements(graphics, colors, layerType);
+        graphics.strokePaths();
     }
-
-    // ☁️ 生成云层
-    generateCloudLayer(graphics, layerType) {
-        const colors = this.getCloudColors(layerType);
-        
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
+    
+    drawCloudBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLUE, alpha * 0.3);
+        graphics.fillRect(0, 0, width, height);
         
         // 绘制云朵
-        const cloudCount = layerType === 'far' ? 8 : layerType === 'mid' ? 12 : 16;
-        
-        for (let i = 0; i < cloudCount; i++) {
-            const x = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const y = Math.random() * GAME_CONFIG.WORLD_HEIGHT * 0.6;
-            const size = (layerType === 'far' ? 40 : layerType === 'mid' ? 30 : 20) + Math.random() * 20;
+        graphics.fillStyle(COLOR_CONFIG.WHITE, alpha * 0.4);
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const size = Math.random() * 100 + 50;
             
-            this.drawCloud(graphics, x, y, size, colors.cloud);
-        }
-    }
-
-    // ⚡ 生成电路层
-    generateCircuitLayer(graphics, layerType) {
-        const colors = this.getCircuitColors(layerType);
-        
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        // 绘制电路
-        this.drawCircuitPattern(graphics, colors, layerType);
-    }
-
-    // ⭐ 生成星空层
-    generateStarFieldLayer(graphics, layerType) {
-        const colors = this.getStarFieldColors(layerType);
-        
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        // 绘制星星
-        const starCount = layerType === 'far' ? 50 : layerType === 'mid' ? 80 : 120;
-        
-        for (let i = 0; i < starCount; i++) {
-            const x = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const y = Math.random() * GAME_CONFIG.WORLD_HEIGHT;
-            const size = (layerType === 'far' ? 2 : layerType === 'mid' ? 1.5 : 1) + Math.random();
-            const alpha = 0.3 + Math.random() * 0.7;
-            
-            graphics.fillStyle(colors.star, alpha);
             graphics.fillCircle(x, y, size);
         }
     }
-
-    // 🔷 生成六边形层
-    generateHexagonLayer(graphics, layerType) {
-        const colors = this.getHexagonColors(layerType);
+    
+    drawCircuitBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
         
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
+        graphics.lineStyle(2, COLOR_CONFIG.GREEN, alpha * 0.6);
         
-        // 绘制六边形图案
-        const hexSize = layerType === 'far' ? 60 : layerType === 'mid' ? 40 : 25;
-        const spacing = hexSize * 1.5;
-        
-        for (let x = 0; x < GAME_CONFIG.WORLD_WIDTH; x += spacing) {
-            for (let y = 0; y < GAME_CONFIG.WORLD_HEIGHT; y += spacing * 0.866) {
-                this.drawHexagon(graphics, x, y, hexSize, colors.hexagon);
-            }
-        }
-    }
-
-    // 🌊 生成波浪层
-    generateWaveLayer(graphics, layerType) {
-        const colors = this.getWaveColors(layerType);
-        
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        // 绘制波浪
-        this.drawWavePattern(graphics, colors, layerType);
-    }
-
-    // 🎨 生成简单层
-    generateSimpleLayer(graphics, layerType) {
-        const colors = this.getSimpleColors(layerType);
-        
-        // 背景色
-        graphics.fillStyle(colors.background);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        // 添加简单装饰
-        this.addSimpleDecorations(graphics, colors, layerType);
-    }
-
-    // 🎨 创建默认背景
-    createDefaultBackground() {
-        console.log('BackgroundManager: 创建默认背景');
-        
-        const graphics = this.scene.add.graphics();
-        graphics.fillStyle(0xe8f4f8);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        this.backgroundLayers.push(graphics);
-    }
-
-    // 🎨 创建简单背景
-    createSimpleBackground() {
-        console.log('BackgroundManager: 创建简单背景');
-        
-        const graphics = this.scene.add.graphics();
-        graphics.fillStyle(0x87ceeb);
-        graphics.fillRect(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        
-        this.backgroundLayers.push(graphics);
-    }
-
-    // 🌊 设置视差滚动
-    setupParallaxScrolling() {
-        // 视差滚动在Phaser中通过setScrollFactor自动处理
-        // 这里可以添加额外的视差效果
-    }
-
-    // 🎨 创建渐变背景
-    createGradientBackground(graphics, colors) {
-        // 使用分层矩形模拟渐变效果
-        const segments = 10;
-        const segmentHeight = GAME_CONFIG.WORLD_HEIGHT / segments;
-        
-        for (let i = 0; i < segments; i++) {
-            const ratio = i / segments;
-            const color = this.interpolateColor(colors.top, colors.bottom, ratio);
-            const y = i * segmentHeight;
+        // 绘制电路图案
+        for (let i = 0; i < 10; i++) {
+            const startX = Math.random() * width;
+            const startY = Math.random() * height;
             
-            graphics.fillStyle(color);
-            graphics.fillRect(0, y, GAME_CONFIG.WORLD_WIDTH, segmentHeight);
-        }
-    }
-
-    // 🎨 添加像素艺术元素
-    addPixelArtElements(graphics, colors) {
-        // 添加像素风格的装饰元素
-        const elementCount = 20;
-        
-        for (let i = 0; i < elementCount; i++) {
-            const x = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const y = Math.random() * GAME_CONFIG.WORLD_HEIGHT;
-            const size = 5 + Math.random() * 15;
-            
-            graphics.fillStyle(colors.accent, 0.3);
-            graphics.fillRect(x, y, size, size);
-        }
-    }
-
-    // 🔧 添加科技元素
-    addTechElements(graphics, colors, layerType) {
-        const elementCount = layerType === 'far' ? 5 : layerType === 'mid' ? 10 : 15;
-        
-        for (let i = 0; i < elementCount; i++) {
-            const x = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const y = Math.random() * GAME_CONFIG.WORLD_HEIGHT;
-            const size = 10 + Math.random() * 20;
-            
-            graphics.fillStyle(colors.accent, 0.4);
-            graphics.fillCircle(x, y, size);
-            
-            graphics.lineStyle(2, colors.accent, 0.6);
-            graphics.strokeCircle(x, y, size);
-        }
-    }
-
-    // ⚡ 绘制电路图案
-    drawCircuitPattern(graphics, colors, layerType) {
-        const lineCount = layerType === 'far' ? 8 : layerType === 'mid' ? 12 : 16;
-        
-        for (let i = 0; i < lineCount; i++) {
-            const startX = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const startY = Math.random() * GAME_CONFIG.WORLD_HEIGHT;
-            const endX = startX + (Math.random() - 0.5) * 200;
-            const endY = startY + (Math.random() - 0.5) * 200;
-            
-            graphics.lineStyle(2, colors.circuit, 0.6);
-            graphics.moveTo(startX, startY);
-            graphics.lineTo(endX, endY);
-            
-            // 添加节点
-            graphics.fillStyle(colors.node, 0.8);
-            graphics.fillCircle(startX, startY, 3);
-            graphics.fillCircle(endX, endY, 3);
-        }
-    }
-
-    // 🌊 绘制波浪图案
-    drawWavePattern(graphics, colors, layerType) {
-        const waveCount = layerType === 'far' ? 3 : layerType === 'mid' ? 5 : 7;
-        
-        for (let i = 0; i < waveCount; i++) {
-            const amplitude = 20 + Math.random() * 30;
-            const frequency = 0.01 + Math.random() * 0.02;
-            const y = (i + 1) * (GAME_CONFIG.WORLD_HEIGHT / (waveCount + 1));
-            
-            graphics.lineStyle(3, colors.wave, 0.4);
             graphics.beginPath();
+            graphics.moveTo(startX, startY);
             
-            for (let x = 0; x < GAME_CONFIG.WORLD_WIDTH; x += 5) {
-                const waveY = y + Math.sin(x * frequency) * amplitude;
-                if (x === 0) {
-                    graphics.moveTo(x, waveY);
-                } else {
-                    graphics.lineTo(x, waveY);
-                }
+            for (let j = 0; j < 5; j++) {
+                const endX = startX + (Math.random() - 0.5) * 200;
+                const endY = startY + (Math.random() - 0.5) * 200;
+                graphics.lineTo(endX, endY);
             }
-            
             graphics.strokePath();
         }
     }
-
-    // 🎨 添加简单装饰
-    addSimpleDecorations(graphics, colors, layerType) {
-        const decorationCount = layerType === 'far' ? 5 : layerType === 'mid' ? 8 : 12;
+    
+    drawStarFieldBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
         
-        for (let i = 0; i < decorationCount; i++) {
-            const x = Math.random() * GAME_CONFIG.WORLD_WIDTH;
-            const y = Math.random() * GAME_CONFIG.WORLD_HEIGHT;
-            const size = 5 + Math.random() * 10;
+        // 绘制星星
+        graphics.fillStyle(COLOR_CONFIG.WHITE, alpha);
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const size = Math.random() * 2 + 1;
             
-            graphics.fillStyle(colors.decoration, 0.3);
             graphics.fillCircle(x, y, size);
         }
     }
-
-    // 🌊 绘制云朵
-    drawCloud(graphics, cloudX, cloudY, cloudSize, color) {
-        graphics.fillStyle(color, 0.6);
+    
+    drawHexagonBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
         
-        for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.random() - 0.5) * cloudSize;
-            const offsetY = (Math.random() - 0.5) * cloudSize * 0.5;
-            graphics.fillCircle(cloudX + offsetX, cloudY + offsetY, cloudSize * 0.3);
-        }
-    }
-
-    // 🔷 绘制六边形
-    drawHexagon(graphics, x, y, size, color) {
-        graphics.lineStyle(1, color, 0.3);
-        graphics.beginPath();
+        graphics.lineStyle(1, COLOR_CONFIG.MAGENTA, alpha * 0.5);
         
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const hx = x + Math.cos(angle) * size;
-            const hy = y + Math.sin(angle) * size;
-            
-            if (i === 0) {
-                graphics.moveTo(hx, hy);
-            } else {
-                graphics.lineTo(hx, hy);
+        // 绘制六边形图案
+        const hexSize = 40;
+        for (let x = 0; x < width; x += hexSize * 1.5) {
+            for (let y = 0; y < height; y += hexSize * 1.3) {
+                this.drawHexagon(graphics, x, y, hexSize);
             }
         }
+    }
+    
+    drawWaveBackground(graphics, width, height, alpha) {
+        graphics.clear();
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
         
+        graphics.lineStyle(2, COLOR_CONFIG.YELLOW, alpha * 0.6);
+        
+        // 绘制波浪图案
+        for (let y = 0; y < height; y += 50) {
+            graphics.beginPath();
+            graphics.moveTo(0, y);
+            
+            for (let x = 0; x < width; x += 10) {
+                const waveY = y + Math.sin(x * 0.01) * 20;
+                graphics.lineTo(x, waveY);
+            }
+            graphics.strokePath();
+        }
+    }
+    
+    drawThemeBackground(graphics, theme, width, height, alpha) {
+        graphics.clear();
+        
+        if (this.themes[theme]) {
+            this.themes[theme](graphics, width, height, alpha);
+        } else {
+            // 默认背景
+            graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+            graphics.fillRect(0, 0, width, height);
+        }
+    }
+    
+    createTechGridTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
+        
+        graphics.lineStyle(1, COLOR_CONFIG.CYAN, alpha * 0.5);
+        
+        // 绘制网格
+        for (let x = 0; x < width; x += 50) {
+            graphics.moveTo(x, 0);
+            graphics.lineTo(x, height);
+        }
+        for (let y = 0; y < height; y += 50) {
+            graphics.moveTo(0, y);
+            graphics.lineTo(width, y);
+        }
+        graphics.strokePaths();
+    }
+    
+    createCloudTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLUE, alpha * 0.3);
+        graphics.fillRect(0, 0, width, height);
+        
+        // 绘制云朵
+        graphics.fillStyle(COLOR_CONFIG.WHITE, alpha * 0.4);
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const size = Math.random() * 100 + 50;
+            
+            graphics.fillCircle(x, y, size);
+        }
+    }
+    
+    createCircuitTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
+        
+        graphics.lineStyle(2, COLOR_CONFIG.GREEN, alpha * 0.6);
+        
+        // 绘制电路图案
+        for (let i = 0; i < 10; i++) {
+            const startX = Math.random() * width;
+            const startY = Math.random() * height;
+            
+            graphics.beginPath();
+            graphics.moveTo(startX, startY);
+            
+            for (let j = 0; j < 5; j++) {
+                const endX = startX + (Math.random() - 0.5) * 200;
+                const endY = startY + (Math.random() - 0.5) * 200;
+                graphics.lineTo(endX, endY);
+            }
+            graphics.strokePath();
+        }
+    }
+    
+    createStarFieldTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
+        
+        // 绘制星星
+        graphics.fillStyle(COLOR_CONFIG.WHITE, alpha);
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const size = Math.random() * 2 + 1;
+            
+            graphics.fillCircle(x, y, size);
+        }
+    }
+    
+    createHexagonTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLACK, alpha);
+        graphics.fillRect(0, 0, width, height);
+        
+        graphics.lineStyle(1, COLOR_CONFIG.MAGENTA, alpha * 0.5);
+        
+        // 绘制六边形图案
+        const hexSize = 40;
+        for (let x = 0; x < width; x += hexSize * 1.5) {
+            for (let y = 0; y < height; y += hexSize * 1.3) {
+                this.drawHexagon(graphics, x, y, hexSize);
+            }
+        }
+    }
+    
+    createWaveTheme(graphics, width, height, alpha) {
+        graphics.fillStyle(COLOR_CONFIG.BLUE, alpha * 0.3);
+        graphics.fillRect(0, 0, width, height);
+        
+        graphics.lineStyle(2, COLOR_CONFIG.CYAN, alpha * 0.6);
+        
+        // 绘制波浪
+        for (let i = 0; i < 5; i++) {
+            graphics.beginPath();
+            graphics.moveTo(0, height / 2 + Math.sin(0) * 50 + i * 100);
+            
+            for (let x = 0; x < width; x += 10) {
+                const y = height / 2 + Math.sin(x * 0.01 + i) * 50 + i * 100;
+                graphics.lineTo(x, y);
+            }
+            graphics.strokePath();
+        }
+    }
+    
+    drawHexagon(graphics, x, y, size) {
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            points.push({
+                x: x + size * Math.cos(angle),
+                y: y + size * Math.sin(angle)
+            });
+        }
+        
+        graphics.beginPath();
+        graphics.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            graphics.lineTo(points[i].x, points[i].y);
+        }
         graphics.closePath();
         graphics.strokePath();
     }
-
-    // 🌍 添加环境效果
-    addEnvironmentEffects() {
-        if (this.scene.currentLevel && this.scene.currentLevel.environmentEffects) {
-            this.scene.currentLevel.environmentEffects.forEach(effect => {
-                this.addEnvironmentEffect(effect);
-            });
-        }
-    }
-
-    // 🌪️ 添加环境效果
-    addEnvironmentEffect(effect) {
-        switch (effect) {
-            case 'sandstorm':
-                this.createSandstormEffect();
-                break;
-            case 'fog':
-                this.createFogEffect();
-                break;
-            case 'bubbles':
-                this.createBubblesEffect();
-                break;
-            case 'stars':
-                this.createStarsEffect();
-                break;
-        }
-    }
-
-    // 🌪️ 创建沙尘暴效果
-    createSandstormEffect() {
-        console.log('BackgroundManager: 创建沙尘暴效果');
-        // 实现沙尘暴粒子效果
-    }
-
-    // 🌫️ 创建迷雾效果
-    createFogEffect() {
-        console.log('BackgroundManager: 创建迷雾效果');
-        // 实现迷雾效果
-    }
-
-    // 💧 创建气泡效果
-    createBubblesEffect() {
-        console.log('BackgroundManager: 创建气泡效果');
-        // 实现气泡效果
-    }
-
-    // ⭐ 创建星空效果
-    createStarsEffect() {
-        console.log('BackgroundManager: 创建星空效果');
-        // 实现星空效果
-    }
-
-    // 🎨 获取关卡颜色
-    getLevelColors() {
-        const levelType = this.scene.currentLevel ? this.scene.currentLevel.type : 'default';
+    
+    drawPixelArtBackground(graphics, theme, levelType) {
+        graphics.clear();
+        
+        // 根据关卡类型设置颜色
+        let bgColor = COLOR_CONFIG.BLACK;
+        let accentColor = COLOR_CONFIG.WHITE;
         
         switch (levelType) {
             case LEVEL_CONFIG.FOREST:
-                return {
-                    top: 0x228B22,
-                    bottom: 0x006400,
-                    accent: 0x90EE90
-                };
+                bgColor = 0x0a4a0a;
+                accentColor = 0x00ff00;
+                break;
             case LEVEL_CONFIG.CITY:
-                return {
-                    top: 0x696969,
-                    bottom: 0x2F4F4F,
-                    accent: 0x87CEEB
-                };
+                bgColor = 0x2a2a2a;
+                accentColor = 0x00ffff;
+                break;
             case LEVEL_CONFIG.OCEAN:
-                return {
-                    top: 0x4169E1,
-                    bottom: 0x000080,
-                    accent: 0x00CED1
-                };
+                bgColor = 0x004466;
+                accentColor = 0x00ffff;
+                break;
             case LEVEL_CONFIG.DESERT:
-                return {
-                    top: 0xDAA520,
-                    bottom: 0xCD853F,
-                    accent: 0xF4A460
-                };
+                bgColor = 0x664400;
+                accentColor = 0xffff00;
+                break;
             case LEVEL_CONFIG.SPACE:
-                return {
-                    top: 0x191970,
-                    bottom: 0x000000,
-                    accent: 0x00FFFF
-                };
-            default:
-                return {
-                    top: 0x87CEEB,
-                    bottom: 0x4682B4,
-                    accent: 0xFFFFFF
-                };
+                bgColor = 0x000022;
+                accentColor = 0xffffff;
+                break;
+        }
+        
+        graphics.fillStyle(bgColor);
+        graphics.fillRect(0, 0, 4000, 720);
+        
+        // 绘制像素艺术图案
+        this.drawPixelArtPattern(graphics, accentColor);
+    }
+    
+    drawPixelArtPattern(graphics, color) {
+        graphics.fillStyle(color);
+        
+        // 绘制随机像素点
+        for (let i = 0; i < 1000; i++) {
+            const x = Math.floor(Math.random() * 4000);
+            const y = Math.floor(Math.random() * 720);
+            const size = Math.random() * 3 + 1;
+            
+            graphics.fillRect(x, y, size, size);
         }
     }
-
-    // 🔧 获取科技网格颜色
-    getTechGridColors(layerType) {
-        const alpha = layerType === 'far' ? 0.2 : layerType === 'mid' ? 0.4 : 0.6;
-        return {
-            background: 0x000033,
-            grid: 0x00FFFF,
-            accent: 0x00FF00,
-            alpha: alpha
-        };
-    }
-
-    // ☁️ 获取云层颜色
-    getCloudColors(layerType) {
-        const alpha = layerType === 'far' ? 0.3 : layerType === 'mid' ? 0.5 : 0.7;
-        return {
-            background: 0x87CEEB,
-            cloud: 0xFFFFFF,
-            alpha: alpha
-        };
-    }
-
-    // ⚡ 获取电路颜色
-    getCircuitColors(layerType) {
-        const alpha = layerType === 'far' ? 0.2 : layerType === 'mid' ? 0.4 : 0.6;
-        return {
-            background: 0x000033,
-            circuit: 0x00FF00,
-            node: 0xFF0000,
-            alpha: alpha
-        };
-    }
-
-    // ⭐ 获取星空颜色
-    getStarFieldColors(layerType) {
-        const alpha = layerType === 'far' ? 0.3 : layerType === 'mid' ? 0.5 : 0.7;
-        return {
-            background: 0x000033,
-            star: 0xFFFFFF,
-            alpha: alpha
-        };
-    }
-
-    // 🔷 获取六边形颜色
-    getHexagonColors(layerType) {
-        const alpha = layerType === 'far' ? 0.2 : layerType === 'mid' ? 0.4 : 0.6;
-        return {
-            background: 0x1E1E1E,
-            hexagon: 0x00FFFF,
-            alpha: alpha
-        };
-    }
-
-    // 🌊 获取波浪颜色
-    getWaveColors(layerType) {
-        const alpha = layerType === 'far' ? 0.3 : layerType === 'mid' ? 0.5 : 0.7;
-        return {
-            background: 0x000080,
-            wave: 0x00FFFF,
-            alpha: alpha
-        };
-    }
-
-    // 🎨 获取简单颜色
-    getSimpleColors(layerType) {
-        const alpha = layerType === 'far' ? 0.2 : layerType === 'mid' ? 0.4 : 0.6;
-        return {
-            background: 0x87CEEB,
-            decoration: 0xFFFFFF,
-            alpha: alpha
-        };
-    }
-
-    // 🎨 颜色插值
-    interpolateColor(color1, color2, ratio) {
-        const r1 = (color1 >> 16) & 255;
-        const g1 = (color1 >> 8) & 255;
-        const b1 = color1 & 255;
+    
+    drawSimpleBackground(graphics, theme, levelType) {
+        graphics.clear();
         
-        const r2 = (color2 >> 16) & 255;
-        const g2 = (color2 >> 8) & 255;
-        const b2 = color2 & 255;
+        // 简单的渐变背景
+        const gradient = graphics.createLinearGradient(0, 0, 0, 720);
         
-        const r = Math.round(r1 + (r2 - r1) * ratio);
-        const g = Math.round(g1 + (g2 - g1) * ratio);
-        const b = Math.round(b1 + (b2 - b1) * ratio);
+        switch (levelType) {
+            case LEVEL_CONFIG.FOREST:
+                gradient.addColorStop(0, '#0a4a0a');
+                gradient.addColorStop(1, '#1a6a1a');
+                break;
+            case LEVEL_CONFIG.CITY:
+                gradient.addColorStop(0, '#2a2a2a');
+                gradient.addColorStop(1, '#4a4a4a');
+                break;
+            case LEVEL_CONFIG.OCEAN:
+                gradient.addColorStop(0, '#004466');
+                gradient.addColorStop(1, '#006688');
+                break;
+            case LEVEL_CONFIG.DESERT:
+                gradient.addColorStop(0, '#664400');
+                gradient.addColorStop(1, '#886600');
+                break;
+            case LEVEL_CONFIG.SPACE:
+                gradient.addColorStop(0, '#000022');
+                gradient.addColorStop(1, '#000044');
+                break;
+            default:
+                gradient.addColorStop(0, '#000000');
+                gradient.addColorStop(1, '#222222');
+        }
         
-        return (r << 16) | (g << 8) | b;
+        graphics.fillStyle(gradient);
+        graphics.fillRect(0, 0, 4000, 720);
     }
-
-    // 🧹 清除背景
-    clearBackground() {
-        this.backgroundLayers.forEach(layer => {
-            if (layer) layer.destroy();
+    
+    addEnvironmentEffect(levelType) {
+        // 清理现有效果
+        this.clearEnvironmentEffects();
+        
+        // 根据关卡类型添加环境效果
+        switch (levelType) {
+            case LEVEL_CONFIG.DESERT:
+                this.environmentEffects.push(this.effects.sandstorm());
+                break;
+            case LEVEL_CONFIG.FOREST:
+                this.environmentEffects.push(this.effects.fog());
+                break;
+            case LEVEL_CONFIG.OCEAN:
+                this.environmentEffects.push(this.effects.bubbles());
+                break;
+            case LEVEL_CONFIG.SPACE:
+                this.environmentEffects.push(this.effects.stars());
+                break;
+        }
+    }
+    
+    createSandstormEffect() {
+        const particles = this.scene.add.particles('particle');
+        
+        const emitter = particles.createEmitter({
+            x: { min: 0, max: 1280 },
+            y: { min: 0, max: 720 },
+            speedX: { min: -50, max: -100 },
+            speedY: { min: -10, max: 10 },
+            scale: { start: 0.1, end: 0 },
+            alpha: { start: 0.3, end: 0 },
+            lifespan: 3000,
+            frequency: 100
         });
-        this.backgroundLayers = [];
         
+        return { particles, emitter };
+    }
+    
+    createFogEffect() {
+        const fog = this.scene.add.graphics();
+        fog.setScrollFactor(0);
+        fog.fillStyle(0xffffff, 0.1);
+        fog.fillRect(0, 0, 1280, 720);
+        
+        return { fog };
+    }
+    
+    createBubbleEffect() {
+        const particles = this.scene.add.particles('particle');
+        
+        const emitter = particles.createEmitter({
+            x: { min: 0, max: 1280 },
+            y: 720,
+            speedY: { min: -30, max: -50 },
+            speedX: { min: -5, max: 5 },
+            scale: { start: 0.2, end: 0 },
+            alpha: { start: 0.5, end: 0 },
+            lifespan: 4000,
+            frequency: 200
+        });
+        
+        return { particles, emitter };
+    }
+    
+    createStarEffect() {
+        const particles = this.scene.add.particles('particle');
+        
+        const emitter = particles.createEmitter({
+            x: { min: 0, max: 1280 },
+            y: { min: 0, max: 720 },
+            speedX: { min: -10, max: 10 },
+            speedY: { min: -10, max: 10 },
+            scale: { start: 0.1, end: 0 },
+            alpha: { start: 0.8, end: 0 },
+            lifespan: 2000,
+            frequency: 50
+        });
+        
+        return { particles, emitter };
+    }
+    
+    clearBackground() {
         this.parallaxLayers.forEach(layer => {
-            if (layer) layer.destroy();
+            if (layer && layer.destroy) {
+                layer.destroy();
+            }
         });
         this.parallaxLayers = [];
     }
-
-    // 🧹 销毁
+    
+    clearEnvironmentEffects() {
+        this.environmentEffects.forEach(effect => {
+            if (effect.particles && effect.particles.destroy) {
+                effect.particles.destroy();
+            }
+            if (effect.fog && effect.fog.destroy) {
+                effect.fog.destroy();
+            }
+        });
+        this.environmentEffects = [];
+    }
+    
+    update(cameraX, cameraY) {
+        // 更新视差背景位置
+        this.parallaxLayers.forEach(layer => {
+            if (layer && layer.setPosition) {
+                layer.setPosition(-cameraX * layer.scrollFactorX, -cameraY * layer.scrollFactorY);
+            }
+        });
+    }
+    
     destroy() {
         this.clearBackground();
+        this.clearEnvironmentEffects();
     }
 }
 
-// 将BackgroundManager类暴露到全局
-window.BackgroundManager = BackgroundManager; 
+console.log('✅ BackgroundManager.js ES6模块已加载'); 

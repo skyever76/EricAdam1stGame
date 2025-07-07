@@ -1,7 +1,7 @@
-// scenes/configs.js - 全局配置文件
+// scenes/configs.js - ES6模块配置文件
 
 // 🎮 游戏核心配置
-window.GAME_CONFIG = {
+export const GAME_CONFIG = {
     // 世界边界
     WORLD_WIDTH: 4000,
     WORLD_HEIGHT: 720,
@@ -40,7 +40,7 @@ window.GAME_CONFIG = {
 };
 
 // 🎯 UI布局配置
-window.UI_LAYOUT = {
+export const UI_LAYOUT = {
     // HUD位置
     SCORE_POS: { x: 20, y: 20 },
     HEALTH_POS: { x: 20, y: 60 },
@@ -68,7 +68,7 @@ window.UI_LAYOUT = {
 };
 
 // 🔫 武器配置
-window.WEAPON_CONFIGS = {
+export const WEAPON_CONFIGS = {
     AK47: {
         name: 'AK47',
         damage: 15,
@@ -161,7 +161,7 @@ window.WEAPON_CONFIGS = {
 };
 
 // 🎨 颜色配置
-window.COLOR_CONFIG = {
+export const COLOR_CONFIG = {
     // 基础颜色
     WHITE: 0xffffff,
     BLACK: 0x000000,
@@ -191,7 +191,7 @@ window.COLOR_CONFIG = {
 };
 
 // 🎵 音效配置
-window.SOUND_CONFIG = {
+export const SOUND_CONFIG = {
     // 音效类型
     SHOOT: 'shoot',
     HIT: 'hit',
@@ -208,7 +208,7 @@ window.SOUND_CONFIG = {
 };
 
 // 🎯 成就配置
-window.ACHIEVEMENT_CONFIG = {
+export const ACHIEVEMENT_CONFIG = {
     FIRST_KILL: { id: 'firstKill', name: '首次击杀', desc: '击败第一个敌人', kills: 1 },
     KILLER_10: { id: 'killer10', name: '新手猎手', desc: '击杀10个敌人', kills: 10 },
     KILLER_50: { id: 'killer50', name: '经验猎手', desc: '击杀50个敌人', kills: 50 },
@@ -218,7 +218,7 @@ window.ACHIEVEMENT_CONFIG = {
 };
 
 // 🌍 关卡配置
-window.LEVEL_CONFIG = {
+export const LEVEL_CONFIG = {
     // 关卡类型
     FOREST: 'forest',
     CITY: 'city',
@@ -242,4 +242,6 @@ window.LEVEL_CONFIG = {
         HEXAGON: 'hexagon',
         WAVE: 'wave'
     }
-}; 
+};
+
+console.log('✅ configs.js ES6模块已加载'); 

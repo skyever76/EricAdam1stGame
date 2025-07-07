@@ -1,12 +1,26 @@
-// scenes/MainScene.js - 横版卷轴关卡系统
+// scenes/MainScene.js - ES6模块横版卷轴关卡系统
 
-// 🔧 使用全局类，避免重复声明
-// Enemy 和 EnemyBullet 类已在 EnemyClass.js 和 EnemyBullet.js 中定义
+import { GAME_CONFIG, WEAPON_CONFIGS, UI_LAYOUT, COLOR_CONFIG } from './configs.js';
+import { Weapon } from './Weapon.js';
+import { Bullet } from './Bullet.js';
+import { Enemy } from './EnemyClass.js';
+import { EnemyBullet } from './EnemyBullet.js';
+import { PowerUp } from './PowerUp.js';
+import { Obstacle } from './Obstacle.js';
+import { PowerUpManager } from './PowerUpManager.js';
+import { ObstacleManager } from './ObstacleManager.js';
+import { UIManager } from './UIManager.js';
+import { BackgroundManager } from './BackgroundManager.js';
+import { AudioManager } from './AudioManager.js';
+import { TouchControls } from './TouchControls.js';
+import { PixelArtSystem } from './PixelArtSystem.js';
+import { AdvancedSceneManager } from './AdvancedSceneManager.js';
+import { SceneSwitcher } from './SceneSwitcher.js';
+import { StatsManager } from './StatsManager.js';
+import { AchievementManager } from './AchievementManager.js';
+import { SaveManager } from './SaveManager.js';
 
-// 🔧 使用全局类，避免重复声明
-// Weapon 和 Bullet 类已在 Weapon.js 和 Bullet.js 中定义
-
-class MainScene extends Phaser.Scene {
+export class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
     }
@@ -28,18 +42,18 @@ class MainScene extends Phaser.Scene {
         this.events.off('enemyEscaped');
       
         // 📊 初始化统计系统
-        if (window.StatsManager) {
-            window.StatsManager.init();
+        if (StatsManager) {
+            StatsManager.init();
         }
         
         // 🏆 初始化成就系统
-        if (window.AchievementManager) {
-            window.AchievementManager.init();
+        if (AchievementManager) {
+            AchievementManager.init();
         }
         
         // 💾 加载游戏数据
-        if (window.SaveManager) {
-            window.SaveManager.loadAll();
+        if (SaveManager) {
+            SaveManager.loadAll();
         }
       
         // 🎨 初始化像素艺术系统
@@ -83,13 +97,13 @@ class MainScene extends Phaser.Scene {
         });
   
         this.enemies = this.physics.add.group({
-            classType: window.Enemy, // 🔧 使用 window.Enemy
+            classType: Enemy, // 🔧 使用导入的Enemy类
             maxSize: 20
         });
       
         // 🆕 敌人子弹组
         this.enemyBullets = this.physics.add.group({
-            classType: window.EnemyBullet, // 🔧 使用 window.EnemyBullet
+            classType: EnemyBullet, // 🔧 使用导入的EnemyBullet类
             maxSize: 30
         });
       
@@ -178,12 +192,12 @@ class MainScene extends Phaser.Scene {
         // 设置初始积分为5000
         this.score = 5000;
 
-        this.powerUpManager = new window.PowerUpManager(this);
+        this.powerUpManager = new PowerUpManager(this);
         // 玩家与道具碰撞检测
         this.physics.add.overlap(this.player, this.powerUpManager.powerUps, this.collectPowerUp, null, this);
 
         // 🆕 初始化障碍物系统
-        this.obstacleManager = new window.ObstacleManager(this);
+        this.obstacleManager = new ObstacleManager(this);
         this.obstacleManager.setLevel('forest');
         this.obstacleManager.spawnObstacles();
     }
@@ -194,107 +208,18 @@ class MainScene extends Phaser.Scene {
         
         // 🔧 使用配置文件创建武器
         this.weapons = [
-            new Weapon(
-                WEAPON_CONFIGS.AK47.name,
-                WEAPON_CONFIGS.AK47.damage,
-                WEAPON_CONFIGS.AK47.fireRate,
-                WEAPON_CONFIGS.AK47.bulletSpeed,
-                WEAPON_CONFIGS.AK47.bulletSize,
-                WEAPON_CONFIGS.AK47.bulletColor,
-                WEAPON_CONFIGS.AK47.texture,
-                WEAPON_CONFIGS.AK47.burstCount,
-                WEAPON_CONFIGS.AK47.burstDelay,
-                WEAPON_CONFIGS.AK47.bulletCost,
-                WEAPON_CONFIGS.AK47.specialEffect,
-                WEAPON_CONFIGS.AK47.isContinuous,
-                WEAPON_CONFIGS.AK47.duration,
-                WEAPON_CONFIGS.AK47.config
-            ),
-            new Weapon(
-                WEAPON_CONFIGS.DESERT_EAGLE.name,
-                WEAPON_CONFIGS.DESERT_EAGLE.damage,
-                WEAPON_CONFIGS.DESERT_EAGLE.fireRate,
-                WEAPON_CONFIGS.DESERT_EAGLE.bulletSpeed,
-                WEAPON_CONFIGS.DESERT_EAGLE.bulletSize,
-                WEAPON_CONFIGS.DESERT_EAGLE.bulletColor,
-                WEAPON_CONFIGS.DESERT_EAGLE.texture,
-                WEAPON_CONFIGS.DESERT_EAGLE.burstCount,
-                WEAPON_CONFIGS.DESERT_EAGLE.burstDelay,
-                WEAPON_CONFIGS.DESERT_EAGLE.bulletCost,
-                WEAPON_CONFIGS.DESERT_EAGLE.specialEffect,
-                WEAPON_CONFIGS.DESERT_EAGLE.isContinuous,
-                WEAPON_CONFIGS.DESERT_EAGLE.duration,
-                WEAPON_CONFIGS.DESERT_EAGLE.config
-            ),
-            new Weapon(
-                WEAPON_CONFIGS.GATLING.name,
-                WEAPON_CONFIGS.GATLING.damage,
-                WEAPON_CONFIGS.GATLING.fireRate,
-                WEAPON_CONFIGS.GATLING.bulletSpeed,
-                WEAPON_CONFIGS.GATLING.bulletSize,
-                WEAPON_CONFIGS.GATLING.bulletColor,
-                WEAPON_CONFIGS.GATLING.texture,
-                WEAPON_CONFIGS.GATLING.burstCount,
-                WEAPON_CONFIGS.GATLING.burstDelay,
-                WEAPON_CONFIGS.GATLING.bulletCost,
-                WEAPON_CONFIGS.GATLING.specialEffect,
-                WEAPON_CONFIGS.GATLING.isContinuous,
-                WEAPON_CONFIGS.GATLING.duration,
-                WEAPON_CONFIGS.GATLING.config
-            ),
-            new Weapon(
-                WEAPON_CONFIGS.SONIC_GUN.name,
-                WEAPON_CONFIGS.SONIC_GUN.damage,
-                WEAPON_CONFIGS.SONIC_GUN.fireRate,
-                WEAPON_CONFIGS.SONIC_GUN.bulletSpeed,
-                WEAPON_CONFIGS.SONIC_GUN.bulletSize,
-                WEAPON_CONFIGS.SONIC_GUN.bulletColor,
-                WEAPON_CONFIGS.SONIC_GUN.texture,
-                WEAPON_CONFIGS.SONIC_GUN.burstCount,
-                WEAPON_CONFIGS.SONIC_GUN.burstDelay,
-                WEAPON_CONFIGS.SONIC_GUN.bulletCost,
-                WEAPON_CONFIGS.SONIC_GUN.specialEffect,
-                WEAPON_CONFIGS.SONIC_GUN.isContinuous,
-                WEAPON_CONFIGS.SONIC_GUN.duration,
-                WEAPON_CONFIGS.SONIC_GUN.config
-            ),
-            new Weapon(
-                WEAPON_CONFIGS.MISSILE.name,
-                WEAPON_CONFIGS.MISSILE.damage,
-                WEAPON_CONFIGS.MISSILE.fireRate,
-                WEAPON_CONFIGS.MISSILE.bulletSpeed,
-                WEAPON_CONFIGS.MISSILE.bulletSize,
-                WEAPON_CONFIGS.MISSILE.bulletColor,
-                WEAPON_CONFIGS.MISSILE.texture,
-                WEAPON_CONFIGS.MISSILE.burstCount,
-                WEAPON_CONFIGS.MISSILE.burstDelay,
-                WEAPON_CONFIGS.MISSILE.bulletCost,
-                WEAPON_CONFIGS.MISSILE.specialEffect,
-                WEAPON_CONFIGS.MISSILE.isContinuous,
-                WEAPON_CONFIGS.MISSILE.duration,
-                WEAPON_CONFIGS.MISSILE.config
-            ),
-            new Weapon(
-                WEAPON_CONFIGS.NUKE.name,
-                WEAPON_CONFIGS.NUKE.damage,
-                WEAPON_CONFIGS.NUKE.fireRate,
-                WEAPON_CONFIGS.NUKE.bulletSpeed,
-                WEAPON_CONFIGS.NUKE.bulletSize,
-                WEAPON_CONFIGS.NUKE.bulletColor,
-                WEAPON_CONFIGS.NUKE.texture,
-                WEAPON_CONFIGS.NUKE.burstCount,
-                WEAPON_CONFIGS.NUKE.burstDelay,
-                WEAPON_CONFIGS.NUKE.bulletCost,
-                WEAPON_CONFIGS.NUKE.specialEffect,
-                WEAPON_CONFIGS.NUKE.isContinuous,
-                WEAPON_CONFIGS.NUKE.duration,
-                WEAPON_CONFIGS.NUKE.config
-            )
+            new Weapon(this, WEAPON_CONFIGS.AK47),
+            new Weapon(this, WEAPON_CONFIGS.DESERT_EAGLE),
+            new Weapon(this, WEAPON_CONFIGS.GATLING),
+            new Weapon(this, WEAPON_CONFIGS.SONIC_GUN),
+            new Weapon(this, WEAPON_CONFIGS.MISSILE),
+            new Weapon(this, WEAPON_CONFIGS.NUKE)
         ];
         
-        this.weaponCooldowns = [0, 0, 0, 0, 0, 0];
         this.currentWeaponIndex = 0;
-        this.currentWeapon = this.weapons[0];
+        this.currentWeapon = this.weapons[this.currentWeaponIndex];
+        
+        console.log('🔫 武器系统初始化完成，当前武器:', this.currentWeapon.name);
     }
     
     switchWeapon(index) {
@@ -304,7 +229,7 @@ class MainScene extends Phaser.Scene {
             const targetWeapon = this.weapons[index];
             
             // 检查是否需要购买子弹
-            if (targetWeapon.bulletCost > 0 && targetWeapon.bulletCount <= 0) {
+            if (!targetWeapon.hasAmmo()) {
                 const costFor5Bullets = targetWeapon.bulletCost * 5;
                 
                 if (this.score >= costFor5Bullets) {
@@ -489,184 +414,7 @@ class MainScene extends Phaser.Scene {
         console.log('MainScene: 粒子效果系统创建完成');
     }
 
-    // 🆕 创建血量条
-    createHealthBar() {
-        const barWidth = 200;
-        const barHeight = 20;
-        const barX = 20;
-        const barY = 85;
-      
-        // 血量条背景
-        this.healthBarBg = this.add.graphics();
-        this.healthBarBg.fillStyle(0x333333);
-        this.healthBarBg.fillRect(barX, barY, barWidth, barHeight);
-        this.healthBarBg.lineStyle(2, 0xffffff);
-        this.healthBarBg.strokeRect(barX, barY, barWidth, barHeight);
-        this.healthBarBg.setScrollFactor(0); // 🆕 横版卷轴：固定显示
-      
-        // 血量条前景
-        this.healthBar = this.add.graphics();
-        this.healthBar.setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        this.updateHealthBar();
-    }
-    
-    // 🆕 横版卷轴：创建距离进度条
-    createDistanceProgressBar() {
-        const barWidth = 400;
-        const barHeight = 8;
-        const barX = 640 - barWidth / 2;
-        const barY = 80;
-      
-        // 距离进度条背景
-        this.distanceBarBg = this.add.graphics();
-        this.distanceBarBg.fillStyle(0x333333);
-        this.distanceBarBg.fillRect(barX, barY, barWidth, barHeight);
-        this.distanceBarBg.lineStyle(1, 0x00ffff);
-        this.distanceBarBg.strokeRect(barX, barY, barWidth, barHeight);
-        this.distanceBarBg.setScrollFactor(0); // 🆕 横版卷轴：固定显示
-      
-        // 距离进度条前景
-        this.distanceBar = this.add.graphics();
-        this.distanceBar.setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        this.updateDistanceProgressBar();
-    }
-    
-    // 🆕 横版卷轴：创建小地图
-    createMiniMap() {
-        const mapSize = 120;
-        const mapX = 1280 - mapSize - 20;
-        const mapY = 180;
-        
-        // 小地图背景
-        this.miniMapBg = this.add.graphics();
-        this.miniMapBg.fillStyle(0x000000, 0.7);
-        this.miniMapBg.fillRect(mapX, mapY, mapSize, mapSize);
-        this.miniMapBg.lineStyle(2, 0x00ffff);
-        this.miniMapBg.strokeRect(mapX, mapY, mapSize, mapSize);
-        this.miniMapBg.setScrollFactor(0);
-        
-        // 小地图内容
-        this.miniMap = this.add.graphics();
-        this.miniMap.setScrollFactor(0);
-        
-        // 小地图标题
-        this.miniMapTitle = this.add.text(mapX + mapSize/2, mapY - 10, '小地图', {
-            font: '12px Arial',
-            fill: '#00ffff',
-            backgroundColor: '#000000',
-            padding: { x: 4, y: 2 }
-        }).setOrigin(0.5, 1).setScrollFactor(0);
-        
-        this.updateMiniMap();
-    }
 
-    // 🆕 更新血量条
-    updateHealthBar() {
-        if (!this.healthBar) return;
-      
-        const barWidth = 200;
-        const barHeight = 20;
-        const barX = 20;
-        const barY = 85;
-      
-        this.healthBar.clear();
-      
-        // 计算血量百分比
-        const healthPercent = this.currentHealth / this.maxHealth;
-        const currentBarWidth = barWidth * healthPercent;
-      
-        // 根据血量百分比选择颜色
-        let barColor;
-        if (healthPercent > 0.6) {
-            barColor = 0x00ff00; // 绿色
-        } else if (healthPercent > 0.3) {
-            barColor = 0xffff00; // 黄色
-        } else {
-            barColor = 0xff0000; // 红色
-        }
-      
-        this.healthBar.fillStyle(barColor);
-        this.healthBar.fillRect(barX, barY, currentBarWidth, barHeight);
-    }
-    
-    // 🆕 横版卷轴：更新距离进度条
-    updateDistanceProgressBar() {
-        if (!this.distanceBar || !this.player) return;
-      
-        const barWidth = 400;
-        const barHeight = 8;
-        const barX = 640 - barWidth / 2;
-        const barY = 80;
-      
-        this.distanceBar.clear();
-      
-        // 计算距离进度（基于玩家X位置）
-        const currentDistance = Math.max(0, this.player.x);
-        const maxDistance = 4000; // 关卡总长度
-        const progress = Math.min(1, currentDistance / maxDistance);
-        const currentBarWidth = barWidth * progress;
-      
-        // 设置进度条颜色（从绿色渐变到红色）
-        let barColor;
-        if (progress < 0.5) {
-            barColor = 0x00ff00; // 绿色
-        } else if (progress < 0.8) {
-            barColor = 0xffff00; // 黄色
-        } else {
-            barColor = 0xff0000; // 红色（接近BOSS）
-        }
-      
-        this.distanceBar.fillStyle(barColor);
-        this.distanceBar.fillRect(barX, barY, currentBarWidth, barHeight);
-      
-        // 更新距离文本
-        if (this.distanceText) {
-            this.distanceText.setText(`距离: ${Math.round(currentDistance)}/${maxDistance}`);
-        }
-    }
-    
-    // 🆕 横版卷轴：更新小地图
-    updateMiniMap() {
-        if (!this.miniMap || !this.player) return;
-        
-        const mapSize = 120;
-        const mapX = 1280 - mapSize - 20;
-        const mapY = 180;
-        const worldWidth = 4000;
-        const worldHeight = 720;
-        
-        this.miniMap.clear();
-        
-        // 绘制世界边界
-        this.miniMap.lineStyle(1, 0x444444);
-        this.miniMap.strokeRect(mapX + 2, mapY + 2, mapSize - 4, mapSize - 4);
-        
-        // 绘制玩家位置
-        const playerMapX = mapX + (this.player.x / worldWidth) * (mapSize - 4) + 2;
-        const playerMapY = mapY + (this.player.y / worldHeight) * (mapSize - 4) + 2;
-        this.miniMap.fillStyle(0x00ff00);
-        this.miniMap.fillCircle(playerMapX, playerMapY, 3);
-        
-        // 绘制敌人位置
-        if (this.enemies) {
-            this.miniMap.fillStyle(0xff0000);
-            this.enemies.children.entries.forEach(enemy => {
-                if (enemy.active) {
-                    const enemyMapX = mapX + (enemy.x / worldWidth) * (mapSize - 4) + 2;
-                    const enemyMapY = mapY + (enemy.y / worldHeight) * (mapSize - 4) + 2;
-                    this.miniMap.fillCircle(enemyMapX, enemyMapY, 1);
-                }
-            });
-        }
-        
-        // 绘制摄像机视窗
-        const cameraLeft = this.cameras.main.scrollX;
-        const cameraRight = cameraLeft + 1280;
-        const cameraMapLeft = mapX + (cameraLeft / worldWidth) * (mapSize - 4) + 2;
-        const cameraMapRight = mapX + (cameraRight / worldWidth) * (mapSize - 4) + 2;
-        this.miniMap.lineStyle(1, 0x00ffff, 0.5);
-        this.miniMap.strokeRect(cameraMapLeft, mapY + 2, cameraMapRight - cameraMapLeft, mapSize - 4);
-    }
 
     // 🆕 修改敌人生成方法（横版卷轴版本）
     spawnEnemy() {
@@ -732,8 +480,7 @@ class MainScene extends Phaser.Scene {
         // 🆕 视觉反馈效果
         this.showDamageEffect(this.damagePerEnemyEscape, 'escape');
       
-        // 更新HUD
-        this.updateHUD();
+        // UI更新通过主循环自动处理
       
         // 检查游戏是否结束
         if (this.currentHealth <= 0) {
@@ -795,93 +542,8 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // 更新HUD显示
-    updateHUD() {
-        if (this.scoreText) {
-            this.scoreText.setText(`分数: ${this.score}`);
-        }
-        if (this.healthText) {
-            this.healthText.setText(`血量: ${this.currentHealth}/${this.maxHealth}`);
-        }
-        if (this.levelText) {
-            this.levelText.setText(`关卡: ${this.level}`);
-        }
-        if (this.weaponText) {
-            this.weaponText.setText(`武器: ${this.currentWeapon.name}`);
-        }
-        if (this.bulletCountText) {
-            // 🆕 更新子弹数量显示
-            let bulletText;
-            if (this.currentWeapon.bulletCost === 0) {
-                bulletText = '子弹: 无限';
-                this.bulletCountText.setFill('#00ff00');
-            } else {
-                bulletText = `子弹: ${this.currentWeapon.bulletCount}发`;
-                // 🆕 根据子弹数量改变颜色
-                if (this.currentWeapon.bulletCount <= 0) {
-                    this.bulletCountText.setFill('#ff0000'); // 红色表示无子弹
-                } else if (this.currentWeapon.bulletCount <= 2) {
-                    this.bulletCountText.setFill('#ffff00'); // 黄色表示子弹少
-                } else {
-                    this.bulletCountText.setFill('#00ff00'); // 绿色表示子弹充足
-                }
-            }
-            this.bulletCountText.setText(bulletText);
-        }
-        if (this.killText) {
-            this.killText.setText(`击杀: ${this.killCount}/${this.levelCompleteKills}`);
-        }
-      
-        // 🆕 更新距离显示
-        if (this.distanceText && this.player) {
-            const currentDistance = Math.max(0, Math.round(this.player.x));
-            this.distanceText.setText(`距离: ${currentDistance}/4000`);
-        }
-        
-        // 🆕 横版卷轴：更新距离进度条
-        this.updateDistanceProgressBar();
-        
-        // 🆕 横版卷轴：更新小地图
-        this.updateMiniMap();
-        
-        // 🆕 更新时间显示
-        if (this.timeText) {
-            // 关卡结束后停止计时
-            const elapsedTime = this.isGameOver || this.levelComplete ? 
-                Math.floor((this.levelEndTime - this.gameStartTime) / 1000) : 
-                Math.floor((this.time.now - this.gameStartTime) / 1000);
-            const minutes = Math.floor(elapsedTime / 60);
-            const seconds = elapsedTime % 60;
-            const timeString = `时间: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            this.timeText.setText(timeString);
-        }
-      
-        // 更新血量条
-        this.updateHealthBar();
-        if (this.powerUpManager) {
-            this.updatePowerUpHUD();
-        }
-        // 🆕 显示障碍物状态
-        if (this.obstacleManager) {
-            const obstacleStatus = this.obstacleManager.getObstacleStatus();
-            if (this.obstacleText) {
-                this.obstacleText.setText(`🪨 障碍物: ${obstacleStatus.count}/${obstacleStatus.maxCount}`);
-            }
-        }
-        
-        // 🌍 显示当前场景信息
-        if (this.advancedSceneManager) {
-            const sceneStatus = this.advancedSceneManager.getSceneStatus();
-            if (this.sceneText) {
-                this.sceneText.setText(`🌍 场景: ${sceneStatus.currentScene}`);
-            }
-        }
-        
-        // 🌍 显示场景切换提示
-        if (this.sceneHintText) {
-            this.sceneHintText.setText(`按 M 键切换场景`);
-        }
-    }
+    // updateHUD方法已完全移至UIManager
+    // 所有UI更新现在通过updateUISystem() -> uiManager.update(gameState)处理
 
     // 🔄 重构后的update方法 - 模块化设计
     update() {
@@ -904,6 +566,30 @@ class MainScene extends Phaser.Scene {
     // ✅ 检查游戏是否活跃
     isGameActive() {
         return this.player && this.player.active && !this.scene.isPaused();
+    }
+
+    // 🎯 获取游戏状态数据包 - 提供给UIManager使用
+    getGameStateForUI() {
+        return {
+            score: this.score,
+            currentHealth: this.currentHealth,
+            maxHealth: this.maxHealth,
+            weapon: this.currentWeapon,
+            killCount: this.killCount,
+            levelCompleteKills: this.levelCompleteKills,
+            player: this.player,
+            gameStartTime: this.gameStartTime,
+            isGameOver: this.isGameOver,
+            levelComplete: this.levelComplete,
+            levelEndTime: this.levelEndTime,
+            powerUpManager: this.powerUpManager,
+            obstacleManager: this.obstacleManager,
+            advancedSceneManager: this.advancedSceneManager,
+            time: this.time,
+            // 🆕 添加小地图需要的数据
+            enemies: this.enemies ? this.enemies.getChildren() : [],
+            camera: this.cameras.main
+        };
     }
 
     // 🎮 更新玩家系统
@@ -960,9 +646,7 @@ class MainScene extends Phaser.Scene {
     // 🔫 更新武器系统
     updateWeaponSystem() {
         // 武器系统更新逻辑（如果需要）
-        if (this.currentWeapon && this.currentWeapon.update) {
-            this.currentWeapon.update();
-        }
+        // 重构后的Weapon类不再需要update方法，所有逻辑都在MainScene中处理
     }
 
     // ⚡ 更新道具系统
@@ -994,10 +678,8 @@ class MainScene extends Phaser.Scene {
     // 📊 更新UI系统
     updateUISystem() {
         if (this.uiManager) {
-            this.uiManager.updateHUD();
-        } else {
-            // 兼容旧版本
-            this.updateHUD();
+            // 传递完整的游戏状态数据包给UIManager
+            this.uiManager.update(this.getGameStateForUI());
         }
     }
 
@@ -1035,7 +717,8 @@ class MainScene extends Phaser.Scene {
       
         // 显示受伤效果
         this.showDamageEffect(this.collisionDamage, 'collision');
-        this.updateHUD();
+      
+        // UI更新通过主循环自动处理
       
         // 设置无敌状态
         player.isInvincible = true;
@@ -1053,7 +736,7 @@ class MainScene extends Phaser.Scene {
     }
 
     handleBulletHit(bullet, enemy) {
-        if (!enemy.active) return; // 简化条件，移除 isDying 检查
+        if (!enemy.active) return;
 
         console.log(`MainScene: 子弹击中敌人 - 武器类型: ${bullet.weaponType}, 敌人: ${enemy.enemyData ? enemy.enemyData.name : 'Unknown'}`);
 
@@ -1075,60 +758,38 @@ class MainScene extends Phaser.Scene {
             return;
         }
 
-        // 🔧 普通武器 - 处理敌人伤害
+        // 🔧 普通武器 - 让敌人类处理自己的伤害计算
+        let isDead = false;
         if (enemy.takeDamage) {
-            const isDead = enemy.takeDamage(bullet.damage);
-            if (isDead) {
-                // 敌人死亡，增加击杀数和分数
-                this.killCount++;
-                let baseScore = bullet.damage;
-                // 🆕 骑士伤害加成
-                if (this.selectedPlayer && this.selectedPlayer.damageMultiplier) {
-                    baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
-                }
-                const killBonus = 20; // 击杀奖励
-                const scoreGain = baseScore + killBonus;
-                this.score += scoreGain;
-                
-                console.log(`MainScene: 使用${bullet.weaponType}击毁敌人，伤害: ${bullet.damage}，得分 +${scoreGain}，击杀数: ${this.killCount}/${this.levelCompleteKills}，当前分数: ${this.score}`);
-            }
+            isDead = enemy.takeDamage(bullet.damage);
         } else {
             // 兼容旧版敌人
-            enemy.destroy();
-            this.killCount++;
+            isDead = true;
+        }
+        
+        // 销毁子弹
+        bullet.destroy();
+        
+        if (isDead) {
+            // 通过事件系统报告击杀，让事件处理器统一处理
+            const enemyName = enemy.enemyData ? enemy.enemyData.name : '小兵';
             let baseScore = bullet.damage;
-            // 🆕 骑士伤害加成
             if (this.selectedPlayer && this.selectedPlayer.damageMultiplier) {
                 baseScore = Math.round(baseScore * this.selectedPlayer.damageMultiplier);
             }
-            const killBonus = 20; // 击杀奖励
+            const killBonus = 20;
             const scoreGain = baseScore + killBonus;
-            this.score += scoreGain;
-          
-            if (this.deathEmitter) {
-                this.deathEmitter.setPosition(enemy.x, enemy.y);
-                this.deathEmitter.start();
-                this.time.delayedCall(100, () => { if (this.deathEmitter) this.deathEmitter.stop(); });
-            }
             
-            console.log(`MainScene: 使用${bullet.weaponType}击毁敌人，伤害: ${bullet.damage}，得分 +${scoreGain}，击杀数: ${this.killCount}/${this.levelCompleteKills}，当前分数: ${this.score}`);
+            this.events.emit('enemyDied', { 
+                enemyName: enemyName,
+                score: scoreGain,
+                killedBy: 'player_bullet',
+                enemy: enemy,
+                weaponType: bullet.weaponType
+            });
         }
-      
-        // 销毁子弹
-        bullet.destroy();
-        this.updateHUD();
 
         console.log(`MainScene: 使用${bullet.weaponType}攻击完成`);
-        
-        // 🆕 检查是否达到击杀目标
-        this.checkLevelComplete();
-        // 普通武器击杀时尝试掉落道具
-        if (bullet.weaponType !== '导弹' && bullet.weaponType !== '核弹') {
-            enemy.destroy();
-            const enemyType = enemy.enemyData ? enemy.enemyData.name : '小兵';
-            if (this.powerUpManager) this.powerUpManager.spawnPowerUp(enemy.x, enemy.y, enemyType);
-            // ... 其他击杀逻辑 ...
-        }
     }
 
     gameOver() {
@@ -1138,9 +799,9 @@ class MainScene extends Phaser.Scene {
         this.isGameOver = true;
         
         // 📊 记录游戏结束统计
-        if (window.StatsManager) {
+        if (StatsManager) {
             const survivalTime = this.time.now - this.gameStartTime;
-            window.StatsManager.gameEnd(this.score, survivalTime);
+            StatsManager.gameEnd(this.score, survivalTime);
         }
         
         // 🔊 播放游戏结束音效
@@ -1200,27 +861,30 @@ class MainScene extends Phaser.Scene {
 
     shoot(angle = null) {
         if (this.isGameOver || this.scene.isPaused()) return; // 游戏状态检查
-        const currentTime = this.time.now;
+        
         // 🆕 检查子弹是否足够
-        if (this.currentWeapon.bulletCost > 0 && this.currentWeapon.bulletCount <= 0) {
+        if (!this.currentWeapon.hasAmmo()) {
             this.showNoBulletsMessage();
             return;
         }
-        // 🆕 检查普通射击冷却
-        if (currentTime - this.lastShootTime < this.currentWeapon.fireRate) {
+        
+        // 🆕 检查射击冷却
+        if (!this.currentWeapon.canFire(this.lastShootTime)) {
             console.log('MainScene: 射击冷却中');
             return; // 冷却时间未到
         }
+        
         if (!this.player || !this.player.active) {
             console.log('MainScene: 玩家不存在或未激活');
             return;
         }
+        
         // 🆕 消耗子弹
-        if (this.currentWeapon.bulletCost > 0) {
-            this.currentWeapon.bulletCount--;
-            console.log(`MainScene: 消耗1发${this.currentWeapon.name}子弹，剩余${this.currentWeapon.bulletCount}发`);
-        }
-        this.lastShootTime = currentTime;
+        this.currentWeapon.consumeAmmo();
+        this.lastShootTime = this.time.now;
+        
+        console.log(`MainScene: 消耗1发${this.currentWeapon.name}子弹，剩余${this.currentWeapon.bulletCount}发`);
+        
         // 🆕 执行连发射击，传递射击角度
         this.executeBurstFire(angle);
     }
@@ -1264,14 +928,13 @@ class MainScene extends Phaser.Scene {
             this.fireSingleBullet(startX, startY, angle, weapon);
             
             // 如果有连发，继续发射
-            if (weapon.burstCount > 1) {
-                for (let i = 1; i < weapon.burstCount; i++) {
-                    this.time.delayedCall(weapon.burstDelay * i, () => {
-                        if (!this.isGameOver && this.player && this.player.active) {
-                            this.fireSingleBullet(startX, startY, angle, weapon);
-                        }
-                    }, null, this);
-                }
+            const burstDelays = weapon.getBurstDelays();
+            for (let i = 1; i < burstDelays.length; i++) {
+                this.time.delayedCall(burstDelays[i], () => {
+                    if (!this.isGameOver && this.player && this.player.active) {
+                        this.fireSingleBullet(startX, startY, angle, weapon);
+                    }
+                }, null, this);
             }
             
             console.log(`MainScene: 发射${weapon.name}，连发${weapon.burstCount}发`);
@@ -1282,7 +945,8 @@ class MainScene extends Phaser.Scene {
     fireSingleBullet(x, y, angle, weapon) {
         const bullet = this.bullets.get();
         if (bullet) {
-            bullet.fire(x, y, weapon);
+            // 调用Bullet实例的fire方法，并把当前武器的配置传进去
+            bullet.fire(x, y, angle, weapon);
             
             // 🔊 播放射击音效
             if (this.audioManager) {
@@ -1302,7 +966,7 @@ class MainScene extends Phaser.Scene {
             }
             
             // 🆕 核弹追踪功能
-            if (weapon.name === '核弹' && weapon.config && weapon.config.isHoming) {
+            if (weapon.name === '核弹') {
                 this.setupNuclearHoming(bullet);
             }
         }
@@ -1421,7 +1085,7 @@ class MainScene extends Phaser.Scene {
             const remainingEnemies = this.enemies.getChildren().filter(e => e.active).length;
             console.log(`☢️ 核弹爆炸完成：击杀${killedEnemies}/${totalEnemies}个敌人，剩余${remainingEnemies}个敌人`);
           
-            this.updateHUD();
+            // UI更新通过主循环自动处理
         });
     }
     
@@ -1471,7 +1135,7 @@ class MainScene extends Phaser.Scene {
       
         // 🆕 增强导弹爆炸特效
         this.createMissileExplosionEffect(explosionCenter);
-        this.updateHUD();
+        // UI更新通过主循环自动处理
         // 爆炸击杀的敌人也可能掉落道具
         for (let enemy of enemies) {
             if (enemy.active && distance <= explosionRadius) {
@@ -2085,218 +1749,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // 1. 科技网格背景（修正版）
-    generateTechGridBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xe6f3ff);
-        graphics.fillRect(0, 0, 1280, 720);
-        for (let i = 0; i < 10; i++) {
-            const alpha = 0.1 - (i * 0.01);
-            graphics.fillStyle(0xccddff, alpha);
-            graphics.fillRect(0, i * 72, 1280, 72);
-        }
-        graphics.lineStyle(1, 0x99ccff, 0.3);
-        const gridSize = 40;
-        for (let x = 0; x <= 1280; x += gridSize) {
-            graphics.beginPath();
-            graphics.moveTo(x, 0);
-            graphics.lineTo(x, 720);
-            graphics.strokePath();
-        }
-        for (let y = 0; y <= 720; y += gridSize) {
-            graphics.beginPath();
-            graphics.moveTo(0, y);
-            graphics.lineTo(1280, y);
-            graphics.strokePath();
-        }
-        graphics.fillStyle(0x6699ff, 0.4);
-        for (let i = 0; i < 20; i++) {
-            const x = Phaser.Math.Between(0, 1280);
-            const y = Phaser.Math.Between(0, 720);
-            graphics.fillCircle(x, y, 2);
-            graphics.lineStyle(1, 0x6699ff, 0.3);
-            graphics.beginPath();
-            graphics.moveTo(x - 5, y);
-            graphics.lineTo(x + 5, y);
-            graphics.moveTo(x, y - 5);
-            graphics.lineTo(x, y + 5);
-            graphics.strokePath();
-        }
-        graphics.setDepth(-100);
-    }
 
-    // 2. 云朵背景（修正版）
-    generateCloudBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf0f8ff);
-        graphics.fillRect(0, 0, 1280, 720);
-        for (let i = 0; i < 20; i++) {
-            const alpha = 0.05 - (i * 0.002);
-            graphics.fillStyle(0xe0e6ff, alpha);
-            graphics.fillRect(0, i * 36, 1280, 36);
-        }
-        graphics.fillStyle(0xffffff, 0.6);
-        for (let i = 0; i < 15; i++) {
-            const cloudX = Phaser.Math.Between(0, 1280);
-            const cloudY = Phaser.Math.Between(50, 400);
-            const cloudSize = Phaser.Math.Between(30, 80);
-            this.drawCloud(graphics, cloudX, cloudY, cloudSize);
-        }
-        graphics.setDepth(-100);
-    }
-
-    // 3. 电路板背景（修正版）
-    generateCircuitBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf0fff0);
-        graphics.fillRect(0, 0, 1280, 720);
-        graphics.lineStyle(2, 0x90ee90, 0.6);
-        for (let i = 0; i < 30; i++) {
-            const startX = Phaser.Math.Between(0, 1280);
-            const startY = Phaser.Math.Between(0, 720);
-            const endX = startX + Phaser.Math.Between(-200, 200);
-            const endY = startY + Phaser.Math.Between(-200, 200);
-            graphics.beginPath();
-            graphics.moveTo(startX, startY);
-            graphics.lineTo(endX, startY);
-            graphics.lineTo(endX, endY);
-            graphics.strokePath();
-            graphics.fillStyle(0x32cd32, 0.8);
-            graphics.fillCircle(startX, startY, 3);
-            graphics.fillCircle(endX, startY, 3);
-            graphics.fillCircle(endX, endY, 3);
-        }
-        graphics.fillStyle(0x98fb98, 0.4);
-        graphics.lineStyle(1, 0x32cd32, 0.8);
-        for (let i = 0; i < 10; i++) {
-            const rectX = Phaser.Math.Between(50, 1200);
-            const rectY = Phaser.Math.Between(50, 650);
-            const rectW = Phaser.Math.Between(20, 60);
-            const rectH = Phaser.Math.Between(15, 40);
-            graphics.fillRect(rectX, rectY, rectW, rectH);
-            graphics.strokeRect(rectX, rectY, rectW, rectH);
-            for (let j = 0; j < 4; j++) {
-                graphics.fillStyle(0x32cd32, 1);
-                graphics.fillRect(rectX - 5, rectY + (j + 1) * (rectH / 5), 10, 2);
-                graphics.fillRect(rectX + rectW - 5, rectY + (j + 1) * (rectH / 5), 10, 2);
-            }
-        }
-        graphics.setDepth(-100);
-    }
-
-    // 4. 星空背景（修正版）
-    generateStarFieldBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf8f8ff);
-        graphics.fillRect(0, 0, 1280, 720);
-        for (let radius = 500; radius > 0; radius -= 50) {
-            const alpha = (500 - radius) / 500 * 0.1;
-            graphics.fillStyle(0xe6e6fa, alpha);
-            graphics.fillCircle(640, 360, radius);
-        }
-        for (let i = 0; i < 100; i++) {
-            const x = Phaser.Math.Between(0, 1280);
-            const y = Phaser.Math.Between(0, 720);
-            const size = Phaser.Math.Between(1, 3);
-            const alpha = Math.random() * 0.8 + 0.2;
-            graphics.fillStyle(0xdda0dd, alpha);
-            graphics.fillCircle(x, y, size);
-            if (size >= 2) {
-                graphics.lineStyle(1, 0xdda0dd, alpha * 0.5);
-                graphics.beginPath();
-                graphics.moveTo(x - size * 2, y);
-                graphics.lineTo(x + size * 2, y);
-                graphics.moveTo(x, y - size * 2);
-                graphics.lineTo(x, y + size * 2);
-                graphics.strokePath();
-                }
-            }
-        graphics.setDepth(-100);
-    }
-
-    // 5. 六角形科技背景（保持不变）
-    generateHexagonBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf5f5f5);
-        graphics.fillRect(0, 0, 1280, 720);
-        const hexSize = 30;
-        const hexWidth = hexSize * Math.sqrt(3);
-        const hexHeight = hexSize * 2;
-        graphics.lineStyle(1, 0xd3d3d3, 0.8);
-        for (let row = 0; row < Math.ceil(720 / (hexHeight * 0.75)) + 1; row++) {
-            for (let col = 0; col < Math.ceil(1280 / hexWidth) + 1; col++) {
-                const x = col * hexWidth + (row % 2) * (hexWidth / 2);
-                const y = row * hexHeight * 0.75;
-                this.drawHexagon(graphics, x, y, hexSize);
-            }
-        }
-        graphics.fillStyle(0xe0e0e0, 0.5);
-        for (let i = 0; i < 20; i++) {
-            const randomRow = Phaser.Math.Between(0, Math.ceil(720 / (hexHeight * 0.75)));
-            const randomCol = Phaser.Math.Between(0, Math.ceil(1280 / hexWidth));
-            const x = randomCol * hexWidth + (randomRow % 2) * (hexWidth / 2);
-            const y = randomRow * hexHeight * 0.75;
-            this.fillHexagon(graphics, x, y, hexSize);
-        }
-        graphics.setDepth(-100);
-    }
-
-    // 6. 波浪背景（修正版）
-    generateWaveBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf0ffff);
-        graphics.fillRect(0, 0, 1280, 720);
-        for (let i = 0; i < 15; i++) {
-            const alpha = 0.08 - (i * 0.005);
-            graphics.fillStyle(0xe0f6ff, alpha);
-            graphics.fillRect(0, i * 48, 1280, 48);
-        }
-        const waveColors = [0xb0e0e6, 0x87ceeb, 0x87cefa];
-        const waveAlphas = [0.3, 0.2, 0.1];
-        for (let layer = 0; layer < 3; layer++) {
-            graphics.fillStyle(waveColors[layer], waveAlphas[layer]);
-            const amplitude = 30 + layer * 20;
-            const frequency = 0.01 + layer * 0.005;
-            const yOffset = 200 + layer * 150;
-            graphics.beginPath();
-            graphics.moveTo(0, yOffset);
-            for (let x = 0; x <= 1280; x += 5) {
-                const y = yOffset + Math.sin(x * frequency) * amplitude;
-                graphics.lineTo(x, y);
-            }
-            graphics.lineTo(1280, 720);
-            graphics.lineTo(0, 720);
-            graphics.closePath();
-            graphics.fillPath();
-        }
-        graphics.setDepth(-100);
-        }
-      
-    // 简化版背景（降级方案）
-    generateSimpleBackground() {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xf0f8ff);
-        graphics.fillRect(0, 0, 1280, 720);
-        graphics.fillStyle(0xb0c4de, 0.3);
-        for (let i = 0; i < 50; i++) {
-            const x = Phaser.Math.Between(0, 1280);
-            const y = Phaser.Math.Between(0, 720);
-            const size = Phaser.Math.Between(2, 8);
-            graphics.fillCircle(x, y, size);
-        }
-        graphics.lineStyle(1, 0xb0c4de, 0.2);
-        for (let i = 0; i < 20; i++) {
-            const x1 = Phaser.Math.Between(0, 1280);
-            const y1 = Phaser.Math.Between(0, 720);
-            const x2 = x1 + Phaser.Math.Between(-100, 100);
-            const y2 = y1 + Phaser.Math.Between(-100, 100);
-            graphics.beginPath();
-            graphics.moveTo(x1, y1);
-            graphics.lineTo(x2, y2);
-            graphics.strokePath();
-        }
-        graphics.setDepth(-100);
-    }
 
     // 🆕 添加环境效果
     addEnvironmentEffects() {
@@ -2456,7 +1909,7 @@ class MainScene extends Phaser.Scene {
     handleEnemyBulletHit(player, bullet) {
         if (player.isInvincible) return;
       
-        bullet.destroy();
+        bullet.kill(); // 使用kill()回收对象池，而不是destroy()
       
         // 子弹伤害
         const bulletDamage = bullet.damage || 15;
@@ -2470,7 +1923,8 @@ class MainScene extends Phaser.Scene {
       
         // 显示受伤效果
         this.showDamageEffect(bulletDamage, 'bullet');
-        this.updateHUD();
+      
+        // UI更新通过主循环自动处理
       
         // 设置无敌状态
         player.isInvincible = true;
@@ -2489,7 +1943,7 @@ class MainScene extends Phaser.Scene {
 
     // 🔧 新增敌人死亡处理方法
     handleEnemyDeath(deathData) {
-        console.log(`MainScene: 敌人死亡事件 - ${deathData.enemyName}, 得分: ${deathData.score}`);
+        console.log(`MainScene: 敌人死亡事件 - ${deathData.enemyName}, 得分: ${deathData.score}, 击杀方式: ${deathData.killedBy}`);
       
         // 增加分数和击杀数
         this.score += deathData.score;
@@ -2497,21 +1951,44 @@ class MainScene extends Phaser.Scene {
         this.currentEnemyCount--;
       
         // 📊 记录统计
-        if (window.StatsManager) {
-            window.StatsManager.addKill();
-            window.StatsManager.addScore(deathData.score);
+        if (StatsManager) {
+            StatsManager.addKill();
+            StatsManager.addScore(deathData.score);
         }
         
         // 🏆 检查成就
-        if (window.AchievementManager) {
-            window.AchievementManager.checkAchievements();
+        if (AchievementManager) {
+            AchievementManager.checkAchievements();
+        }
+        
+        // 创建死亡效果
+        if (deathData.enemy && this.deathEmitter) {
+            this.deathEmitter.setPosition(deathData.enemy.x, deathData.enemy.y);
+            this.deathEmitter.start();
+            this.time.delayedCall(100, () => { 
+                if (this.deathEmitter) this.deathEmitter.stop(); 
+            });
+        }
+        
+        // 普通武器击杀时尝试掉落道具
+        if (deathData.weaponType && deathData.weaponType !== '导弹' && deathData.weaponType !== '核弹') {
+            if (deathData.enemy && this.powerUpManager) {
+                const enemyType = deathData.enemy.enemyData ? deathData.enemy.enemyData.name : '小兵';
+                this.powerUpManager.spawnPowerUp(deathData.enemy.x, deathData.enemy.y, enemyType);
+            }
+        }
+        
+        // 销毁敌人对象
+        if (deathData.enemy) {
+            deathData.enemy.destroy();
         }
       
-        // 更新HUD
-        this.updateHUD();
+        // UI更新通过主循环自动处理
       
         // 检查关卡完成
         this.checkLevelComplete();
+        
+        console.log(`MainScene: 敌人死亡处理完成 - 击杀数: ${this.killCount}/${this.levelCompleteKills}, 当前分数: ${this.score}`);
     }
   
     // 🔧 修改敌人逃脱处理
@@ -2534,8 +2011,7 @@ class MainScene extends Phaser.Scene {
         // 视觉反馈效果
         this.showDamageEffect(escapeData.damage, 'escape');
       
-        // 更新HUD
-        this.updateHUD();
+        // UI更新通过主循环自动处理
       
         // 检查游戏是否结束
         if (this.currentHealth <= 0) {
@@ -2701,8 +2177,8 @@ class MainScene extends Phaser.Scene {
         }
         
         // 📊 清理统计系统
-        if (window.StatsManager) {
-            window.StatsManager.saveStats();
+        if (StatsManager) {
+            StatsManager.saveStats();
         }
         
         // 清理自定义事件监听器
@@ -2789,38 +2265,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    updatePowerUpHUD() {
-        if (this.powerUpHUDGroup) {
-            this.powerUpHUDGroup.clear(true);
-        } else {
-            this.powerUpHUDGroup = this.add.group();
-        }
-        const activeBonuses = this.powerUpManager.getActiveBonuses();
-        activeBonuses.forEach((bonus, index) => {
-            const x = 50;
-            const y = 150 + index * 40;
-            const remainingTime = Math.max(0, bonus.endTime - Date.now());
-            const seconds = Math.ceil(remainingTime / 1000);
-            const bg = this.add.rectangle(x, y, 200, 30, 0x000000, 0.6)
-                .setOrigin(0, 0.5)
-                .setStroke(0xffffff, 1)
-                .setScrollFactor(0);
-            const text = this.add.text(x + 10, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
-                fontSize: '14px',
-                fill: '#ffffff'
-            }).setOrigin(0, 0.5).setScrollFactor(0);
-            const progressWidth = 180;
-            const progress = remainingTime / bonus.effect.duration;
-            const progressBg = this.add.rectangle(x + 10, y + 12, progressWidth, 4, 0x333333)
-                .setOrigin(0, 0.5)
-                .setScrollFactor(0);
-            const progressBar = this.add.rectangle(x + 10, y + 12, progressWidth * progress, 4, 0x00ff00)
-                .setOrigin(0, 0.5)
-                .setScrollFactor(0);
-            this.powerUpHUDGroup.addMultiple([bg, text, progressBg, progressBar]);
-        });
-        this.powerUpHUDGroup.setDepth(1000);
-    }
+
 
     switchLevel(levelType) {
         console.log(`🌍 切换到 ${levelType} 关卡`);
@@ -2834,274 +2279,7 @@ class MainScene extends Phaser.Scene {
         // ... 其他关卡切换逻辑 ...
     }
     
-    // 🆕 横版卷轴：多层视差背景方法
-    
-    // 1. 科技网格视差背景
-    generateParallaxTechGridBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xe6f3ff);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        for (let i = 0; i < 10; i++) {
-            const alpha = 0.1 - (i * 0.01);
-            farGraphics.fillStyle(0xccddff, alpha);
-            farGraphics.fillRect(0, i * 72, 4000, 72);
-        }
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        midGraphics.lineStyle(1, 0x99ccff, 0.3);
-        const gridSize = 40;
-        for (let x = 0; x <= 4000; x += gridSize) {
-            midGraphics.beginPath();
-            midGraphics.moveTo(x, 0);
-            midGraphics.lineTo(x, 720);
-            midGraphics.strokePath();
-        }
-        for (let y = 0; y <= 720; y += gridSize) {
-            midGraphics.beginPath();
-            midGraphics.moveTo(0, y);
-            midGraphics.lineTo(4000, y);
-            midGraphics.strokePath();
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        nearGraphics.fillStyle(0x6699ff, 0.4);
-        for (let i = 0; i < 60; i++) {
-            const x = Phaser.Math.Between(0, 4000);
-            const y = Phaser.Math.Between(0, 720);
-            nearGraphics.fillCircle(x, y, 2);
-            nearGraphics.lineStyle(1, 0x6699ff, 0.3);
-            nearGraphics.beginPath();
-            nearGraphics.moveTo(x - 5, y);
-            nearGraphics.lineTo(x + 5, y);
-            nearGraphics.moveTo(x, y - 5);
-            nearGraphics.lineTo(x, y + 5);
-            nearGraphics.strokePath();
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
-    
-    // 2. 云朵视差背景
-    generateParallaxCloudBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xf0f8ff);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        for (let i = 0; i < 20; i++) {
-            const alpha = 0.05 - (i * 0.002);
-            farGraphics.fillStyle(0xe0e6ff, alpha);
-            farGraphics.fillRect(0, i * 36, 4000, 36);
-        }
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        midGraphics.fillStyle(0xffffff, 0.4);
-        for (let i = 0; i < 30; i++) {
-            const cloudX = Phaser.Math.Between(0, 4000);
-            const cloudY = Phaser.Math.Between(50, 400);
-            const cloudSize = Phaser.Math.Between(40, 100);
-            this.drawCloud(midGraphics, cloudX, cloudY, cloudSize);
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        nearGraphics.fillStyle(0xffffff, 0.6);
-        for (let i = 0; i < 20; i++) {
-            const cloudX = Phaser.Math.Between(0, 4000);
-            const cloudY = Phaser.Math.Between(100, 500);
-            const cloudSize = Phaser.Math.Between(30, 80);
-            this.drawCloud(nearGraphics, cloudX, cloudY, cloudSize);
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
-    
-    // 3. 电路板视差背景
-    generateParallaxCircuitBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xf0fff0);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        midGraphics.lineStyle(2, 0x90ee90, 0.4);
-        for (let i = 0; i < 80; i++) {
-            const startX = Phaser.Math.Between(0, 4000);
-            const startY = Phaser.Math.Between(0, 720);
-            const endX = startX + Phaser.Math.Between(-200, 200);
-            const endY = startY + Phaser.Math.Between(-200, 200);
-            midGraphics.beginPath();
-            midGraphics.moveTo(startX, startY);
-            midGraphics.lineTo(endX, startY);
-            midGraphics.lineTo(endX, endY);
-            midGraphics.strokePath();
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        nearGraphics.fillStyle(0x32cd32, 0.8);
-        nearGraphics.lineStyle(1, 0x32cd32, 0.8);
-        for (let i = 0; i < 30; i++) {
-            const rectX = Phaser.Math.Between(50, 3900);
-            const rectY = Phaser.Math.Between(50, 650);
-            const rectW = Phaser.Math.Between(20, 60);
-            const rectH = Phaser.Math.Between(15, 40);
-            nearGraphics.fillRect(rectX, rectY, rectW, rectH);
-            nearGraphics.strokeRect(rectX, rectY, rectW, rectH);
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
-    
-    // 4. 星空视差背景
-    generateParallaxStarFieldBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xf8f8ff);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        for (let radius = 500; radius > 0; radius -= 50) {
-            const alpha = (500 - radius) / 500 * 0.1;
-            farGraphics.fillStyle(0xe6e6fa, alpha);
-            farGraphics.fillCircle(2000, 360, radius);
-        }
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        for (let i = 0; i < 200; i++) {
-            const x = Phaser.Math.Between(0, 4000);
-            const y = Phaser.Math.Between(0, 720);
-            const size = Phaser.Math.Between(1, 2);
-            const alpha = Math.random() * 0.6 + 0.2;
-            midGraphics.fillStyle(0xdda0dd, alpha);
-            midGraphics.fillCircle(x, y, size);
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        for (let i = 0; i < 100; i++) {
-            const x = Phaser.Math.Between(0, 4000);
-            const y = Phaser.Math.Between(0, 720);
-            const size = Phaser.Math.Between(2, 4);
-            const alpha = Math.random() * 0.8 + 0.2;
-            nearGraphics.fillStyle(0xffffff, alpha);
-            nearGraphics.fillCircle(x, y, size);
-            if (size >= 3) {
-                nearGraphics.lineStyle(1, 0xffffff, alpha * 0.5);
-                nearGraphics.beginPath();
-                nearGraphics.moveTo(x - size * 2, y);
-                nearGraphics.lineTo(x + size * 2, y);
-                nearGraphics.moveTo(x, y - size * 2);
-                nearGraphics.lineTo(x, y + size * 2);
-                nearGraphics.strokePath();
-            }
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
-    
-    // 5. 六角形视差背景
-    generateParallaxHexagonBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xf5f5f5);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        const hexSize = 40;
-        const hexWidth = hexSize * Math.sqrt(3);
-        const hexHeight = hexSize * 2;
-        midGraphics.lineStyle(1, 0xd3d3d3, 0.6);
-        for (let row = 0; row < Math.ceil(720 / (hexHeight * 0.75)) + 1; row++) {
-            for (let col = 0; col < Math.ceil(4000 / hexWidth) + 1; col++) {
-                const x = col * hexWidth + (row % 2) * (hexWidth / 2);
-                const y = row * hexHeight * 0.75;
-                this.drawHexagon(midGraphics, x, y, hexSize);
-            }
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        nearGraphics.fillStyle(0xe0e0e0, 0.5);
-        for (let i = 0; i < 60; i++) {
-            const randomRow = Phaser.Math.Between(0, Math.ceil(720 / (hexHeight * 0.75)));
-            const randomCol = Phaser.Math.Between(0, Math.ceil(4000 / hexWidth));
-            const x = randomCol * hexWidth + (randomRow % 2) * (hexWidth / 2);
-            const y = randomRow * hexHeight * 0.75;
-            this.fillHexagon(nearGraphics, x, y, hexSize);
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
-    
-    // 6. 波浪视差背景
-    generateParallaxWaveBackground() {
-        // 远景层（滚动速度 0.3）
-        const farGraphics = this.add.graphics();
-        farGraphics.fillStyle(0xf0ffff);
-        farGraphics.fillRect(0, 0, 4000, 720);
-        for (let i = 0; i < 15; i++) {
-            const alpha = 0.08 - (i * 0.005);
-            farGraphics.fillStyle(0xe0f6ff, alpha);
-            farGraphics.fillRect(0, i * 48, 4000, 48);
-        }
-        farGraphics.setDepth(-300);
-        farGraphics.setScrollFactor(0.3);
-        
-        // 中景层（滚动速度 0.6）
-        const midGraphics = this.add.graphics();
-        const waveColors = [0xb0e0e6, 0x87ceeb, 0x87cefa];
-        const waveAlphas = [0.2, 0.15, 0.1];
-        for (let layer = 0; layer < 3; layer++) {
-            midGraphics.fillStyle(waveColors[layer], waveAlphas[layer]);
-            const amplitude = 20 + layer * 15;
-            const frequency = 0.008 + layer * 0.003;
-            for (let x = 0; x < 4000; x += 5) {
-                const y = 360 + Math.sin(x * frequency) * amplitude;
-                midGraphics.fillCircle(x, y, 3);
-            }
-        }
-        midGraphics.setDepth(-200);
-        midGraphics.setScrollFactor(0.6);
-        
-        // 近景层（滚动速度 1.0）
-        const nearGraphics = this.add.graphics();
-        nearGraphics.fillStyle(0x00bfff, 0.3);
-        for (let i = 0; i < 50; i++) {
-            const x = Phaser.Math.Between(0, 4000);
-            const y = Phaser.Math.Between(100, 620);
-            const size = Phaser.Math.Between(10, 30);
-            nearGraphics.fillCircle(x, y, size);
-        }
-        nearGraphics.setDepth(-100);
-        nearGraphics.setScrollFactor(1.0);
-    }
+
 }
 
-// 🆕 导出到全局作用域
-window.MainScene = MainScene;
-console.log('✅ MainScene.js 已加载'); 
+    console.log('✅ MainScene.js ES6模块已加载'); 

@@ -1,5 +1,6 @@
-// 🆕 使用全局变量，因为文件已通过script标签加载
-class PlayerSelectScene extends Phaser.Scene {
+// scenes/PlayerSelectScene.js - ES6模块玩家选择场景
+
+export class PlayerSelectScene extends Phaser.Scene {
     constructor() {
         super('PlayerSelectScene');
         this.selectedPlayer = null;
@@ -13,218 +14,322 @@ class PlayerSelectScene extends Phaser.Scene {
     }
 
     create() {
-        console.log('PlayerSelectScene.create() 开始执行');
-        console.log('PlayerSelectScene: 可用纹理:', this.textures.getTextureKeys());
+        console.log('PlayerSelectScene: 创建玩家选择场景');
         
-        // 标题
-        this.add.text(this.cameras.main.width / 2, 60, '选择你的角色', { 
-            font: '54px Arial', 
-            fill: '#fff',
-            stroke: '#000',
-            strokeThickness: 5
-        }).setOrigin(0.5);
-
-        // 显示保存的积分
-        const savedPoints = this.getSavedPoints();
-        this.add.text(this.cameras.main.width / 2, 120, `保存的积分: ${savedPoints}`, { 
-            font: '32px Arial', 
-            fill: '#ffff00',
-            stroke: '#000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        // 角色区更紧凑排列，整体更靠左
-        const playerButtons = [];
-        const columns = 2;
-        const startX = 120; // 更靠左
-        const startY = 180; // 与说明区顶部对齐
-        const spacingX = 260; // 更紧凑
-        const spacingY = 220; // 更紧凑
-        const avatarBgColors = [0x3e2723, 0x1565c0, 0x616161, 0x90caf9];
-
-        this.players.forEach((player, index) => {
-            const x = startX + (index % columns) * spacingX;
-            const y = startY + Math.floor(index / columns) * spacingY;
-            // 头像底色
-            this.add.circle(x, y - 40, 48, avatarBgColors[index], 0.18);
-            // 检查纹理是否存在
-            const textureKey = this.textures.exists(player.key) ? player.key : 'player';
-            console.log(`PlayerSelectScene: 角色 ${player.name} 使用纹理: ${textureKey}`);
-          
-            // 创建可交互的玩家图片
-            const playerImage = this.add.image(x, y - 40, textureKey)
-                .setScale(1.3)
-                .setInteractive()
-                .setData('player', player);
-              
-            // 玩家名称
-            this.add.text(x, y + 30, player.name, { 
-                font: '32px Arial', 
-                fill: '#ffffff',
-                stroke: '#000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
+        // 创建背景
+        this.createBackground();
         
-            // 玩家描述
-            this.add.text(x, y + 70, player.description, { 
-                font: '20px Arial', 
-                fill: '#cccccc',
-                stroke: '#000',
-                strokeThickness: 1
-            }).setOrigin(0.5);
-
-            playerButtons.push(playerImage);
-
-            playerImage.on('pointerdown', () => {
-                console.log('玩家角色被点击:', player.name);
-                this.selectedPlayer = playerImage.getData('player');
-                console.log('选中的玩家数据:', this.selectedPlayer);
-              
-                // 高亮选中的玩家
-                playerButtons.forEach(btn => {
-                    btn.clearTint();
-                    if (btn.getData('player').key === this.selectedPlayer.key) {
-                        btn.setTint(0x00ff00); // 选中玩家高亮
-                        btn.setScale(1.5);
-                    } else {
-                        btn.setScale(1.3);
-                    }
-                });
-              
-                // 激活开始按钮
-                this.startButton.setAlpha(1).setInteractive();
-                console.log('开始按钮已激活');
-            });
-        });
-
-        // 游戏操控和游戏玩法左右并排显示
-        const explainBaseY = 180;
-        const explainLeftX = 650;
-        const explainRightX = 950;
-        const explainAlign = 0; // 左对齐
-        // 游戏操控
-        this.add.text(explainLeftX, explainBaseY, '游戏操控', { 
-            font: '32px Arial', 
-            fill: '#ffff00',
-            stroke: '#000',
-            strokeThickness: 3,
-            underline: true
-        }).setOrigin(explainAlign, 0.5);
-        this.add.rectangle(explainLeftX, explainBaseY + 20, 180, 3, 0xffff00, 0.5).setOrigin(explainAlign, 0.5);
-        const controlsText = [
-            '移动控制:',
-            '  方向键 或 WASD',
-            '',
-            '射击控制:',
-            '  鼠标点击 或 空格键',
-            '',
-            '武器切换:',
-            '  数字键 1-6',
-            '',
-            '游戏控制:',
-            '  P键: 暂停/恢复',
-            '  R键: 重新开始',
-            '  N键: 下一关'
-        ];
-        controlsText.forEach((text, index) => {
-            this.add.text(explainLeftX, explainBaseY + 40 + index * 25, text, { 
-                font: '16px Arial', 
-                fill: '#ffffff',
-                stroke: '#000',
-                strokeThickness: 1
-            }).setOrigin(explainAlign, 0.5);
-        });
-        // 游戏玩法
-        this.add.text(explainRightX, explainBaseY, '游戏玩法', { 
-            font: '32px Arial', 
-            fill: '#00ffff',
-            stroke: '#000',
-            strokeThickness: 3,
-            underline: true
-        }).setOrigin(explainAlign, 0.5);
-        this.add.rectangle(explainRightX, explainBaseY + 20, 180, 3, 0x00ffff, 0.5).setOrigin(explainAlign, 0.5);
-        const gameplayText = [
-            '游戏目标:',
-            '  生存90秒 或',
-            '  击杀30个敌人',
-            '',
-            '武器系统:',
-            '  AK47/沙漠之鹰: 免费',
-            '  其他武器: 需要积分',
-            '',
-            '积分系统:',
-            '  击杀敌人获得积分',
-            '  用于购买高级子弹',
-            '',
-            '特殊效果:',
-            '  核弹: 全屏消灭',
-            '  导弹: 范围爆炸',
-            '  特斯拉: 持续光线'
-        ];
-        gameplayText.forEach((text, index) => {
-            this.add.text(explainRightX, explainBaseY + 40 + index * 20, text, { 
-                font: '14px Arial', 
-                fill: '#cccccc',
-                stroke: '#000',
-                strokeThickness: 1
-            }).setOrigin(explainAlign, 0.5);
-        });
-
-
-
-        // 创建开始按钮 - 居中，按钮上方留白，亮绿色，悬停高亮，按钮往上移
-        this.startButton = this.add.text(this.cameras.main.width / 2, 600, '开始游戏', { 
-            font: '48px Arial', 
-            fill: '#00e676', 
-            backgroundColor: '#fff', 
-            padding: { x: 30, y: 16 },
-            stroke: '#000',
-            strokeThickness: 3
-        })
-        .setOrigin(0.5)
-        .setAlpha(0.5)
-        .setInteractive({ useHandCursor: true });
-        this.startButton.on('pointerover', () => {
-            this.startButton.setStyle({ fill: '#1de9b6', backgroundColor: '#e0f2f1' });
-        });
-        this.startButton.on('pointerout', () => {
-            this.startButton.setStyle({ fill: '#00e676', backgroundColor: '#fff' });
-        });
-
-        // 修复开始按钮点击事件
-        this.startButton.on('pointerdown', () => {
-            console.log('开始按钮被点击');
-            console.log('选中的玩家:', this.selectedPlayer);
-          
-            if (this.selectedPlayer) {
-                console.log('启动主场景，传递玩家数据:', this.selectedPlayer);
-                this.scene.start('MainScene', { 
-                    player: this.selectedPlayer,
-                    level: 0 // 固定从第一关开始
-                });
-            } else {
-                console.error('请选择角色');
-                // 添加视觉提示
-                this.add.text(this.cameras.main.width / 2, 570, '请先选择角色', {
-                    font: '24px Arial',
-                    fill: '#ff0000',
-                    stroke: '#000',
-                    strokeThickness: 2
-                }).setOrigin(0.5);
-            }
-        });
-
-        console.log('PlayerSelectScene创建完成');
-        console.log('开始按钮状态:', this.startButton);
-        console.log('可用纹理:', this.textures.getTextureKeys());
+        // 创建标题
+        this.createTitle();
+        
+        // 创建玩家选择界面
+        this.createPlayerSelection();
+        
+        // 创建开始按钮
+        this.createStartButton();
+        
+        // 添加输入控制
+        this.setupInput();
     }
 
-    getSavedPoints() {
-        // 从localStorage获取保存的积分
-        const savedPoints = localStorage.getItem('gamePoints');
-        return savedPoints ? parseInt(savedPoints) : 0;
+    createBackground() {
+        // 创建渐变背景
+        const graphics = this.add.graphics();
+        graphics.fillGradientStyle(0x001122, 0x001122, 0x003366, 0x003366, 1);
+        graphics.fillRect(0, 0, 1280, 720);
+        
+        // 添加装饰性元素
+        this.addStars();
+    }
+
+    addStars() {
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * 1280;
+            const y = Math.random() * 720;
+            const size = Math.random() * 2 + 1;
+            
+            const star = this.add.graphics();
+            star.fillStyle(0xffffff, 0.8);
+            star.fillCircle(x, y, size);
+            
+            // 添加闪烁动画
+            this.tweens.add({
+                targets: star,
+                alpha: 0.3,
+                duration: 1000 + Math.random() * 2000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        }
+    }
+
+    createTitle() {
+        const title = this.add.text(640, 80, '选择你的角色', {
+            font: '48px Arial',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        title.setOrigin(0.5);
+        
+        // 添加标题动画
+        this.tweens.add({
+            targets: title,
+            scaleX: 1.1,
+            scaleY: 1.1,
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    createPlayerSelection() {
+        const startX = 200;
+        const spacing = 220;
+        
+        this.playerButtons = [];
+        
+        this.players.forEach((player, index) => {
+            const x = startX + (index * spacing);
+            const y = 300;
+            
+            // 创建玩家卡片
+            const card = this.createPlayerCard(x, y, player, index);
+            this.playerButtons.push(card);
+        });
+        
+        // 默认选择第一个玩家
+        this.selectPlayer(0);
+    }
+
+    createPlayerCard(x, y, player, index) {
+        const card = this.add.container(x, y);
+        
+        // 卡片背景
+        const background = this.add.graphics();
+        background.fillStyle(0x333333, 0.8);
+        background.fillRoundedRect(-80, -100, 160, 200, 10);
+        background.lineStyle(3, 0x666666);
+        background.strokeRoundedRect(-80, -100, 160, 200, 10);
+        card.add(background);
+        
+        // 玩家图片（使用占位符）
+        const playerSprite = this.add.graphics();
+        playerSprite.fillStyle(this.getPlayerColor(player.key));
+        playerSprite.fillCircle(0, -50, 30);
+        playerSprite.lineStyle(2, 0xffffff);
+        playerSprite.strokeCircle(0, -50, 30);
+        card.add(playerSprite);
+        
+        // 玩家名称
+        const nameText = this.add.text(0, -10, player.name, {
+            font: '20px Arial',
+            fill: '#ffffff'
+        });
+        nameText.setOrigin(0.5);
+        card.add(nameText);
+        
+        // 玩家描述
+        const descText = this.add.text(0, 15, player.description, {
+            font: '14px Arial',
+            fill: '#cccccc',
+            wordWrap: { width: 140 }
+        });
+        descText.setOrigin(0.5);
+        card.add(descText);
+        
+        // 玩家属性
+        const statsText = this.add.text(0, 50, this.getPlayerStats(player), {
+            font: '12px Arial',
+            fill: '#ffff00'
+        });
+        statsText.setOrigin(0.5);
+        card.add(statsText);
+        
+        // 选择指示器
+        const selector = this.add.graphics();
+        selector.lineStyle(4, 0x00ff00);
+        selector.strokeRoundedRect(-85, -105, 170, 210, 10);
+        selector.setVisible(false);
+        card.add(selector);
+        
+        // 添加交互
+        card.setInteractive(new Phaser.Geom.Rectangle(-80, -100, 160, 200), Phaser.Geom.Rectangle.Contains);
+        card.on('pointerdown', () => this.selectPlayer(index));
+        card.on('pointerover', () => this.highlightCard(card, true));
+        card.on('pointerout', () => this.highlightCard(card, false));
+        
+        // 保存引用
+        card.background = background;
+        card.selector = selector;
+        card.playerIndex = index;
+        
+        return card;
+    }
+
+    getPlayerColor(key) {
+        const colors = {
+            soldier: 0x8B4513,
+            diver: 0x4169E1,
+            tank: 0x696969,
+            spaceship: 0xC0C0C0
+        };
+        return colors[key] || 0xffffff;
+    }
+
+    getPlayerStats(player) {
+        let stats = `速度: ${player.speed}\n生命: ${player.health}`;
+        if (player.damageMultiplier) {
+            stats += `\n伤害: x${player.damageMultiplier}`;
+        }
+        if (player.initPoints) {
+            stats += `\n积分: ${player.initPoints}`;
+        }
+        return stats;
+    }
+
+    selectPlayer(index) {
+        // 清除之前的选择
+        this.playerButtons.forEach((button, i) => {
+            button.selector.setVisible(i === index);
+        });
+        
+        this.selectedPlayer = this.players[index];
+        console.log('PlayerSelectScene: 选择玩家:', this.selectedPlayer.name);
+        
+        // 更新开始按钮状态
+        this.updateStartButton();
+    }
+
+    highlightCard(card, isHighlighted) {
+        if (isHighlighted) {
+            card.background.clear();
+            card.background.fillStyle(0x444444, 0.9);
+            card.background.fillRoundedRect(-80, -100, 160, 200, 10);
+            card.background.lineStyle(3, 0x888888);
+            card.background.strokeRoundedRect(-80, -100, 160, 200, 10);
+        } else {
+            card.background.clear();
+            card.background.fillStyle(0x333333, 0.8);
+            card.background.fillRoundedRect(-80, -100, 160, 200, 10);
+            card.background.lineStyle(3, 0x666666);
+            card.background.strokeRoundedRect(-80, -100, 160, 200, 10);
+        }
+    }
+
+    createStartButton() {
+        this.startButton = this.add.container(640, 550);
+        
+        // 按钮背景
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(0x00aa00, 0.8);
+        buttonBg.fillRoundedRect(-100, -30, 200, 60, 10);
+        buttonBg.lineStyle(3, 0x00ff00);
+        buttonBg.strokeRoundedRect(-100, -30, 200, 60, 10);
+        this.startButton.add(buttonBg);
+        
+        // 按钮文本
+        this.startButtonText = this.add.text(0, 0, '开始游戏', {
+            font: '24px Arial',
+            fill: '#ffffff'
+        });
+        this.startButtonText.setOrigin(0.5);
+        this.startButton.add(this.startButtonText);
+        
+        // 添加交互
+        this.startButton.setInteractive(new Phaser.Geom.Rectangle(-100, -30, 200, 60), Phaser.Geom.Rectangle.Contains);
+        this.startButton.on('pointerdown', () => this.startGame());
+        this.startButton.on('pointerover', () => this.highlightStartButton(true));
+        this.startButton.on('pointerout', () => this.highlightStartButton(false));
+        
+        // 保存引用
+        this.startButton.background = buttonBg;
+        
+        // 初始状态
+        this.updateStartButton();
+    }
+
+    updateStartButton() {
+        if (this.selectedPlayer) {
+            this.startButtonText.setText('开始游戏');
+            this.startButtonText.setColor('#ffffff');
+            this.startButton.background.clear();
+            this.startButton.background.fillStyle(0x00aa00, 0.8);
+            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
+            this.startButton.background.lineStyle(3, 0x00ff00);
+            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+        } else {
+            this.startButtonText.setText('请选择角色');
+            this.startButtonText.setColor('#888888');
+            this.startButton.background.clear();
+            this.startButton.background.fillStyle(0x666666, 0.8);
+            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
+            this.startButton.background.lineStyle(3, 0x888888);
+            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+        }
+    }
+
+    highlightStartButton(isHighlighted) {
+        if (!this.selectedPlayer) return;
+        
+        if (isHighlighted) {
+            this.startButton.background.clear();
+            this.startButton.background.fillStyle(0x00cc00, 0.9);
+            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
+            this.startButton.background.lineStyle(3, 0x00ff00);
+            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+        } else {
+            this.startButton.background.clear();
+            this.startButton.background.fillStyle(0x00aa00, 0.8);
+            this.startButton.background.fillRoundedRect(-100, -30, 200, 60, 10);
+            this.startButton.background.lineStyle(3, 0x00ff00);
+            this.startButton.background.strokeRoundedRect(-100, -30, 200, 60, 10);
+        }
+    }
+
+    setupInput() {
+        // 键盘控制
+        this.input.keyboard.on('keydown-LEFT', () => {
+            const currentIndex = this.selectedPlayer ? this.players.indexOf(this.selectedPlayer) : 0;
+            const newIndex = (currentIndex - 1 + this.players.length) % this.players.length;
+            this.selectPlayer(newIndex);
+        });
+        
+        this.input.keyboard.on('keydown-RIGHT', () => {
+            const currentIndex = this.selectedPlayer ? this.players.indexOf(this.selectedPlayer) : 0;
+            const newIndex = (currentIndex + 1) % this.players.length;
+            this.selectPlayer(newIndex);
+        });
+        
+        this.input.keyboard.on('keydown-ENTER', () => {
+            if (this.selectedPlayer) {
+                this.startGame();
+            }
+        });
+        
+        this.input.keyboard.on('keydown-SPACE', () => {
+            if (this.selectedPlayer) {
+                this.startGame();
+            }
+        });
+    }
+
+    startGame() {
+        if (!this.selectedPlayer) {
+            console.log('PlayerSelectScene: 未选择玩家，无法开始游戏');
+            return;
+        }
+        
+        console.log('PlayerSelectScene: 开始游戏，选择的玩家:', this.selectedPlayer);
+        
+        // 切换到主游戏场景
+        this.scene.start('MainScene', {
+            player: this.selectedPlayer,
+            level: 0
+        });
     }
 }
 
-// 🆕 导出到全局作用域
-window.PlayerSelectScene = PlayerSelectScene; 
+console.log('✅ PlayerSelectScene.js ES6模块已加载'); 

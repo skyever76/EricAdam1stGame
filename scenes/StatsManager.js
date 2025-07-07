@@ -1,4 +1,6 @@
-window.StatsManager = {
+// scenes/StatsManager.js - ES6模块统计管理器
+
+export const StatsManager = {
     stats: {
         totalKills: 0,
         totalScore: 0,
@@ -60,4 +62,6 @@ window.StatsManager = {
             killDeathRatio: (this.stats.totalKills / Math.max(1, this.stats.totalDeaths)).toFixed(2)
         };
     }
-}; 
+};
+
+console.log('✅ StatsManager.js ES6模块已加载'); 

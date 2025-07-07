@@ -2,87 +2,111 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
-    <title>Phaser 3 射击游戏 - iPad版</title>
-    <!-- 添加 favicon 避免 404 错误 -->
-    <link rel="icon" href="data:,">
-    
-    <!-- Phaser 核心库 -->
-    <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    
-    <!-- 
-      项目脚本加载顺序 (已修正并优化)
-      使用 'defer' 属性确保脚本在DOM解析后、按顺序执行，且不阻塞页面渲染。
-    -->
-
-    <!-- 1. 基础配置类 (无依赖) -->
-    <script defer src="scenes/configs.js"></script>
-    <script defer src="scenes/levels.js"></script>
-    <script defer src="scenes/powerUps.js"></script>
-    <script defer src="scenes/obstacleTypes.js"></script>
-    <script defer src="scenes/advancedScenes.js"></script>
-    <script defer src="scenes/advancedEnemies.js"></script>
-    
-    <!-- 2. 管理器与系统类 (有依赖关系，注意顺序) -->
-    <script defer src="scenes/SaveManager.js"></script>
-    <script defer src="scenes/StatsManager.js"></script>
-    <script defer src="scenes/AchievementManager.js"></script>
-    <script defer src="scenes/AudioManager.js"></script>
-    <script defer src="scenes/PowerUpManager.js"></script>
-    <script defer src="scenes/ObstacleManager.js"></script>
-    <script defer src="scenes/UIManager.js"></script>
-    <script defer src="scenes/BackgroundManager.js"></script>
-    <script defer src="scenes/AdvancedSceneManager.js"></script>
-    <script defer src="scenes/SceneSwitcher.js"></script>
-    <script defer src="scenes/PixelArtSystem.js"></script>
-    <script defer src="scenes/TouchControls.js"></script>
-    
-    <!-- 3. 游戏对象类 (依赖配置和部分管理器) -->
-    <script defer src="scenes/Weapon.js"></script>
-    <script defer src="scenes/Bullet.js"></script>
-    <script defer src="scenes/EnemyClass.js"></script>
-    <script defer src="scenes/EnemyBullet.js"></script>
-    <script defer src="scenes/PowerUp.js"></script>
-    <script defer src="scenes/Obstacle.js"></script>
-    
-    <!-- 4. 场景类 (依赖所有管理器和游戏对象) -->
-    <script defer src="scenes/PreloaderScene.js"></script>
-    <script defer src="scenes/PlayerSelectScene.js"></script>
-    <script defer src="scenes/MainScene.js"></script>
-    
-    <!-- 5. 游戏主入口 (最后加载，启动游戏) -->
-    <script defer src="scenes/game.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Eric Adam 第一游戏 - 横版射击</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <style>
         body {
             margin: 0;
             padding: 0;
             background: #000;
+            font-family: Arial, sans-serif;
             overflow: hidden;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #game-container {
-            width: 100vw;
-            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
-        canvas {
-            touch-action: none;
+        
+        #game-container {
+            position: relative;
+            border: 2px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 24px;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        #loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 移动设备优化 */
+        @media (max-width: 768px) {
+            #game-container {
+                border: none;
+                border-radius: 0;
+            }
+            
+            #loading {
+                font-size: 18px;
+            }
+        }
+        
+        /* 平板设备优化 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #game-container {
+                border-width: 3px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
+    <div id="game-container">
+        <div id="loading">游戏加载中...</div>
+    </div>
+    
+    <!-- Phaser 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    
+    <!-- ES6模块入口 -->
+    <script type="module" src="scenes/game.js"></script>
+    
+    <script>
+        // 隐藏加载提示
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('hidden');
+                }
+            }, 2000);
+        });
+        
+        // 错误处理
+        window.addEventListener('error', (e) => {
+            console.error('游戏加载错误:', e.error);
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = '游戏加载失败，请刷新页面重试';
+                loading.style.color = '#ff0000';
+            }
+        });
+    </script>
 </body>
 </html> 

@@ -1,66 +1,74 @@
-// scenes/Weapon.js - 武器类
+// scenes/Weapon.js - ES6模块武器系统
 
-// 🆕 武器系统类
-class Weapon {
-    constructor(name, damage, fireRate, bulletSpeed, bulletSize, bulletColor, texture, 
-                burstCount = 1, burstDelay = 0, bulletCost = 0, specialEffect = null, 
-                isContinuous = false, duration = 0, config = {}) {
-        this.name = name;
-        this.damage = damage;
-        this.fireRate = fireRate; // 毫秒
-        this.bulletSpeed = bulletSpeed;
-        this.bulletSize = bulletSize;
-        this.bulletColor = bulletColor;
-        this.texture = texture;
-        this.burstCount = burstCount; // 连发数量
-        this.burstDelay = burstDelay; // 连发间隔
-        this.bulletCost = bulletCost; // 每发子弹消耗积分
-        this.specialEffect = specialEffect;
-        this.isContinuous = isContinuous; // 是否持续武器
-        this.duration = duration; // 持续时间
-        this.bulletCount = 0; // 当前子弹数量
-        this.config = config;
+export class Weapon {
+    constructor(scene, config) {
+        this.scene = scene; // 保留对scene的引用可能有用
+        
+        // 1. 直接从配置初始化所有属性
+        this.name = config.name;
+        this.damage = config.damage;
+        this.fireRate = config.fireRate;
+        this.bulletSpeed = config.bulletSpeed;
+        this.bulletSize = config.bulletSize;
+        this.bulletColor = config.bulletColor;
+        this.texture = config.texture; // 子弹的纹理
+        this.burstCount = config.burstCount || 1;
+        this.burstDelay = config.burstDelay || 0;
+        this.bulletCost = config.bulletCost || 0;
+        this.isContinuous = config.isContinuous || false;
+        this.duration = config.duration || 0;
+        
+        // 2. 管理自身的状态 (例如，子弹数量)
+        this.bulletCount = config.initialBullets || 0;
+        
+        // 3. 移除所有与子弹创建、物理和对象池相关的逻辑
+        // 这些逻辑应该在MainScene中处理
     }
 
-    // 检查是否可以射击
-    canFire() {
-        if (this.bulletCost > 0 && this.bulletCount <= 0) {
-            return false;
-        }
-        return true;
+    // 可以保留一些辅助方法，如果需要的话
+    hasAmmo() {
+        if (this.bulletCost === 0) return true; // 无限子弹
+        return this.bulletCount > 0;
     }
 
-    // 消耗子弹
-    consumeBullet() {
+    consumeAmmo() {
         if (this.bulletCost > 0) {
-            this.bulletCount = Math.max(0, this.bulletCount - 1);
+            this.bulletCount--;
         }
     }
-
-    // 添加子弹
-    addBullets(count) {
-        this.bulletCount += count;
-    }
-
-    // 获取子弹数量
-    getBulletCount() {
-        return this.bulletCount;
-    }
-
-    // 获取武器信息
-    getInfo() {
+    
+    // 获取武器配置信息
+    getConfig() {
         return {
             name: this.name,
             damage: this.damage,
             fireRate: this.fireRate,
             bulletSpeed: this.bulletSpeed,
+            bulletSize: this.bulletSize,
+            bulletColor: this.bulletColor,
+            texture: this.texture,
+            burstCount: this.burstCount,
+            burstDelay: this.burstDelay,
             bulletCost: this.bulletCost,
-            bulletCount: this.bulletCount,
             isContinuous: this.isContinuous,
             duration: this.duration
         };
     }
+    
+    // 检查是否可以射击（基于冷却时间）
+    canFire(lastFireTime) {
+        const now = Date.now();
+        return now - lastFireTime >= this.fireRate;
+    }
+    
+    // 获取连发延迟数组
+    getBurstDelays() {
+        const delays = [];
+        for (let i = 0; i < this.burstCount; i++) {
+            delays.push(i * this.burstDelay);
+        }
+        return delays;
+    }
 }
 
-// 将Weapon类暴露到全局
-window.Weapon = Weapon; 
+console.log('✅ Weapon.js ES6模块已加载'); 

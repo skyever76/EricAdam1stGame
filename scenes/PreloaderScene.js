@@ -1,268 +1,222 @@
-class PreloaderScene extends Phaser.Scene {
+// scenes/PreloaderScene.js - ES6模块预加载场景
+
+export class PreloaderScene extends Phaser.Scene {
     constructor() {
         super('PreloaderScene');
     }
 
     preload() {
-        console.log('PreloaderScene: 开始初始化...');
-      
-        // 创建加载进度条UI（纯装饰性）
-        const progressBar = this.add.graphics();
-        const progressBox = this.add.graphics();
-        progressBox.fillStyle(0x222222, 0.8);
-        progressBox.fillRect(540, 320, 200, 50);
-
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-      
-        const loadingText = this.add.text(width / 2, height / 2 - 50, '初始化游戏资源...', {
-            font: '20px Arial',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-
-        const percentText = this.add.text(width / 2, height / 2 - 5, '0%', {
-            font: '18px Arial',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-
-        // 模拟加载进度
-        let progress = 0;
-        const timer = this.time.addEvent({
-            delay: 100,
-            callback: () => {
-                progress += 10;
-                const value = progress / 100;
-              
-                progressBar.clear();
-                progressBar.fillStyle(0xffffff, 1);
-                progressBar.fillRect(550, 330, 180 * value, 30);
-                percentText.setText(Math.round(value * 100) + '%');
-              
-                console.log('PreloaderScene: 初始化进度:', Math.round(value * 100) + '%');
-              
-                if (progress >= 100) {
-                    timer.destroy();
-                  
-                    // 清理UI
-                    progressBar.destroy();
-                    progressBox.destroy();
-                    loadingText.destroy();
-                    percentText.destroy();
-                  
-                    // 创建纹理后切换场景
-                    this.createTexturesAndProceed();
-                }
-            },
-            repeat: 9
-        });
-      
-        console.log('PreloaderScene: 跳过外部资源加载，使用内置纹理生成');
-    }
-
-    createTexturesAndProceed() {
-        console.log('PreloaderScene: 开始创建游戏纹理...');
-      
-        try {
-            // 创建所有需要的纹理
-            this.createAllGameTextures();
-          
-            // 验证纹理创建
-            const textureKeys = this.textures.getTextureKeys();
-            console.log('PreloaderScene: 成功创建纹理:', textureKeys);
-          
-            // 切换到玩家选择场景
-            this.time.delayedCall(500, () => {
-                console.log('PreloaderScene: 切换到PlayerSelectScene');
-                this.scene.start('PlayerSelectScene');
-            });
-          
-        } catch (error) {
-            console.error('PreloaderScene: 纹理创建失败:', error);
-          
-            // 错误处理：显示错误信息
-            this.add.text(640, 360, '纹理创建失败，请刷新页面重试', {
-                font: '24px Arial',
-                fill: '#ff0000'
-            }).setOrigin(0.5);
-        }
-    }
-
-    createAllGameTextures() {
-        // 🔧 修复纹理配置数组 - 调整小尺寸纹理
-        const textureConfigs = [
-            // 基础游戏对象
-            { key: 'player', color: '#00ff00', size: 32, shape: 'circle' },
-            { key: 'enemy', color: '#ff0000', size: 32, shape: 'circle' },
-            { key: 'bullet', color: '#ffff00', size: 8, shape: 'circle' },
-            { key: 'background', color: '#001122', size: 64, shape: 'square' },
+        console.log('PreloaderScene: 开始预加载资源');
         
-            // 玩家角色
-            { key: 'elf', color: '#90EE90', size: 40, shape: 'circle', border: '#ffffff' },
-            { key: 'soldier', color: '#8B4513', size: 40, shape: 'circle', border: '#ffffff' },
-            { key: 'diver', color: '#4169E1', size: 40, shape: 'circle', border: '#ffffff' },
-            { key: 'tank', color: '#696969', size: 40, shape: 'square', border: '#ffffff' },
-            { key: 'spaceship', color: '#C0C0C0', size: 40, shape: 'triangle', border: '#ffffff' },
-          
-            // 🔧 修复粒子效果纹理 - 增加最小尺寸
-            { key: 'shoot', color: '#ffff00', size: 6, shape: 'circle' },     // 从4改为6
-            { key: 'explosion', color: '#ff6600', size: 8, shape: 'circle' }, // 从6改为8
-            { key: 'damage', color: '#ff0000', size: 6, shape: 'circle' },    // 从3改为6
-            { key: 'death', color: '#ff00ff', size: 8, shape: 'circle' },     // 从5改为8
-          
-            // 🆕 敌人子弹纹理
-            { key: 'enemyBullet', color: '#ff0000', size: 8, shape: 'circle' },
-          
-            // 🆕 关卡背景纹理（占位符）
-            { key: 'city', color: '#e8f4f8', size: 64, shape: 'square' },
-            { key: 'desert', color: '#f4e4bc', size: 64, shape: 'square' },
-            { key: 'forest', color: '#d4f0d4', size: 64, shape: 'square' },
-            { key: 'ocean', color: '#e6f3ff', size: 64, shape: 'square' },
-            { key: 'space', color: '#f0f0f0', size: 64, shape: 'square' },
-          
-            // 🆕 敌人纹理
-            { key: 'thug', color: '#8B0000', size: 32, shape: 'circle', border: '#ffffff' },
-            { key: 'scorpion', color: '#DAA520', size: 32, shape: 'triangle', border: '#000000' },
-            { key: 'wolf', color: '#696969', size: 32, shape: 'circle', border: '#000000' },
-            { key: 'archer', color: '#8B4513', size: 32, shape: 'circle', border: '#ffffff' },
-            { key: 'squid', color: '#4B0082', size: 32, shape: 'circle', border: '#ffffff' },
-            { key: 'eel', color: '#00CED1', size: 32, shape: 'circle', border: '#000000' },
-            { key: 'pirate', color: '#8B4513', size: 32, shape: 'square', border: '#ffffff' },
-            { key: 'alien', color: '#00FF00', size: 32, shape: 'triangle', border: '#000000' },
-            { key: 'robot', color: '#C0C0C0', size: 32, shape: 'square', border: '#000000' },
-            { key: 'ufo', color: '#9370DB', size: 32, shape: 'circle', border: '#ffffff' },
-            { key: 'boss', color: '#FF1493', size: 64, shape: 'square', border: '#ffffff' }
-        ];
-
-        // 创建每个纹理
-        textureConfigs.forEach(config => {
-            this.createSingleTexture(config);
-        });
-    }
-
-    createSingleTexture(config) {
-        const { key, color, size, shape = 'circle', border = null } = config;
-    
-        try {
-            // 🔧 确保尺寸不小于最小值
-            const minSize = 6; // 最小尺寸6像素
-            const actualSize = Math.max(size, minSize);
-          
-            if (actualSize !== size) {
-                console.log(`PreloaderScene: 纹理 ${key} 尺寸从 ${size} 调整为 ${actualSize}`);
-            }
-          
-            // 创建canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = actualSize;
-            canvas.height = actualSize;
-            const ctx = canvas.getContext('2d');
+        // 创建加载进度条
+        this.createLoadingBar();
         
-            // 清除canvas
-            ctx.clearRect(0, 0, actualSize, actualSize);
+        // 加载图片资源
+        this.loadImages();
         
-            // 设置主要颜色
-            ctx.fillStyle = color;
+        // 加载音频资源
+        this.loadAudio();
         
-            // 🔧 修复半径计算 - 确保半径不为负数
-            const padding = 2; // 边距
-            const maxRadius = (actualSize / 2) - padding;
-            const radius = Math.max(1, maxRadius); // 确保半径至少为1
-          
-            // 根据形状绘制
-            switch (shape) {
-                case 'circle':
-                    ctx.beginPath();
-                    ctx.arc(actualSize/2, actualSize/2, radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                
-                case 'square':
-                    const squareSize = actualSize - (padding * 2);
-                    ctx.fillRect(padding, padding, squareSize, squareSize);
-                    break;
-                
-                case 'triangle':
-                    ctx.beginPath();
-                    ctx.moveTo(actualSize/2, padding);
-                    ctx.lineTo(actualSize - padding, actualSize - padding);
-                    ctx.lineTo(padding, actualSize - padding);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-            }
-        
-            // 🔧 修复边框绘制 - 确保边框半径不为负数
-            if (border) {
-                ctx.strokeStyle = border;
-                ctx.lineWidth = Math.min(2, actualSize / 4); // 动态线宽
-            
-                switch (shape) {
-                    case 'circle':
-                        ctx.beginPath();
-                        ctx.arc(actualSize/2, actualSize/2, radius, 0, Math.PI * 2);
-                        ctx.stroke();
-                        break;
-                    
-                    case 'square':
-                        const squareSize = actualSize - (padding * 2);
-                        ctx.strokeRect(padding, padding, squareSize, squareSize);
-                        break;
-                    
-                    case 'triangle':
-                        ctx.beginPath();
-                        ctx.moveTo(actualSize/2, padding);
-                        ctx.lineTo(actualSize - padding, actualSize - padding);
-                        ctx.lineTo(padding, actualSize - padding);
-                        ctx.closePath();
-                        ctx.stroke();
-                        break;
-                }
-            }
-        
-            // 添加到Phaser纹理管理器
-            this.textures.addCanvas(key, canvas);
-        
-            console.log(`PreloaderScene: 成功创建纹理 ${key} (${actualSize}x${actualSize}, ${color})`);
-        
-        } catch (error) {
-            console.error(`PreloaderScene: 创建纹理 ${key} 失败:`, error);
-        
-            // 创建备用纯色方块
-            this.createFallbackTexture(key, Math.max(size, 6));
-        }
-    }
-
-    // 🔧 改进备用纹理创建
-    createFallbackTexture(key, size) {
-        try {
-            const actualSize = Math.max(size, 6); // 确保最小尺寸
-            const canvas = document.createElement('canvas');
-            canvas.width = actualSize;
-            canvas.height = actualSize;
-            const ctx = canvas.getContext('2d');
-        
-            // 创建简单的白色方块
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, actualSize, actualSize);
-          
-            // 添加简单的边框以便识别
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(0, 0, actualSize, actualSize);
-        
-            this.textures.addCanvas(key, canvas);
-            console.log(`PreloaderScene: 创建备用纹理 ${key} (${actualSize}x${actualSize})`);
-        
-        } catch (error) {
-            console.error(`PreloaderScene: 备用纹理创建也失败 ${key}:`, error);
-        }
+        // 加载字体资源
+        this.loadFonts();
     }
 
     create() {
-        console.log('PreloaderScene: create() 执行完成');
-        // 所有逻辑都在 preload() 中处理了
+        console.log('PreloaderScene: 预加载完成，切换到玩家选择场景');
+        
+        // 显示加载完成信息
+        this.showLoadingComplete();
+        
+        // 延迟切换到玩家选择场景
+        this.time.delayedCall(1500, () => {
+            this.scene.start('PlayerSelectScene');
+        });
+    }
+
+    createLoadingBar() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // 创建进度条背景
+        const progressBox = this.add.graphics();
+        progressBox.fillStyle(0x222222, 0.8);
+        progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+        
+        // 创建进度条边框
+        const progressBorder = this.add.graphics();
+        progressBorder.lineStyle(3, 0xffffff);
+        progressBorder.strokeRect(width / 2 - 160, height / 2 - 25, 320, 50);
+        
+        // 创建进度条
+        const progressBar = this.add.graphics();
+        
+        // 创建加载文本
+        const loadingText = this.add.text(width / 2, height / 2 - 50, '游戏资源加载中...', {
+            font: '20px Arial',
+            fill: '#ffffff'
+        });
+        loadingText.setOrigin(0.5);
+        
+        const percentText = this.add.text(width / 2, height / 2, '0%', {
+            font: '18px Arial',
+            fill: '#ffffff'
+        });
+        percentText.setOrigin(0.5);
+        
+        const assetText = this.add.text(width / 2, height / 2 + 50, '', {
+            font: '14px Arial',
+            fill: '#ffffff'
+        });
+        assetText.setOrigin(0.5);
+        
+        // 监听加载进度
+        this.load.on('progress', (value) => {
+            progressBar.clear();
+            progressBar.fillStyle(0x00ff00);
+            progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
+            percentText.setText(Math.round(value * 100) + '%');
+        });
+        
+        this.load.on('fileprogress', (file) => {
+            assetText.setText('加载中: ' + file.key);
+        });
+        
+        this.load.on('complete', () => {
+            progressBar.clear();
+            progressBar.fillStyle(0x00ff00);
+            progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300, 30);
+            percentText.setText('100%');
+            assetText.setText('加载完成！');
+        });
+        
+        // 保存引用以便清理
+        this.progressElements = {
+            progressBox,
+            progressBorder,
+            progressBar,
+            loadingText,
+            percentText,
+            assetText
+        };
+    }
+
+    loadImages() {
+        // 加载角色图片
+        this.load.image('soldier', 'images/characters/soldier.png');
+        this.load.image('diver', 'images/characters/diver.png');
+        this.load.image('tank', 'images/characters/tank.png');
+        this.load.image('spaceship', 'images/characters/spaceship.png');
+        this.load.image('elf', 'images/characters/elf.png');
+        
+        // 加载敌人图片
+        this.load.image('alien', 'images/enemies/alien.png');
+        this.load.image('robot', 'images/enemies/robot.png');
+        this.load.image('scorpion', 'images/enemies/scorpion.png');
+        this.load.image('shark', 'images/enemies/shark.png');
+        this.load.image('wolf', 'images/enemies/wolf.png');
+        
+        // 加载武器图片
+        this.load.image('ak47', 'images/ak47.png');
+        this.load.image('pistol', 'images/pistol.png');
+        this.load.image('gatling', 'images/gatling.png');
+        this.load.image('tesla', 'images/tesla.png');
+        this.load.image('missile', 'images/missile.png');
+        this.load.image('nuke', 'images/nuke.png');
+        
+        // 加载道具图片
+        this.load.image('health', 'images/health.png');
+        this.load.image('power', 'images/power.png');
+        
+        // 加载背景图片
+        this.load.image('background', 'images/background.png');
+        this.load.image('city', 'images/backgrounds/city.png');
+        this.load.image('desert', 'images/backgrounds/desert.png');
+        this.load.image('forest', 'images/backgrounds/forest.png');
+        this.load.image('ocean', 'images/backgrounds/ocean.png');
+        this.load.image('space', 'images/backgrounds/space.png');
+        
+        // 加载BOSS图片
+        this.load.image('cosmic-lord', 'images/bosses/cosmic-lord.png');
+        this.load.image('deep-sea-lord', 'images/bosses/deep-sea-lord.png');
+        this.load.image('desert-king', 'images/bosses/desert-king.png');
+        this.load.image('forest-king', 'images/bosses/forest-king.png');
+        this.load.image('mecha-beast', 'images/bosses/mecha-beast.png');
+        
+        // 加载障碍物图片
+        this.load.image('asteroid', 'images/obstacles/asteroid.png');
+        this.load.image('building', 'images/obstacles/building.png');
+        this.load.image('coral', 'images/obstacles/coral.png');
+        this.load.image('rock', 'images/obstacles/rock.png');
+        this.load.image('tree', 'images/obstacles/tree.png');
+        
+        // 加载粒子效果
+        this.load.image('particle', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+        
+        // 创建子弹占位符纹理
+        this.createBulletDummyTexture();
+    }
+
+    loadAudio() {
+        // 加载音效文件
+        this.load.audio('shoot', 'audio/shoot.mp3');
+        this.load.audio('hit', 'audio/hit.mp3');
+        this.load.audio('explosion', 'audio/explosion.mp3');
+        this.load.audio('damage', 'audio/damage.mp3');
+        this.load.audio('death', 'audio/death.mp3');
+        this.load.audio('powerup', 'audio/powerup.mp3');
+        this.load.audio('game_over', 'audio/game_over.mp3');
+        
+        // 加载背景音乐
+        this.load.audio('bgm_forest', 'audio/bgm_forest.mp3');
+        this.load.audio('bgm_city', 'audio/bgm_city.mp3');
+        this.load.audio('bgm_ocean', 'audio/bgm_ocean.mp3');
+        this.load.audio('bgm_desert', 'audio/bgm_desert.mp3');
+        this.load.audio('bgm_space', 'audio/bgm_space.mp3');
+    }
+
+    loadFonts() {
+        // 加载自定义字体（如果有的话）
+        // this.load.webfont('gameFont', 'fonts/game-font.woff2');
+    }
+
+    createBulletDummyTexture() {
+        // 创建一个1x1的透明像素作为子弹占位符
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0x000000, 0); // 透明
+        graphics.fillRect(0, 0, 1, 1);
+        graphics.generateTexture('bullet_dummy', 1, 1);
+        graphics.destroy();
+    }
+
+    showLoadingComplete() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // 显示加载完成文本
+        const completeText = this.add.text(width / 2, height / 2 + 100, '加载完成！准备开始游戏...', {
+            font: '24px Arial',
+            fill: '#00ff00'
+        });
+        completeText.setOrigin(0.5);
+        
+        // 添加淡入效果
+        completeText.setAlpha(0);
+        this.tweens.add({
+            targets: completeText,
+            alpha: 1,
+            duration: 1000,
+            ease: 'Power2'
+        });
+        
+        // 清理进度条元素
+        if (this.progressElements) {
+            Object.values(this.progressElements).forEach(element => {
+                if (element && element.destroy) {
+                    element.destroy();
+                }
+            });
+        }
     }
 }
 
-// 🆕 导出到全局作用域
-window.PreloaderScene = PreloaderScene;
+console.log('✅ PreloaderScene.js ES6模块已加载');
