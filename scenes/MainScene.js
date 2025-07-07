@@ -2630,10 +2630,9 @@ export class MainScene extends Phaser.Scene {
             }
         });
         
-        // 🆕 生成BOSS在游戏画面最右边
-        const camera = this.cameras.main;
-        const screenWidth = camera.width; // 1280
-        const spawnX = camera.scrollX + screenWidth + 100; // BOSS在屏幕右侧100像素处生成
+        // 🆕 生成BOSS在关卡地图的最后最右边
+        const worldWidth = 4000; // 关卡地图总宽度
+        const spawnX = worldWidth - 50; // BOSS在关卡地图最右边，距离右边界50像素
         const y = Phaser.Math.Between(200, 520); // BOSS在屏幕中央区域生成
         
         const boss = this.enemies.get();
