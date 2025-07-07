@@ -19,7 +19,6 @@ export const SaveManager = {
         };
       
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameData));
-        this.showMessage('游戏数据已保存！', 'success');
     },
 
     // 加载所有游戏数据
@@ -30,10 +29,9 @@ export const SaveManager = {
                 const gameData = JSON.parse(saved);
                 StatsManager.stats = {...StatsManager.stats, ...gameData.stats};
                 AchievementManager.achievements = {...AchievementManager.achievements, ...gameData.achievements};
-                this.showMessage('游戏数据已加载！', 'success');
                 return true;
             } catch (e) {
-                this.showMessage('数据加载失败！', 'error');
+                console.error('数据加载失败:', e);
                 return false;
             }
         }
