@@ -1,118 +1,10 @@
-// scenes/MainScene.js - 关卡系统集成
+// scenes/MainScene.js - 横版卷轴关卡系统
 
-// 🆕 使用全局变量，因为文件已通过script标签加载
-const Enemy = window.Enemy;
-const EnemyBullet = window.EnemyBullet;
+// 🔧 使用全局类，避免重复声明
+// Enemy 和 EnemyBullet 类已在 EnemyClass.js 和 EnemyBullet.js 中定义
 
-// 🆕 武器系统类
-class Weapon {
-    constructor(name, damage, fireRate, bulletSpeed, bulletSize, bulletColor, texture, 
-                burstCount = 1, burstDelay = 0, bulletCost = 0, specialEffect = null, 
-                isContinuous = false, duration = 0, config = {}) {
-        this.name = name;
-        this.damage = damage;
-        this.fireRate = fireRate; // 毫秒
-        this.bulletSpeed = bulletSpeed;
-        this.bulletSize = bulletSize;
-        this.bulletColor = bulletColor;
-        this.texture = texture;
-        this.burstCount = burstCount; // 连发数量
-        this.burstDelay = burstDelay; // 连发间隔
-        this.bulletCost = bulletCost; // 每发子弹消耗积分
-        this.specialEffect = specialEffect;
-        this.isContinuous = isContinuous; // 是否持续武器
-        this.duration = duration; // 持续时间
-        this.bulletCount = 0; // 当前子弹数量
-        this.config = config;
-    }
-}
-
-// 🆕 子弹类，支持不同武器类型
-class Bullet extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y) {
-        super(scene, x, y, 'bullet');
-        this.weaponType = null;
-        this.damage = 10;
-    }
-
-    fire(x, y, weapon) {
-        this.setActive(true).setVisible(true);
-        this.body.reset(x, y);
-        this.weaponType = weapon.name;
-        this.damage = weapon.damage;
-
-        // 计算射击角度（朝向鼠标位置）
-        const angle = Phaser.Math.Angle.Between(
-            x, y,
-            this.scene.input.activePointer.worldX,
-            this.scene.input.activePointer.worldY
-        );
-
-        // 设置速度和大小
-        this.scene.physics.velocityFromRotation(
-            angle,
-            weapon.bulletSpeed,
-            this.body.velocity
-        );
-      
-        this.setDisplaySize(weapon.bulletSize.width, weapon.bulletSize.height);
-        this.setTint(weapon.bulletColor);
-        
-        // 🆕 声波枪特殊旋转处理
-        if (weapon.name === '声波枪') {
-            this.setRotation(angle + Math.PI / 2);
-        }
-
-        // 🆕 特殊武器效果
-        if (weapon.specialEffect) {
-            weapon.specialEffect(this, x, y);
-        }
-
-        // 自动销毁
-        this.scene.time.delayedCall(3000, () => {
-            if (this.active) this.destroy();
-        }, null, this);
-    }
-
-    // 销毁越界子弹
-    preUpdate() {
-        super.preUpdate();
-        
-        // 检查是否飞出边界
-        const worldView = this.scene.cameras.main.worldView;
-        const isOutOfBounds = !worldView.contains(this.x, this.y);
-        
-        if (isOutOfBounds) {
-            console.log(`子弹越界检测：${this.weaponType} 在位置 (${this.x}, ${this.y})，世界视图: (${worldView.x}, ${worldView.y}, ${worldView.width}, ${worldView.height})`);
-            
-            // 🆕 导弹和核弹在边界爆炸
-            if (this.weaponType === '导弹' || this.weaponType === '核弹') {
-                this.explodeAtBoundary();
-            } else {
-                console.log(`普通子弹越界，直接销毁`);
-                this.destroy();
-            }
-        }
-    }
-    
-    // 🆕 在边界爆炸
-    explodeAtBoundary() {
-        console.log(`边界爆炸触发：${this.weaponType} 在位置 (${this.x}, ${this.y})`);
-        
-        if (this.weaponType === '导弹') {
-            this.scene.executeMissileExplosion(this, { x: this.x, y: this.y });
-        } else if (this.weaponType === '核弹') {
-            this.scene.executeNuclearStrike(this, { x: this.x, y: this.y });
-        }
-        
-        // 延迟销毁子弹，确保爆炸效果完成
-        this.scene.time.delayedCall(100, () => {
-            if (this.active) {
-                this.destroy();
-            }
-        });
-    }
-}
+// 🔧 使用全局类，避免重复声明
+// Weapon 和 Bullet 类已在 Weapon.js 和 Bullet.js 中定义
 
 class MainScene extends Phaser.Scene {
     constructor() {
@@ -128,7 +20,12 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        console.log('MainScene: 创建场景开始');
+        console.log('MainScene: 创建横版卷轴场景开始');
+        
+        // 🔧 清理可能存在的旧事件监听器（防止重复添加）
+        this.input.keyboard.removeAllListeners();
+        this.events.off('enemyDied');
+        this.events.off('enemyEscaped');
       
         // 📊 初始化统计系统
         if (window.StatsManager) {
@@ -164,14 +61,17 @@ class MainScene extends Phaser.Scene {
         // 初始化血量系统
         this.initHealthSystem();
   
-        // 🆕 创建关卡背景
-        this.createLevelBackground();
+        // 🎨 初始化背景管理器
+        this.backgroundManager = new BackgroundManager(this);
+        this.backgroundManager.createLevelBackground();
   
         // 🆕 横版卷轴：设置扩展的世界边界
-        this.physics.world.setBounds(0, 0, 4000, 720);
+        console.log(`🌍 设置横版卷轴世界边界: ${GAME_CONFIG.WORLD_WIDTH}x${GAME_CONFIG.WORLD_HEIGHT}`);
+        this.physics.world.setBounds(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
         
         // 🆕 横版卷轴：设置摄像机边界和跟随系统
-        this.cameras.main.setBounds(0, 0, 4000, 720);
+        this.cameras.main.setBounds(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
+        console.log('📹 摄像机边界设置完成');
   
         // 🆕 创建关卡对应的玩家
         this.createLevelPlayer();
@@ -183,13 +83,13 @@ class MainScene extends Phaser.Scene {
         });
   
         this.enemies = this.physics.add.group({
-            classType: Enemy,
+            classType: window.Enemy, // 🔧 使用 window.Enemy
             maxSize: 20
         });
       
         // 🆕 敌人子弹组
         this.enemyBullets = this.physics.add.group({
-            classType: EnemyBullet,
+            classType: window.EnemyBullet, // 🔧 使用 window.EnemyBullet
             maxSize: 30
         });
       
@@ -251,8 +151,9 @@ class MainScene extends Phaser.Scene {
             }
         });
   
-        // 创建UI
-        this.createHUD();
+        // 📊 初始化UI管理器
+        this.uiManager = new UIManager(this);
+        this.uiManager.createHUD();
   
         // 🔧 添加敌人死亡事件监听器
         this.events.on('enemyDied', this.handleEnemyDeath, this);
@@ -267,12 +168,12 @@ class MainScene extends Phaser.Scene {
         });
 
         // 显示版本信息
-        this.add.text(1200, 700, 'v4.0-LevelSystem', { 
+        this.add.text(1200, 700, 'v4.1-SideScroll', { 
             font: '14px Arial', 
             fill: '#666666' 
-        }).setOrigin(1);
+        }).setOrigin(1).setScrollFactor(0); // 🆕 固定显示
     
-        console.log('MainScene: 场景创建完成');
+        console.log('MainScene: 横版卷轴场景创建完成');
 
         // 设置初始积分为5000
         this.score = 5000;
@@ -289,97 +190,128 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 初始化武器系统
     initWeaponSystem() {
-        // 射击冷却时间初始化
         this.lastShootTime = 0;
         
-        // 定义6种武器及其特性（调整颜色以适应偏淡背景）
+        // 🔧 使用配置文件创建武器
         this.weapons = [
-            // AK47 - 射速快，一次连续三发 (免费无限子弹)
-            new Weapon('AK47', 15, 200, 600, {width: 10, height: 5}, 0xcc6600, 'ak47', 
-                3, 50, 0), // 深橙色，3发连射，50ms间隔，免费
-            
-            // 沙漠之鹰 - 射速快，伤害高，一发 (免费无限子弹)
-            new Weapon('沙漠之鹰', 60, 300, 800, {width: 12, height: 8}, 0xcc3300, 'pistol', 
-                1, 0, 0), // 深红色，单发，免费
-            
-            // 加特林 - 射速极快，同时8发扇形散弹，每次5秒冷却 (每次射击20积分)
-            new Weapon('加特林', 12, 100, 700, {width: 8, height: 4}, 0x990000, 'gatling', 
-                8, 0, 20), // 深红色，8发同时发射，无间隔，每次射击20积分
-            
-            // 声波枪 - 射速快，伤害高，声波持续2秒 (每发10积分)
-            new Weapon('声波枪', 60, 150, 900, {width: 150, height: 4}, 0x0066cc, 'tesla', 
-                1, 0, 10, 
-                (bullet, x, y) => {
-                    bullet.scene.tweens.add({
-                        targets: bullet,
-                        alpha: 0.7,
-                        duration: 200,
-                        yoyo: true,
-                        repeat: -1
-                    });
-                }, true, 2000),
-            
-            // 导弹 - 射速慢，爆炸范围大 (每发20积分)
-            new Weapon('导弹', 300, 1000, 400, {width: 15, height: 10}, 0x006600, 'missile', 
-                1, 0, 20, 
-                (bullet, x, y) => {
-                    bullet.scene.tweens.add({
-                        targets: bullet,
-                        scaleX: 1.2,
-                        scaleY: 1.2,
-                        duration: 100,
-                        yoyo: true,
-                        repeat: -1
-                    });
-                }, false, 0, { damageRadius: 200 }),
-            
-            // 核弹 - 追踪型全屏武器 (每发50积分)
-            new Weapon('核弹', 999, 1000, 300, {width: 20, height: 15}, 0x660066, 'nuke', 
-                1, 0, 50,
-                (bullet, x, y) => {
-                    bullet.scene.tweens.add({
-                        targets: bullet,
-                        alpha: 0.5,
-                        duration: 200,
-                        yoyo: true,
-                        repeat: -1
-                    });
-                }, false, 0, { 
-                    damageRadius: 400,  // 核弹爆炸半径
-                    isHoming: true      // 追踪功能
-                })
+            new Weapon(
+                WEAPON_CONFIGS.AK47.name,
+                WEAPON_CONFIGS.AK47.damage,
+                WEAPON_CONFIGS.AK47.fireRate,
+                WEAPON_CONFIGS.AK47.bulletSpeed,
+                WEAPON_CONFIGS.AK47.bulletSize,
+                WEAPON_CONFIGS.AK47.bulletColor,
+                WEAPON_CONFIGS.AK47.texture,
+                WEAPON_CONFIGS.AK47.burstCount,
+                WEAPON_CONFIGS.AK47.burstDelay,
+                WEAPON_CONFIGS.AK47.bulletCost,
+                WEAPON_CONFIGS.AK47.specialEffect,
+                WEAPON_CONFIGS.AK47.isContinuous,
+                WEAPON_CONFIGS.AK47.duration,
+                WEAPON_CONFIGS.AK47.config
+            ),
+            new Weapon(
+                WEAPON_CONFIGS.DESERT_EAGLE.name,
+                WEAPON_CONFIGS.DESERT_EAGLE.damage,
+                WEAPON_CONFIGS.DESERT_EAGLE.fireRate,
+                WEAPON_CONFIGS.DESERT_EAGLE.bulletSpeed,
+                WEAPON_CONFIGS.DESERT_EAGLE.bulletSize,
+                WEAPON_CONFIGS.DESERT_EAGLE.bulletColor,
+                WEAPON_CONFIGS.DESERT_EAGLE.texture,
+                WEAPON_CONFIGS.DESERT_EAGLE.burstCount,
+                WEAPON_CONFIGS.DESERT_EAGLE.burstDelay,
+                WEAPON_CONFIGS.DESERT_EAGLE.bulletCost,
+                WEAPON_CONFIGS.DESERT_EAGLE.specialEffect,
+                WEAPON_CONFIGS.DESERT_EAGLE.isContinuous,
+                WEAPON_CONFIGS.DESERT_EAGLE.duration,
+                WEAPON_CONFIGS.DESERT_EAGLE.config
+            ),
+            new Weapon(
+                WEAPON_CONFIGS.GATLING.name,
+                WEAPON_CONFIGS.GATLING.damage,
+                WEAPON_CONFIGS.GATLING.fireRate,
+                WEAPON_CONFIGS.GATLING.bulletSpeed,
+                WEAPON_CONFIGS.GATLING.bulletSize,
+                WEAPON_CONFIGS.GATLING.bulletColor,
+                WEAPON_CONFIGS.GATLING.texture,
+                WEAPON_CONFIGS.GATLING.burstCount,
+                WEAPON_CONFIGS.GATLING.burstDelay,
+                WEAPON_CONFIGS.GATLING.bulletCost,
+                WEAPON_CONFIGS.GATLING.specialEffect,
+                WEAPON_CONFIGS.GATLING.isContinuous,
+                WEAPON_CONFIGS.GATLING.duration,
+                WEAPON_CONFIGS.GATLING.config
+            ),
+            new Weapon(
+                WEAPON_CONFIGS.SONIC_GUN.name,
+                WEAPON_CONFIGS.SONIC_GUN.damage,
+                WEAPON_CONFIGS.SONIC_GUN.fireRate,
+                WEAPON_CONFIGS.SONIC_GUN.bulletSpeed,
+                WEAPON_CONFIGS.SONIC_GUN.bulletSize,
+                WEAPON_CONFIGS.SONIC_GUN.bulletColor,
+                WEAPON_CONFIGS.SONIC_GUN.texture,
+                WEAPON_CONFIGS.SONIC_GUN.burstCount,
+                WEAPON_CONFIGS.SONIC_GUN.burstDelay,
+                WEAPON_CONFIGS.SONIC_GUN.bulletCost,
+                WEAPON_CONFIGS.SONIC_GUN.specialEffect,
+                WEAPON_CONFIGS.SONIC_GUN.isContinuous,
+                WEAPON_CONFIGS.SONIC_GUN.duration,
+                WEAPON_CONFIGS.SONIC_GUN.config
+            ),
+            new Weapon(
+                WEAPON_CONFIGS.MISSILE.name,
+                WEAPON_CONFIGS.MISSILE.damage,
+                WEAPON_CONFIGS.MISSILE.fireRate,
+                WEAPON_CONFIGS.MISSILE.bulletSpeed,
+                WEAPON_CONFIGS.MISSILE.bulletSize,
+                WEAPON_CONFIGS.MISSILE.bulletColor,
+                WEAPON_CONFIGS.MISSILE.texture,
+                WEAPON_CONFIGS.MISSILE.burstCount,
+                WEAPON_CONFIGS.MISSILE.burstDelay,
+                WEAPON_CONFIGS.MISSILE.bulletCost,
+                WEAPON_CONFIGS.MISSILE.specialEffect,
+                WEAPON_CONFIGS.MISSILE.isContinuous,
+                WEAPON_CONFIGS.MISSILE.duration,
+                WEAPON_CONFIGS.MISSILE.config
+            ),
+            new Weapon(
+                WEAPON_CONFIGS.NUKE.name,
+                WEAPON_CONFIGS.NUKE.damage,
+                WEAPON_CONFIGS.NUKE.fireRate,
+                WEAPON_CONFIGS.NUKE.bulletSpeed,
+                WEAPON_CONFIGS.NUKE.bulletSize,
+                WEAPON_CONFIGS.NUKE.bulletColor,
+                WEAPON_CONFIGS.NUKE.texture,
+                WEAPON_CONFIGS.NUKE.burstCount,
+                WEAPON_CONFIGS.NUKE.burstDelay,
+                WEAPON_CONFIGS.NUKE.bulletCost,
+                WEAPON_CONFIGS.NUKE.specialEffect,
+                WEAPON_CONFIGS.NUKE.isContinuous,
+                WEAPON_CONFIGS.NUKE.duration,
+                WEAPON_CONFIGS.NUKE.config
+            )
         ];
         
-        // 🆕 武器冷却时间
-        this.weaponCooldowns = [0, 0, 0, 0, 0, 0]; // 每种武器的冷却时间
-        
-        // 当前武器索引
+        this.weaponCooldowns = [0, 0, 0, 0, 0, 0];
         this.currentWeaponIndex = 0;
         this.currentWeapon = this.weapons[0];
-        
-        console.log('MainScene: 武器系统初始化完成，当前武器:', this.currentWeapon.name);
     }
     
-    // 🆕 切换武器
     switchWeapon(index) {
         if (this.isGameOver) return;
         
         if (index >= 0 && index < this.weapons.length) {
             const targetWeapon = this.weapons[index];
             
-            // 🆕 检查是否需要购买子弹
+            // 检查是否需要购买子弹
             if (targetWeapon.bulletCost > 0 && targetWeapon.bulletCount <= 0) {
                 const costFor5Bullets = targetWeapon.bulletCost * 5;
                 
-                // 检查积分是否足够购买5发子弹
                 if (this.score >= costFor5Bullets) {
-                    // 自动购买5发子弹
                     this.score -= costFor5Bullets;
                     targetWeapon.bulletCount = 5;
-                    console.log(`MainScene: 自动购买${targetWeapon.name}子弹5发，消耗${costFor5Bullets}积分`);
                     this.showBulletPurchaseMessage(targetWeapon.name, 5, costFor5Bullets);
                 } else {
-                    // 积分不足，切换失败
                     this.showInsufficientScoreForBulletsMessage(targetWeapon.name, costFor5Bullets);
                     return;
                 }
@@ -387,19 +319,15 @@ class MainScene extends Phaser.Scene {
             
             this.currentWeaponIndex = index;
             this.currentWeapon = targetWeapon;
-            console.log(`MainScene: 切换到武器: ${this.currentWeapon.name}，剩余子弹: ${this.currentWeapon.bulletCount}`);
             
-            // 🆕 如果是触摸控制，更新UI高亮
             if (this.touchControls && this.touchControls.isMobile) {
                 this.touchControls.highlightWeaponButton(index);
             }
             
-            // 显示武器切换提示
             this.showWeaponSwitchMessage();
         }
     }
     
-    // 🆕 显示子弹购买提示
     showBulletPurchaseMessage(weaponName, bulletCount, cost) {
         if (this.weaponSwitchText) {
             this.weaponSwitchText.destroy();
@@ -410,7 +338,7 @@ class MainScene extends Phaser.Scene {
             fill: '#00ff00',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         this.time.delayedCall(2000, () => {
             if (this.weaponSwitchText) {
@@ -420,7 +348,6 @@ class MainScene extends Phaser.Scene {
         }, null, this);
     }
     
-    // 🆕 显示积分不足购买子弹提示
     showInsufficientScoreForBulletsMessage(weaponName, requiredScore) {
         if (this.weaponSwitchText) {
             this.weaponSwitchText.destroy();
@@ -431,7 +358,7 @@ class MainScene extends Phaser.Scene {
             fill: '#ff0000',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         this.time.delayedCall(2000, () => {
             if (this.weaponSwitchText) {
@@ -443,9 +370,7 @@ class MainScene extends Phaser.Scene {
     
 
     
-    // 🆕 显示武器切换提示
     showWeaponSwitchMessage() {
-        // 移除之前的提示
         if (this.weaponSwitchText) {
             this.weaponSwitchText.destroy();
         }
@@ -455,9 +380,8 @@ class MainScene extends Phaser.Scene {
             fill: '#ffffff',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
-        // 2秒后自动消失
         this.time.delayedCall(2000, () => {
             if (this.weaponSwitchText) {
                 this.weaponSwitchText.destroy();
@@ -468,16 +392,11 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 初始化血量系统
     initHealthSystem() {
-        // 设置最大血量和当前血量
-        this.maxHealth = this.selectedPlayer ? this.selectedPlayer.health : 100;
+        this.maxHealth = this.selectedPlayer ? this.selectedPlayer.health : GAME_CONFIG.MAX_HEALTH;
         this.currentHealth = this.maxHealth;
-      
-        // 每个敌人到达左边界扣除的血量
         this.damagePerEnemyEscape = 10;
         this.collisionDamage = 20;
         this.invincibilityTime = 500;
-      
-        console.log(`MainScene: 血量系统初始化 - 最大血量: ${this.maxHealth}, 当前血量: ${this.currentHealth}`);
     }
 
     createBackground() {
@@ -500,8 +419,8 @@ class MainScene extends Phaser.Scene {
         let playerTexture = 'player'; // 默认
       
         // 预设玩家属性
-        this.playerSpeed = 400;
-        this.playerSize = 40;
+        this.playerSpeed = GAME_CONFIG.PLAYER_SPEED;
+        this.playerSize = GAME_CONFIG.PLAYER_SIZE;
       
         if (this.selectedPlayer && this.textures.exists(this.selectedPlayer.key)) {
             playerTexture = this.selectedPlayer.key;
@@ -520,444 +439,6 @@ class MainScene extends Phaser.Scene {
         this.player.isInvincible = false;
     
         console.log('MainScene: 玩家创建完成，速度:', this.playerSpeed);
-    }
-
-    createHUD() {
-        console.log('MainScene: 创建游戏HUD');
-      
-        // 游戏状态初始化
-        this.score = (this.selectedPlayer && this.selectedPlayer.initPoints) ? this.selectedPlayer.initPoints : 0;
-        this.level = 1;
-      
-        // 🆕 统一的HUD文本样式（与右上角保持一致）
-        const hudStyle = {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#000000',
-            padding: { x: 8, y: 4 }
-        };
-      
-        // 分数显示
-        this.scoreText = this.add.text(20, 20, '分数: 0', hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-      
-        // 🆕 血量显示（替换生命值显示）
-        this.healthText = this.add.text(20, 50, `血量: ${this.currentHealth}/${this.maxHealth}`, hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-      
-        // 🆕 血量条
-        this.createHealthBar();
-      
-        // 🆕 关卡信息显示
-        this.levelInfoText = this.add.text(640, 20, 
-            `${this.currentLevel.name} (${this.currentLevelIndex + 1}/${LEVELS_CONFIG.length})`, 
-            {
-                font: '18px Arial',
-                fill: '#ffffff',
-                backgroundColor: '#000000',
-                padding: { x: 8, y: 4 }
-            }
-        ).setOrigin(0.5, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🆕 横版卷轴：距离进度显示
-        this.distanceText = this.add.text(640, 50, '距离: 0/4000', {
-            font: '16px Arial',
-            fill: '#00ffff',
-            backgroundColor: '#000000',
-            padding: { x: 6, y: 3 }
-        }).setOrigin(0.5, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🆕 横版卷轴：距离进度条
-        this.createDistanceProgressBar();
-        
-        // 🆕 横版卷轴：创建小地图
-        this.createMiniMap();
-        
-        // 🆕 当前武器显示
-        this.weaponText = this.add.text(20, 140, '武器: AK47', hudStyle).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🆕 子弹数量显示
-        this.bulletCountText = this.add.text(20, 170, '子弹: 无限', {
-            font: '14px Arial',
-            fill: '#00ff00',
-            backgroundColor: '#000000',
-            padding: { x: 6, y: 2 }
-        }).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🆕 右上角显示时间和击杀数
-        const rightHudStyle = {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#000000',
-            padding: { x: 8, y: 4 }
-        };
-        
-        // 时间显示（右上角）
-        this.timeText = this.add.text(1280 - 20, 20, '时间: 00:00', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 击杀数显示（右上角）
-        this.killText = this.add.text(1280 - 20, 50, '击杀: 0/30', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🆕 障碍物状态显示（右上角）
-        this.obstacleText = this.add.text(1280 - 20, 80, '🪨 障碍物: 0/0', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🌍 场景信息显示（右上角）
-        this.sceneText = this.add.text(1280 - 20, 110, '🌍 场景: 巨型机械内部', rightHudStyle).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🌍 场景切换提示（右上角）
-        this.sceneHintText = this.add.text(1280 - 20, 140, '按 M 键切换场景', {
-            font: '14px Arial',
-            fill: '#00ff00',
-            backgroundColor: '#000000',
-            padding: { x: 6, y: 3 }
-        }).setOrigin(1, 0).setScrollFactor(0); // 🆕 横版卷轴：固定显示
-        
-        // 🔊 音效控制UI（右上角）
-        this.createAudioControls();
-        
-        // 📊 统计按钮
-        this.createStatsButton();
-      
-        // 控制说明
-        const controlStyle = {
-            font: '14px Arial',
-            fill: '#cccccc',
-            backgroundColor: '#000000',
-            padding: { x: 6, y: 3 }
-        };
-      
-
-        
-
-      
-        console.log('MainScene: HUD创建完成');
-        
-        // 🆕 如果是移动设备，调整HUD位置
-        if (this.touchControls && this.touchControls.isMobile) {
-            this.adjustHUDForMobile();
-        }
-    }
-    
-    // 🔊 创建音效控制UI
-    createAudioControls() {
-        const width = this.cameras.main.width;
-        const audioX = width - 20;
-        const audioY = 170;
-        
-        // 音效标题
-        this.audioTitleText = this.add.text(audioX, audioY, '🔊 音效', {
-            font: '14px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#000000',
-            padding: { x: 6, y: 3 }
-        }).setOrigin(1, 0).setScrollFactor(0);
-        
-        // 音量显示
-        this.volumeText = this.add.text(audioX, audioY + 25, '音量: 50%', {
-            font: '12px Arial',
-            fill: '#00ff00',
-            backgroundColor: '#000000',
-            padding: { x: 4, y: 2 }
-        }).setOrigin(1, 0).setScrollFactor(0);
-        
-        // 静音按钮
-        this.muteButton = this.add.text(audioX, audioY + 50, '🔊', {
-            font: '20px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 8, y: 4 }
-        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
-        
-        // 静音按钮交互
-        this.muteButton.on('pointerdown', () => {
-            const isMuted = this.audioManager.toggleMute();
-            this.muteButton.setText(isMuted ? '🔇' : '🔊');
-            this.volumeText.setText(isMuted ? '音量: 静音' : `音量: ${Math.round(this.audioManager.getVolume() * 100)}%`);
-        });
-        
-        // 音量滑块背景
-        this.volumeSliderBg = this.add.graphics();
-        this.volumeSliderBg.fillStyle(0x333333);
-        this.volumeSliderBg.fillRect(audioX - 110, audioY + 80, 100, 8);
-        this.volumeSliderBg.setScrollFactor(0);
-        
-        // 音量滑块
-        this.volumeSlider = this.add.graphics();
-        this.volumeSlider.fillStyle(0x00ff00);
-        this.volumeSlider.fillRect(audioX - 110, audioY + 80, 50, 8);
-        this.volumeSlider.setScrollFactor(0).setInteractive();
-        
-        // 音量滑块交互
-        this.volumeSlider.on('pointerdown', (pointer) => {
-            this.isDraggingVolume = true;
-        });
-        
-        this.input.on('pointerup', () => {
-            this.isDraggingVolume = false;
-        });
-        
-        this.input.on('pointermove', (pointer) => {
-            if (this.isDraggingVolume) {
-                const sliderX = audioX - 110;
-                const sliderWidth = 100;
-                const relativeX = Math.max(0, Math.min(sliderWidth, pointer.x - sliderX));
-                const volume = relativeX / sliderWidth;
-                
-                this.audioManager.setVolume(volume);
-                this.volumeSlider.clear();
-                this.volumeSlider.fillStyle(0x00ff00);
-                this.volumeSlider.fillRect(audioX - 110, audioY + 80, relativeX, 8);
-                this.volumeText.setText(`音量: ${Math.round(volume * 100)}%`);
-            }
-        });
-        
-        console.log('🔊 音效控制UI创建完成');
-    }
-    
-    // 📊 创建统计按钮
-    createStatsButton() {
-        const width = this.cameras.main.width;
-        const statsX = width - 20;
-        const statsY = 250;
-        
-        // 统计按钮
-        this.statsButton = this.add.text(statsX, statsY, '📊 统计', {
-            font: '16px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
-        
-        // 统计按钮交互
-        this.statsButton.on('pointerdown', () => {
-            this.showStatsDialog();
-        });
-        
-        // 成就按钮
-        this.achievementButton = this.add.text(statsX, statsY + 40, '🏆 成就', {
-            font: '16px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
-        
-        // 成就按钮交互
-        this.achievementButton.on('pointerdown', () => {
-            this.showAchievementDialog();
-        });
-        
-        // 数据管理按钮
-        this.dataButton = this.add.text(statsX, statsY + 80, '💾 数据', {
-            font: '16px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0).setScrollFactor(0).setInteractive();
-        
-        // 数据管理按钮交互
-        this.dataButton.on('pointerdown', () => {
-            this.showDataDialog();
-        });
-        
-        console.log('📊 统计按钮创建完成');
-    }
-    
-    // 📊 显示统计对话框
-    showStatsDialog() {
-        if (!window.StatsManager) return;
-        
-        const stats = window.StatsManager.getStats();
-        const dialog = this.add.rectangle(640, 360, 500, 400, 0x000000, 0.9);
-        
-        this.add.text(640, 200, '📊 游戏统计', {
-            font: '32px Arial',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-        
-        const statsText = [
-            `总击杀数: ${stats.totalKills}`,
-            `最高分数: ${stats.highestScore}`,
-            `游戏次数: ${stats.gamesPlayed}`,
-            `平均分数: ${stats.avgScore}`,
-            `击杀死亡比: ${stats.killDeathRatio}`,
-            `最长生存: ${Math.round(stats.longestSurvival / 1000)}秒`
-        ];
-        
-        statsText.forEach((text, index) => {
-            this.add.text(640, 250 + index * 30, text, {
-                font: '18px Arial',
-                fill: '#00ff00'
-            }).setOrigin(0.5);
-        });
-        
-        // 关闭按钮
-        const closeButton = this.add.text(640, 450, '关闭', {
-            font: '20px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive();
-        
-        closeButton.on('pointerdown', () => {
-            dialog.destroy();
-            closeButton.destroy();
-            // 清理所有统计文本
-            this.children.list.forEach(child => {
-                if (child.type === 'Text' && child !== closeButton) {
-                    child.destroy();
-                }
-            });
-        });
-    }
-    
-    // 🏆 显示成就对话框
-    showAchievementDialog() {
-        if (!window.AchievementManager) return;
-        
-        const achievements = window.AchievementManager.achievements;
-        const dialog = this.add.rectangle(640, 360, 500, 400, 0x000000, 0.9);
-        
-        this.add.text(640, 200, '🏆 成就系统', {
-            font: '32px Arial',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-        
-        let yPos = 250;
-        Object.values(achievements).forEach(achievement => {
-            const color = achievement.unlocked ? '#00ff00' : '#666666';
-            const icon = achievement.unlocked ? '✅' : '❌';
-            
-            this.add.text(640, yPos, `${icon} ${achievement.name}`, {
-                font: '16px Arial',
-                fill: color
-            }).setOrigin(0.5);
-            
-            this.add.text(640, yPos + 20, achievement.desc, {
-                font: '12px Arial',
-                fill: '#cccccc'
-            }).setOrigin(0.5);
-            
-            yPos += 50;
-        });
-        
-        // 关闭按钮
-        const closeButton = this.add.text(640, 450, '关闭', {
-            font: '20px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive();
-        
-        closeButton.on('pointerdown', () => {
-            dialog.destroy();
-            closeButton.destroy();
-            // 清理所有成就文本
-            this.children.list.forEach(child => {
-                if (child.type === 'Text' && child !== closeButton) {
-                    child.destroy();
-                }
-            });
-        });
-    }
-    
-    // 💾 显示数据管理对话框
-    showDataDialog() {
-        if (!window.SaveManager) return;
-        
-        const dialog = this.add.rectangle(640, 360, 400, 300, 0x000000, 0.9);
-        
-        this.add.text(640, 200, '💾 数据管理', {
-            font: '32px Arial',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-        
-        // 保存按钮
-        const saveButton = this.add.text(640, 250, '保存数据', {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#4CAF50',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5).setInteractive();
-        
-        saveButton.on('pointerdown', () => {
-            window.SaveManager.saveAll();
-        });
-        
-        // 导出按钮
-        const exportButton = this.add.text(640, 290, '导出数据', {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#2196F3',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5).setInteractive();
-        
-        exportButton.on('pointerdown', () => {
-            window.SaveManager.exportData();
-        });
-        
-        // 重置按钮
-        const resetButton = this.add.text(640, 330, '重置数据', {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#f44336',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5).setInteractive();
-        
-        resetButton.on('pointerdown', () => {
-            window.SaveManager.resetAll();
-        });
-        
-        // 关闭按钮
-        const closeButton = this.add.text(640, 370, '关闭', {
-            font: '18px Arial',
-            fill: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 15, y: 8 }
-        }).setOrigin(0.5).setInteractive();
-        
-        closeButton.on('pointerdown', () => {
-            dialog.destroy();
-            saveButton.destroy();
-            exportButton.destroy();
-            resetButton.destroy();
-            closeButton.destroy();
-            // 清理标题文本
-            this.children.list.forEach(child => {
-                if (child.type === 'Text' && child !== closeButton && child !== saveButton && child !== exportButton && child !== resetButton) {
-                    child.destroy();
-                }
-            });
-        });
-    }
-    
-    // 🆕 为移动设备调整HUD位置
-    adjustHUDForMobile() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-      
-        // 调整分数显示位置（避免与触摸控制重叠）
-        if (this.scoreText) {
-            this.scoreText.setPosition(width / 2 - 100, 20);
-        }
-      
-        // 调整血量显示位置
-        if (this.healthText) {
-            this.healthText.setPosition(width / 2 - 100, 50);
-        }
-      
-        // 调整血量条位置
-        if (this.healthBarBg) {
-            this.healthBarBg.setPosition(width / 2 - 100, 85);
-        }
-      
-        // 调整武器信息位置
-        if (this.weaponText) {
-            this.weaponText.setPosition(width / 2 - 100, 110);
-        }
-      
-        if (this.bulletCountText) {
-            this.bulletCountText.setPosition(width / 2 - 100, 140);
-        }
-      
-        console.log('📱 HUD已针对移动设备调整');
     }
 
     // 🆕 创建粒子效果系统
@@ -1187,47 +668,47 @@ class MainScene extends Phaser.Scene {
         this.miniMap.strokeRect(cameraMapLeft, mapY + 2, cameraMapRight - cameraMapLeft, mapSize - 4);
     }
 
-    // 修改敌人生成方法
+    // 🆕 修改敌人生成方法（横版卷轴版本）
     spawnEnemy() {
-        if (this.isGameOver) return; // 游戏结束时停止生成敌人
+        if (this.isGameOver) return;
         
-        console.log('MainScene: 开始生成敌人');
+        console.log('MainScene: 横版卷轴敌人生成');
         
-        // 检查敌人纹理是否存在
         if (!this.textures.exists('enemy')) {
             console.error('MainScene: 敌人纹理不存在！');
             return;
         }
         
         const y = Phaser.Math.Between(50, 670);
-        // 直接在组中创建敌人，避免重复添加
-        const enemy = this.enemies.create(1280, y, 'enemy');
+        // 🆕 横版卷轴：在摄像机右侧外生成敌人
+        const spawnX = this.cameras.main.scrollX + 900; // 摄像机右侧900像素处
+        const enemy = this.enemies.create(spawnX, y, 'enemy');
         
         if (enemy) {
             enemy.setDisplaySize(32, 32);
-            enemy.setVelocityX(-100);
+            enemy.setVelocityX(-100); // 向左移动（相对世界坐标）
             
-            // 确保物理体被启用
             if (enemy.body) {
                 enemy.body.enable = true;
             }
             
-            // 🆕 自定义边界检测 - 不使用世界边界事件
             enemy.checkBounds = true;
             
-            console.log('MainScene: 生成新敌人，位置:', enemy.x, enemy.y, '速度:', enemy.body.velocity.x, '当前敌人数量:', this.enemies.children.size);
+            console.log(`MainScene: 横版卷轴敌人生成成功，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.enemies.children.size}`);
         } else {
             console.error('MainScene: 无法创建敌人对象');
         }
     }
 
-    // 🆕 检查敌人是否逃脱
+    // 🆕 修改敌人逃脱检查（横版卷轴版本）
     checkEnemyEscape() {
-        if (this.isGameOver) return; // 游戏结束时停止检查
+        if (this.isGameOver) return;
+      
+        const cameraLeft = this.cameras.main.scrollX;
         
         this.enemies.children.entries.forEach(enemy => {
-            if (enemy.active && enemy.x < -50) { // 敌人完全离开屏幕左边
-                console.log('MainScene: 敌人逃脱！扣除血量');
+            if (enemy.active && enemy.x < cameraLeft - 100) { // 敌人移出摄像机左侧
+                console.log('MainScene: 横版卷轴敌人逃脱！');
                 this.handleEnemyEscape(enemy);
             }
         });
@@ -1270,7 +751,7 @@ class MainScene extends Phaser.Scene {
         });
         
         // 屏幕红色闪烁效果
-        const damageOverlay = this.add.rectangle(640, 360, 1280, 720, 0xff0000, 0.3);
+        const damageOverlay = this.add.rectangle(640, 360, 1280, 720, 0xff0000, 0.3).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 闪烁动画
         this.tweens.add({
@@ -1300,7 +781,7 @@ class MainScene extends Phaser.Scene {
             fill: textColor,
             stroke: '#ffffff',
             strokeThickness: 2
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 伤害文字动画
         this.tweens.add({
@@ -1350,6 +831,12 @@ class MainScene extends Phaser.Scene {
         if (this.killText) {
             this.killText.setText(`击杀: ${this.killCount}/${this.levelCompleteKills}`);
         }
+      
+        // 🆕 更新距离显示
+        if (this.distanceText && this.player) {
+            const currentDistance = Math.max(0, Math.round(this.player.x));
+            this.distanceText.setText(`距离: ${currentDistance}/4000`);
+        }
         
         // 🆕 横版卷轴：更新距离进度条
         this.updateDistanceProgressBar();
@@ -1396,83 +883,133 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // 修改 update 方法
+    // 🔄 重构后的update方法 - 模块化设计
     update() {
-        if (!this.player || !this.player.active) return;
-        if (this.scene.isPaused()) return; // 暂停时不更新
+        // 基础检查
+        if (!this.isGameActive()) return;
         
-        // 🆕 游戏结束后只更新HUD，不执行其他游戏逻辑
-        if (this.isGameOver) {
-            this.updateHUD();
-            return;
-        }
-      
-        // 🆕 更新触摸控制
+        // 更新各个系统
+        this.updatePlayerSystem();
+        this.updateEnemySystem();
+        this.updateWeaponSystem();
+        this.updatePowerUpSystem();
+        this.updateObstacleSystem();
+        this.updateSceneSystem();
+        this.updateUISystem();
+        
+        // 检查游戏状态
+        this.checkGameState();
+    }
+
+    // ✅ 检查游戏是否活跃
+    isGameActive() {
+        return this.player && this.player.active && !this.scene.isPaused();
+    }
+
+    // 🎮 更新玩家系统
+    updatePlayerSystem() {
+        if (this.isGameOver) return;
+        
+        // 更新触摸控制
         if (this.touchControls) {
             this.touchControls.update();
         }
-      
-        // 🆕 更新所有敌人AI
+        
+        // 键盘控制（非触摸设备）
+        if (!this.touchControls || !this.touchControls.isMobile) {
+            this.updatePlayerMovement();
+        }
+    }
+
+    // 🎮 更新玩家移动
+    updatePlayerMovement() {
+            this.player.setVelocity(0);
+          
+        // 水平移动
+            if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+                    this.player.setVelocityX(-this.playerSpeed);
+            } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+                this.player.setVelocityX(this.playerSpeed);
+            }
+          
+        // 垂直移动（限制在世界边界内）
+            if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+            if (this.player.y > 50) {
+                this.player.setVelocityY(-this.playerSpeed);
+            }
+            } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+            if (this.player.y < 670) {
+                this.player.setVelocityY(this.playerSpeed);
+            }
+        }
+    }
+
+    // 👾 更新敌人系统
+    updateEnemySystem() {
+        // 更新所有敌人AI
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active && enemy.update) {
                 enemy.update();
             }
         });
-      
-        // 🆕 检查关卡完成条件
-        this.checkLevelComplete();
-      
-        // 🆕 检查敌人逃脱
-        this.checkEnemyEscape();
         
-        // 🆕 更新HUD（包括时间显示）
-        this.updateHUD();
-      
-        // 🆕 如果不是触摸设备，使用键盘控制
-        if (!this.touchControls || !this.touchControls.isMobile) {
-            // 玩家移动
-            this.player.setVelocity(0);
-          
-            // 🆕 横版卷轴：限制玩家在可视区域内移动
-            const cameraLeft = this.cameras.main.scrollX;
-            const cameraRight = cameraLeft + 1280; // 游戏宽度
-            const cameraCenter = cameraLeft + 640; // 屏幕中心
-          
-            // 水平移动 (左右方向键 或 A/D键)
-            if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-                // 限制玩家不能移出屏幕左边缘
-                if (this.player.x > cameraLeft + 50) {
-                    this.player.setVelocityX(-this.playerSpeed);
-                }
-            } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-                // 允许玩家向右移动，触发摄像机滚动
-                this.player.setVelocityX(this.playerSpeed);
-            }
-          
-            // 垂直移动 (上下方向键 或 W/S键) - 不受摄像机影响
-            if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-                this.player.setVelocityY(-this.playerSpeed);
-            } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-                this.player.setVelocityY(this.playerSpeed);
-            }
+        // 检查敌人逃脱
+        this.checkEnemyEscape();
+    }
+
+    // 🔫 更新武器系统
+    updateWeaponSystem() {
+        // 武器系统更新逻辑（如果需要）
+        if (this.currentWeapon && this.currentWeapon.update) {
+            this.currentWeapon.update();
         }
+    }
+
+    // ⚡ 更新道具系统
+    updatePowerUpSystem() {
         if (this.powerUpManager) {
             this.powerUpManager.update();
         }
-        // 🆕 更新障碍物系统
+    }
+
+    // 🪨 更新障碍物系统
+    updateObstacleSystem() {
         if (this.obstacleManager) {
             this.obstacleManager.update(this.time.now, this.game.loop.delta);
         }
+        }
         
-        // 🌍 更新高级场景
+    // 🌍 更新场景系统
+    updateSceneSystem() {
         if (this.advancedSceneManager) {
             this.advancedSceneManager.update(this.time.now, this.game.loop.delta);
         }
         
-        // 🌍 检查场景切换快捷键
+        // 检查场景切换快捷键
         if (Phaser.Input.Keyboard.JustDown(this.sceneKey)) {
             this.sceneSwitcher.toggle();
         }
+    }
+
+    // 📊 更新UI系统
+    updateUISystem() {
+        if (this.uiManager) {
+            this.uiManager.updateHUD();
+        } else {
+            // 兼容旧版本
+            this.updateHUD();
+        }
+    }
+
+    // 🎯 检查游戏状态
+    checkGameState() {
+        if (this.isGameOver) {
+            this.updateUISystem();
+            return;
+        }
+        
+        // 检查关卡完成条件
+        this.checkLevelComplete();
     }
 
     // 🆕 修改玩家受伤逻辑
@@ -1626,24 +1163,24 @@ class MainScene extends Phaser.Scene {
         this.enemyBullets.clear(true, true);
       
         // 显示游戏结束界面
-        const gameOverBg = this.add.rectangle(640, 360, 400, 200, 0x000000, 0.8);
+        const gameOverBg = this.add.rectangle(640, 360, 400, 200, 0x000000, 0.8).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         this.add.text(640, 320, 'GAME OVER', {
             font: '48px Arial',
             fill: '#ff0000',
             stroke: '#ffffff',
             strokeThickness: 2
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         this.add.text(640, 380, `最终分数: ${this.score}`, {
             font: '24px Arial',
             fill: '#ffffff'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         this.add.text(640, 410, '按 R 重新开始', {
             font: '16px Arial',
             fill: '#cccccc'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
       
         // 🆕 暂停游戏逻辑但保持输入监听器活跃
         this.scene.pause();
@@ -2160,7 +1697,7 @@ class MainScene extends Phaser.Scene {
             fill: '#ff0000',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         this.time.delayedCall(2000, () => {
             if (this.weaponSwitchText) {
@@ -2181,7 +1718,7 @@ class MainScene extends Phaser.Scene {
             fill: '#ff6600',
             stroke: '#000000',
             strokeThickness: 3
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0); // 🆕 横版卷轴：固定显示
         
         this.time.delayedCall(2000, () => {
             if (this.weaponSwitchText) {
@@ -2290,14 +1827,33 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 加载关卡配置
     loadLevelConfig() {
-        this.currentLevel = LEVELS_CONFIG[this.currentLevelIndex] || LEVELS_CONFIG[0];
-        console.log('MainScene: 加载关卡配置:', this.currentLevel.name);
-        console.log('MainScene: 关卡详情:', {
-            name: this.currentLevel.name,
-            description: this.currentLevel.description,
-            duration: this.currentLevel.levelDuration,
-            targetKills: this.currentLevel.targetKills
-        });
+        // 从LEVELS_CONFIG加载关卡配置
+        if (this.currentLevelIndex >= 0 && this.currentLevelIndex < LEVELS_CONFIG.length) {
+            this.currentLevel = LEVELS_CONFIG[this.currentLevelIndex];
+            console.log(`🎵 加载关卡 ${this.currentLevelIndex + 1}: ${this.currentLevel.name}`);
+            
+            // 🆕 播放背景音乐
+            if (this.audioManager && this.currentLevel.music) {
+                this.audioManager.playBackgroundMusic(this.currentLevel.music);
+            }
+        } else {
+            // 使用默认关卡配置
+            this.currentLevel = {
+                name: '横版卷轴测试关卡',
+                description: '测试横版卷轴机制',
+                levelDuration: 120000, // 2分钟
+                targetKills: 30,
+                spawnRate: 2000,
+                maxEnemies: 10,
+                environmentEffects: [],
+                music: 'city_theme'
+            };
+            
+            // 🆕 播放默认背景音乐
+            if (this.audioManager) {
+                this.audioManager.playBackgroundMusic('city_theme');
+            }
+        }
     }
 
     // 🆕 显示关卡开场动画
@@ -2306,7 +1862,7 @@ class MainScene extends Phaser.Scene {
         
         // 创建关卡介绍背景（确保在最顶层）
         const introBg = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.9)
-            .setDepth(1000); // 设置最高深度
+            .setDepth(1000).setScrollFactor(0); // 设置最高深度并固定显示
       
         // 关卡名称
         const levelTitle = this.add.text(640, 280, this.currentLevel.name, {
@@ -2314,7 +1870,7 @@ class MainScene extends Phaser.Scene {
             fill: '#ffffff',
             stroke: '#000000',
             strokeThickness: 4
-        }).setOrigin(0.5).setAlpha(0).setDepth(1001);
+        }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 关卡描述
         const levelDesc = this.add.text(640, 360, this.currentLevel.description, {
@@ -2322,16 +1878,16 @@ class MainScene extends Phaser.Scene {
             fill: '#cccccc',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setAlpha(0).setDepth(1001);
+        }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 关卡目标
-        const targetText = `目标: 生存${this.currentLevel.levelDuration/1000}秒 或 击杀${this.currentLevel.targetKills}个敌人`;
+        const targetText = `目标: 到达终点 或 生存${this.currentLevel.levelDuration/1000}秒 或 击杀${this.currentLevel.targetKills}个敌人`;
         const levelTarget = this.add.text(640, 420, targetText, {
             font: '18px Arial',
             fill: '#ffff00',
             stroke: '#000000',
             strokeThickness: 1
-        }).setOrigin(0.5).setAlpha(0).setDepth(1001);
+        }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 开始提示
         const startHint = this.add.text(640, 480, '3秒后开始...', {
@@ -2339,7 +1895,7 @@ class MainScene extends Phaser.Scene {
             fill: '#00ff00',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setAlpha(0).setDepth(1001);
+        }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 倒计时显示
         let countdown = 3;
@@ -2348,7 +1904,7 @@ class MainScene extends Phaser.Scene {
             fill: '#ff0000',
             stroke: '#ffffff',
             strokeThickness: 3
-        }).setOrigin(0.5).setAlpha(0).setDepth(1001);
+        }).setOrigin(0.5).setAlpha(0).setDepth(1001).setScrollFactor(0);
       
         // 动画序列
         this.tweens.add({
@@ -2418,7 +1974,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // 🆕 初始化关卡系统
     initLevelSystem() {
         this.gameStartTime = this.time.now;
         this.killCount = 0;
@@ -2427,23 +1982,27 @@ class MainScene extends Phaser.Scene {
         this.levelEndTime = null;
         this.levelComplete = false;
         this.isLevelCompleted = false;
-      
-        // 敌人生成控制
         this.enemySpawnRate = this.currentLevel.spawnRate;
         this.maxEnemies = this.currentLevel.maxEnemies;
         this.currentEnemyCount = 0;
-      
-        console.log(`MainScene: 关卡系统初始化完成 - ${this.currentLevel.name}`);
     }
 
-    // 🆕 创建关卡背景（修正版，100% Phaser 兼容）
     createLevelBackground() {
-        console.log('MainScene: 创建像素风关卡背景');
-        
-        // 🎨 使用像素艺术背景系统
-        this.createPixelArtBackground();
-        
-        this.addEnvironmentEffects();
+        // 简化的横版卷轴背景
+        const graphics = this.add.graphics();
+      
+        // 天空渐变
+        graphics.fillGradientStyle(0x87CEEB, 0x87CEEB, 0xF0F8FF, 0xF0F8FF, 1);
+        graphics.fillRect(0, 0, 4000, 400);
+      
+        // 地面
+        graphics.fillStyle(0x228B22);
+        graphics.fillRect(0, 400, 4000, 320);
+      
+        graphics.setDepth(-100);
+        graphics.setScrollFactor(0.3); // 背景视差效果
+      
+        console.log('🌄 横版卷轴背景创建完成');
     }
 
     // 🎨 创建像素艺术背景
@@ -2760,14 +2319,12 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // 🆕 创建关卡对应的玩家
+    // 🆕 创建关卡对应的玩家（横版卷轴版本）
     createLevelPlayer() {
         // 🎨 使用像素艺术角色纹理
-        let characterType = 'warrior'; // 默认角色
+        let characterType = 'warrior';
         
-        // 根据选择的角色或关卡确定角色类型
         if (this.selectedPlayer && this.selectedPlayer.key) {
-            // 映射角色键到像素艺术类型
             const characterMap = {
                 'elf': 'archer',
                 'soldier': 'warrior', 
@@ -2778,11 +2335,11 @@ class MainScene extends Phaser.Scene {
             characterType = characterMap[this.selectedPlayer.key] || 'warrior';
         }
         
-        // 使用像素艺术纹理
-        const playerTexture = `${characterType}_0`; // 使用第一帧
+        const playerTexture = `${characterType}_0`;
         this.playerSpeed = (this.selectedPlayer && this.selectedPlayer.speed) || 400;
         this.playerSize = 40;
         
+        // 🆕 横版卷轴：玩家在世界坐标中的起始位置
         this.player = this.physics.add.sprite(100, 360, playerTexture)
             .setCollideWorldBounds(true)
             .setDisplaySize(this.playerSize, this.playerSize);
@@ -2794,7 +2351,7 @@ class MainScene extends Phaser.Scene {
         
         // 🎨 设置角色动画
         this.player.animationTimer = this.time.addEvent({
-            delay: 200, // 每200ms更新一帧
+            delay: 200,
             callback: this.updatePlayerAnimation,
             callbackScope: this,
             loop: true
@@ -2803,14 +2360,12 @@ class MainScene extends Phaser.Scene {
         // 🆕 横版卷轴：设置摄像机跟随玩家
         this.cameras.main.startFollow(this.player);
         this.cameras.main.setLerp(0.1, 0.1); // 平滑跟随
-        this.cameras.main.setDeadzone(100, 50); // 死区设置，避免频繁移动
+        this.cameras.main.setDeadzone(200, 100); // 死区设置
   
-        console.log('MainScene: 像素风角色创建完成，类型:', characterType);
+        console.log('🎮 横版卷轴玩家创建完成，类型:', characterType);
     }
 
-    // 🆕 关卡特定的敌人生成
     startLevelEnemySpawner() {
-        console.log('MainScene: 启动关卡敌人生成器');
         this.enemySpawner = this.time.addEvent({
             delay: this.enemySpawnRate,
             callback: this.spawnLevelEnemy,
@@ -2847,10 +2402,10 @@ class MainScene extends Phaser.Scene {
     spawnLevelEnemy() {
         if (this.isGameOver || this.currentEnemyCount >= this.maxEnemies) return;
       
-        // 🎨 使用像素艺术敌人类型
-        const enemyTypes = ['drone', 'soldier', 'heavy', 'flyer'];
+        // 使用简单敌人类型
+        const enemyTypes = ['enemy'];
         const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-        const enemyTexture = `${enemyType}_0`; // 使用第一帧
+        const enemyTexture = enemyType;
       
         const y = Phaser.Math.Between(50, 670);
         // 🆕 横版卷轴：在摄像机右侧生成敌人
@@ -2858,41 +2413,24 @@ class MainScene extends Phaser.Scene {
         const enemy = this.enemies.create(spawnX, y, enemyTexture);
       
         if (enemy) {
-            // 🎨 设置像素艺术敌人数据
-            const pixelEnemyData = ENEMY_TYPES[enemyType];
+            enemy.setDisplaySize(32, 32);
+            enemy.setVelocityX(-100); // 向左移动（相对世界坐标）
+          
+            if (enemy.body) {
+                enemy.body.enable = true;
+            }
+          
+            // 🆕 设置敌人数据
             enemy.enemyData = {
-                name: pixelEnemyData.name,
-                hp: pixelEnemyData.health,
-                speed: 100 + Math.random() * 50,
-                score: pixelEnemyData.health * 10,
-                canShoot: enemyType === 'soldier' || enemyType === 'heavy',
-                shootRate: 2000 + Math.random() * 1000,
-                ai: 'straight'
+                name: '小兵',
+                ai: 'straight',
+                weight: 1
             };
-            
-            enemy.maxHp = enemy.enemyData.hp;
-            enemy.currentHp = enemy.enemyData.hp;
-            enemy.enemySpeed = enemy.enemyData.speed;
-            enemy.scoreValue = enemy.enemyData.score;
-            enemy.canShoot = enemy.enemyData.canShoot;
-            enemy.shootRate = enemy.enemyData.shootRate;
-            enemy.aiType = enemy.enemyData.ai;
-            enemy.pixelType = enemyType;
-            enemy.animationFrame = 0;
-            
-            // 🎨 设置敌人动画
-            enemy.animationTimer = this.time.addEvent({
-                delay: 300,
-                callback: () => this.updateEnemyAnimation(enemy),
-                callbackScope: this,
-                loop: true
-            });
-            
-            // 初始化敌人
-            enemy.init();
+          
+            enemy.checkBounds = true;
             this.currentEnemyCount++;
             
-            console.log(`MainScene: 生成像素风敌人: ${enemy.enemyData.name}，当前数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
+            console.log(`MainScene: 横版卷轴敌人生成成功，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
         } else {
             console.error('MainScene: 无法创建敌人对象');
         }
@@ -3008,14 +2546,15 @@ class MainScene extends Phaser.Scene {
 
 
     // 🆕 修改关卡完成检查
+    // 🆕 关卡完成检查（横版卷轴版本）
     checkLevelComplete() {
         if (this.isGameOver || this.isLevelCompleted) return;
       
         const currentTime = this.time.now;
         const survivalTime = currentTime - this.gameStartTime;
       
-        // 🆕 横版卷轴：检查距离条件
-        if (this.player && this.player.x >= 4000) {
+        // 🆕 横版卷轴：检查距离条件 - 到达世界右边界
+        if (this.player && this.player.x >= 3800) { // 接近4000像素时触发
             this.completeLevel(`到达关卡终点`);
             return;
         }
@@ -3059,60 +2598,49 @@ class MainScene extends Phaser.Scene {
 
     // 🆕 显示关卡完成界面
     showLevelCompleteScreen(reason) {
-        const completeBg = this.add.rectangle(640, 360, 600, 400, 0x000000, 0.9);
+        const completeBg = this.add.rectangle(640, 360, 600, 400, 0x000000, 0.9).setScrollFactor(0);
       
         this.add.text(640, 240, '🎉 关卡完成！🎉', {
             font: '48px Arial',
             fill: '#00ff00',
             stroke: '#ffffff',
             strokeThickness: 2
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
       
         this.add.text(640, 300, `${this.currentLevel.name}`, {
             font: '32px Arial',
             fill: '#ffff00',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
       
         this.add.text(640, 340, `完成条件: ${reason}`, {
             font: '20px Arial',
             fill: '#ffffff'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
       
         this.add.text(640, 380, `最终分数: ${this.score}`, {
             font: '24px Arial',
             fill: '#ffffff'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
       
         this.add.text(640, 420, `击杀数: ${this.killCount}`, {
             font: '20px Arial',
             fill: '#cccccc'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
       
         // 按键提示
-        const nextLevel = this.currentLevelIndex + 1;
-        if (nextLevel < LEVELS_CONFIG.length) {
-            this.add.text(640, 480, '按 N 进入下一关', {
-                font: '18px Arial',
-                fill: '#00ffff'
-            }).setOrigin(0.5);
-          
-            this.input.keyboard.on('keydown-N', this.nextLevel, this);
-        } else {
-            this.add.text(640, 480, '🏆 恭喜通关！🏆', {
+        this.add.text(640, 480, '🏆 横版卷轴测试完成！🏆', {
                 font: '24px Arial',
                 fill: '#ffd700'
-            }).setOrigin(0.5);
-        }
+        }).setOrigin(0.5).setScrollFactor(0);
       
         this.add.text(640, 520, '按 R 重新开始本关', {
             font: '16px Arial',
             fill: '#cccccc'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setScrollFactor(0);
         
-        // 确保R键监听器已设置
-        this.input.keyboard.on('keydown-R', this.handleRestart, this);
+        // 注意：R键监听器已在create()方法中设置，这里不需要重复添加
     }
 
     // 🔧 在场景销毁时清理事件监听器
@@ -3129,6 +2657,7 @@ class MainScene extends Phaser.Scene {
         
         // 🔊 清理音效系统
         if (this.audioManager) {
+            this.audioManager.stopBackgroundMusic(); // 🆕 停止背景音乐
             this.audioManager.destroy();
         }
         
@@ -3159,6 +2688,16 @@ class MainScene extends Phaser.Scene {
         // 🏗️ 清理障碍物管理器
         if (this.obstacleManager) {
             this.obstacleManager.destroy();
+        }
+        
+        // 📊 清理UI管理器
+        if (this.uiManager) {
+            this.uiManager.destroy();
+        }
+        
+        // 🎨 清理背景管理器
+        if (this.backgroundManager) {
+            this.backgroundManager.destroy();
         }
         
         // 📊 清理统计系统
@@ -3264,17 +2803,20 @@ class MainScene extends Phaser.Scene {
             const seconds = Math.ceil(remainingTime / 1000);
             const bg = this.add.rectangle(x, y, 200, 30, 0x000000, 0.6)
                 .setOrigin(0, 0.5)
-                .setStroke(0xffffff, 1);
+                .setStroke(0xffffff, 1)
+                .setScrollFactor(0);
             const text = this.add.text(x + 10, y, `${bonus.symbol} ${bonus.name} ${seconds}s`, {
                 fontSize: '14px',
                 fill: '#ffffff'
-            }).setOrigin(0, 0.5);
+            }).setOrigin(0, 0.5).setScrollFactor(0);
             const progressWidth = 180;
             const progress = remainingTime / bonus.effect.duration;
             const progressBg = this.add.rectangle(x + 10, y + 12, progressWidth, 4, 0x333333)
-                .setOrigin(0, 0.5);
+                .setOrigin(0, 0.5)
+                .setScrollFactor(0);
             const progressBar = this.add.rectangle(x + 10, y + 12, progressWidth * progress, 4, 0x00ff00)
-                .setOrigin(0, 0.5);
+                .setOrigin(0, 0.5)
+                .setScrollFactor(0);
             this.powerUpHUDGroup.addMultiple([bg, text, progressBg, progressBar]);
         });
         this.powerUpHUDGroup.setDepth(1000);

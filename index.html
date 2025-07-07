@@ -10,41 +10,53 @@
     <title>Phaser 3 射击游戏 - iPad版</title>
     <!-- 添加 favicon 避免 404 错误 -->
     <link rel="icon" href="data:,">
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     
-    <!-- 1. 基础配置和工具类 -->
-    <script src="scenes/levels.js"></script>
-    <script src="scenes/powerUps.js"></script>
-    <script src="scenes/obstacleTypes.js"></script>
+    <!-- Phaser 核心库 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     
-    <!-- 2. 管理器类 -->
-    <script src="scenes/StatsManager.js"></script>
-    <script src="scenes/AchievementManager.js"></script>
-    <script src="scenes/SaveManager.js"></script>
-    <script src="scenes/AudioManager.js"></script>
-    <script src="scenes/PowerUpManager.js"></script>
-    <script src="scenes/ObstacleManager.js"></script>
+    <!-- 
+      项目脚本加载顺序 (已修正并优化)
+      使用 'defer' 属性确保脚本在DOM解析后、按顺序执行，且不阻塞页面渲染。
+    -->
+
+    <!-- 1. 基础配置类 (无依赖) -->
+    <script defer src="scenes/configs.js"></script>
+    <script defer src="scenes/levels.js"></script>
+    <script defer src="scenes/powerUps.js"></script>
+    <script defer src="scenes/obstacleTypes.js"></script>
+    <script defer src="scenes/advancedScenes.js"></script>
+    <script defer src="scenes/advancedEnemies.js"></script>
     
-    <!-- 3. 游戏对象类 -->
-    <script src="scenes/EnemyClass.js"></script>
-    <script src="scenes/EnemyBullet.js"></script>
-    <script src="scenes/PowerUp.js"></script>
-    <script src="scenes/Obstacle.js"></script>
+    <!-- 2. 管理器与系统类 (有依赖关系，注意顺序) -->
+    <script defer src="scenes/SaveManager.js"></script>
+    <script defer src="scenes/StatsManager.js"></script>
+    <script defer src="scenes/AchievementManager.js"></script>
+    <script defer src="scenes/AudioManager.js"></script>
+    <script defer src="scenes/PowerUpManager.js"></script>
+    <script defer src="scenes/ObstacleManager.js"></script>
+    <script defer src="scenes/UIManager.js"></script>
+    <script defer src="scenes/BackgroundManager.js"></script>
+    <script defer src="scenes/AdvancedSceneManager.js"></script>
+    <script defer src="scenes/SceneSwitcher.js"></script>
+    <script defer src="scenes/PixelArtSystem.js"></script>
+    <script defer src="scenes/TouchControls.js"></script>
     
-    <!-- 4. 系统类 -->
-    <script src="scenes/PixelArtSystem.js"></script>
-    <script src="scenes/TouchControls.js"></script>
+    <!-- 3. 游戏对象类 (依赖配置和部分管理器) -->
+    <script defer src="scenes/Weapon.js"></script>
+    <script defer src="scenes/Bullet.js"></script>
+    <script defer src="scenes/EnemyClass.js"></script>
+    <script defer src="scenes/EnemyBullet.js"></script>
+    <script defer src="scenes/PowerUp.js"></script>
+    <script defer src="scenes/Obstacle.js"></script>
     
-    <!-- 5. 场景类 -->
-    <script src="scenes/PreloaderScene.js"></script>
-    <script src="scenes/PlayerSelectScene.js"></script>
-    <script src="scenes/MainScene.js"></script>
+    <!-- 4. 场景类 (依赖所有管理器和游戏对象) -->
+    <script defer src="scenes/PreloaderScene.js"></script>
+    <script defer src="scenes/PlayerSelectScene.js"></script>
+    <script defer src="scenes/MainScene.js"></script>
     
-    <!-- 6. 高级功能类 -->
-    <script src="scenes/advancedScenes.js"></script>
-    <script src="scenes/AdvancedSceneManager.js"></script>
-    <script src="scenes/SceneSwitcher.js"></script>
-    <script src="scenes/advancedEnemies.js"></script>
+    <!-- 5. 游戏主入口 (最后加载，启动游戏) -->
+    <script defer src="scenes/game.js"></script>
+    
     <style>
         body {
             margin: 0;
@@ -72,8 +84,5 @@
 </head>
 <body>
     <div id="game-container"></div>
-    
-    <!-- 游戏主脚本 -->
-    <script src="scenes/game.js"></script>
 </body>
 </html> 

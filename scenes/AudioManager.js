@@ -10,6 +10,11 @@ class AudioManager {
         this.isInitialized = false;
         this.audioUnlocked = false;
         
+        // 背景音乐相关
+        this.currentMusic = null;
+        this.musicGain = null;
+        this.musicVolume = 0.3; // 背景音乐音量较低
+        
         // 音效参数配置
         this.soundConfigs = {
             shoot: {
@@ -69,6 +74,11 @@ class AudioManager {
             this.masterGain = this.audioContext.createGain();
             this.masterGain.connect(this.audioContext.destination);
             this.masterGain.gain.value = this.volume;
+            
+            // 创建背景音乐音量控制
+            this.musicGain = this.audioContext.createGain();
+            this.musicGain.connect(this.audioContext.destination);
+            this.musicGain.gain.value = this.musicVolume;
             
             this.isInitialized = true;
             console.log('🎵 AudioManager initialized successfully');
@@ -347,7 +357,7 @@ class AudioManager {
     setVolume(volume) {
         this.volume = Math.max(0, Math.min(1, volume));
         if (this.masterGain) {
-            this.masterGain.gain.value = this.volume;
+            this.masterGain.gain.value = this.isMuted ? 0 : this.volume;
         }
         console.log(`🔊 Volume set to: ${Math.round(this.volume * 100)}%`);
     }
@@ -356,6 +366,9 @@ class AudioManager {
         this.isMuted = !this.isMuted;
         if (this.masterGain) {
             this.masterGain.gain.value = this.isMuted ? 0 : this.volume;
+        }
+        if (this.musicGain) {
+            this.musicGain.gain.value = this.isMuted ? 0 : this.musicVolume;
         }
         console.log(`🔊 ${this.isMuted ? 'Muted' : 'Unmuted'}`);
         return this.isMuted;
@@ -369,7 +382,122 @@ class AudioManager {
         return this.isMuted;
     }
     
+    // 🆕 背景音乐系统
+    playBackgroundMusic(musicType) {
+        if (!this.isInitialized || !this.audioUnlocked) {
+            console.log('🔇 Audio not ready for background music');
+            return;
+        }
+        
+        // 停止当前音乐
+        this.stopBackgroundMusic();
+        
+        console.log(`🎵 Starting background music: ${musicType}`);
+        
+        // 创建简单的背景音乐
+        this.currentMusic = this.createBackgroundMusic(musicType);
+        
+        if (this.currentMusic) {
+            this.currentMusic.connect(this.musicGain);
+            this.currentMusic.start();
+        }
+    }
+    
+    stopBackgroundMusic() {
+        if (this.currentMusic) {
+            this.currentMusic.stop();
+            this.currentMusic = null;
+            console.log('🔇 Background music stopped');
+        }
+    }
+    
+    createBackgroundMusic(musicType) {
+        // 简单的背景音乐生成
+        const musicConfigs = {
+            'city_theme': {
+                baseFreq: 220,
+                pattern: [0, 2, 4, 7, 9, 11, 14], // C大调音阶
+                tempo: 120
+            },
+            'desert_theme': {
+                baseFreq: 196,
+                pattern: [0, 3, 5, 7, 10, 12, 15], // G小调音阶
+                tempo: 90
+            },
+            'forest_theme': {
+                baseFreq: 261,
+                pattern: [0, 2, 4, 5, 7, 9, 11], // C自然小调
+                tempo: 100
+            },
+            'ocean_theme': {
+                baseFreq: 174,
+                pattern: [0, 4, 7, 11, 14, 17, 21], // 五声音阶
+                tempo: 80
+            },
+            'space_theme': {
+                baseFreq: 329,
+                pattern: [0, 2, 4, 6, 8, 10, 12], // 全音阶
+                tempo: 110
+            }
+        };
+        
+        const config = musicConfigs[musicType] || musicConfigs['city_theme'];
+        
+        // 创建简单的循环音乐
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+        
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.1; // 背景音乐音量较低
+        
+        // 添加低通滤波器让音乐更柔和
+        filter.type = 'lowpass';
+        filter.frequency.value = 800;
+        filter.Q.value = 1;
+        
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        
+        // 简单的音乐模式
+        let noteIndex = 0;
+        const noteDuration = 60 / config.tempo; // 秒/拍
+        
+        const playNote = () => {
+            if (!this.currentMusic) return; // 如果音乐已停止，不再继续
+            
+            const note = config.pattern[noteIndex % config.pattern.length];
+            const frequency = config.baseFreq * Math.pow(2, note / 12);
+            
+            oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+            
+            // 简单的音量包络
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + noteDuration);
+            
+            noteIndex++;
+            
+            // 安排下一个音符
+            setTimeout(playNote, noteDuration * 1000);
+        };
+        
+        // 开始播放
+        setTimeout(playNote, 0);
+        
+        return oscillator;
+    }
+    
+    setMusicVolume(volume) {
+        this.musicVolume = Math.max(0, Math.min(1, volume));
+        if (this.musicGain) {
+            this.musicGain.gain.value = this.isMuted ? 0 : this.musicVolume;
+        }
+        console.log(`🎵 Music volume set to: ${Math.round(this.musicVolume * 100)}%`);
+    }
+    
     destroy() {
+        this.stopBackgroundMusic();
         if (this.audioContext) {
             this.audioContext.close();
         }
