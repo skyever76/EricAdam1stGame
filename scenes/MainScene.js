@@ -29,15 +29,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     init(data) {
-        console.log('MainScene: 初始化，接收到的数据:', data);
         this.selectedPlayer = data.player || null;
         this.currentLevelIndex = data.level || 0; // 🆕 接收关卡索引
-        console.log('MainScene: 选中的玩家:', this.selectedPlayer);
-        console.log('MainScene: 当前关卡索引:', this.currentLevelIndex);
     }
 
     create() {
-        console.log('MainScene: 创建横版卷轴场景开始');
         
         // 🔧 清理可能存在的旧事件监听器（防止重复添加）
         this.input.keyboard.removeAllListeners();
@@ -80,12 +76,10 @@ export class MainScene extends Phaser.Scene {
         this.backgroundManager.createLevelBackground();
   
         // 🆕 横版卷轴：设置扩展的世界边界
-        console.log(`🌍 设置横版卷轴世界边界: ${GAME_CONFIG.WORLD_WIDTH}x${GAME_CONFIG.WORLD_HEIGHT}`);
         this.physics.world.setBounds(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
         
         // 🆕 横版卷轴：设置摄像机边界和跟随系统
         this.cameras.main.setBounds(0, 0, GAME_CONFIG.WORLD_WIDTH, GAME_CONFIG.WORLD_HEIGHT);
-        console.log('📹 摄像机边界设置完成');
   
         // 🆕 创建关卡对应的玩家
         this.createLevelPlayer();
@@ -96,7 +90,7 @@ export class MainScene extends Phaser.Scene {
             maxSize: 50
         });
         
-        console.log(`🔫 子弹组创建完成: 最大大小=${this.bullets.maxSize}, 当前大小=${this.bullets.getLength()}`);
+
   
         this.enemies = this.physics.add.group({
             classType: Enemy, // 🔧 使用导入的Enemy类
@@ -186,13 +180,11 @@ export class MainScene extends Phaser.Scene {
             // 解锁AudioManager
             if (AudioManager && !AudioManager.audioUnlocked) {
                 AudioManager.unlockAudio();
-                console.log('MainScene: AudioManager已解锁');
             }
             
             // 恢复Phaser音频上下文
             if (this.sound && this.sound.context && this.sound.context.state === 'suspended') {
                 this.sound.context.resume();
-                console.log('MainScene: Phaser音频上下文已恢复');
             }
         });
   
@@ -218,7 +210,7 @@ export class MainScene extends Phaser.Scene {
             fill: '#666666' 
         }).setOrigin(1).setScrollFactor(0); // 🆕 固定显示
     
-        console.log('MainScene: 横版卷轴场景创建完成');
+
 
         // 设置初始积分（根据角色配置）
         this.score = this.selectedPlayer ? (this.selectedPlayer.initPoints || 0) : 0;
@@ -359,7 +351,6 @@ export class MainScene extends Phaser.Scene {
 
     createBackground() {
         if (this.textures.exists('background')) {
-            console.log('MainScene: 使用background纹理创建背景');
             // 创建平铺背景
             for (let x = 0; x < 1280; x += 64) {
                 for (let y = 0; y < 720; y += 64) {
@@ -367,7 +358,6 @@ export class MainScene extends Phaser.Scene {
                 }
             }
         } else {
-            console.log('MainScene: background纹理不存在，使用偏淡背景');
             this.add.rectangle(640, 360, 1280, 720, 0xe8f4f8); // 偏淡的蓝白色背景
         }
     }
@@ -383,9 +373,6 @@ export class MainScene extends Phaser.Scene {
         if (this.selectedPlayer && this.textures.exists(this.selectedPlayer.key)) {
             playerTexture = this.selectedPlayer.key;
             this.playerSpeed = this.selectedPlayer.speed || 400;
-            console.log('MainScene: 使用角色纹理:', playerTexture, '速度:', this.playerSpeed);
-        } else {
-            console.log('MainScene: 使用默认玩家纹理:', playerTexture);
         }
           
         this.player = this.physics.add.sprite(100, 360, playerTexture)
@@ -402,23 +389,14 @@ export class MainScene extends Phaser.Scene {
             this.player.body.setMass(1);
             this.player.body.setSize(this.playerSize, this.playerSize);
             
-            console.log('🎮 玩家物理体设置完成:', {
-                collideWorldBounds: this.player.body.collideWorldBounds,
-                bounce: this.player.body.bounce,
-                drag: this.player.body.drag,
-                friction: this.player.body.friction,
-                gravity: this.player.body.gravity,
-                immovable: this.player.body.immovable,
-                mass: this.player.body.mass,
-                size: `${this.player.body.width}x${this.player.body.height}`
-            });
+
         }
     
         // 设置玩家属性到 sprite
         this.player.playerSpeed = this.playerSpeed;
         this.player.isInvincible = false;
     
-        console.log('🎮 横版卷轴玩家创建完成，类型:', this.selectedPlayer ? this.selectedPlayer.key : 'default');
+
     }
 
 
@@ -429,16 +407,16 @@ export class MainScene extends Phaser.Scene {
     spawnEnemy() {
         if (this.isGameOver) return;
         
-        console.log('MainScene: 横版卷轴敌人生成');
-        
         if (!this.textures.exists('enemy')) {
             console.error('MainScene: 敌人纹理不存在！');
             return;
         }
         
+        // 🆕 严格约束敌人生成位置在游戏画面最右边
+        const camera = this.cameras.main;
+        const screenWidth = camera.width; // 1280
+        const spawnX = camera.scrollX + screenWidth + 50; // 在屏幕右侧50像素处生成
         const y = Phaser.Math.Between(50, 670);
-        // 🆕 横版卷轴：在摄像机右侧外生成敌人
-        const spawnX = this.cameras.main.scrollX + 900; // 摄像机右侧900像素处
         const enemy = this.enemies.create(spawnX, y, 'enemy');
         
         if (enemy) {
@@ -451,7 +429,7 @@ export class MainScene extends Phaser.Scene {
             
             enemy.checkBounds = true;
             
-            console.log(`MainScene: 横版卷轴敌人生成成功，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.enemies.children.size}`);
+
         } else {
             console.error('MainScene: 无法创建敌人对象');
         }
@@ -465,7 +443,6 @@ export class MainScene extends Phaser.Scene {
         
         this.enemies.children.entries.forEach(enemy => {
             if (enemy.active && enemy.x < cameraLeft - 100) { // 敌人移出摄像机左侧
-                console.log('MainScene: 横版卷轴敌人逃脱！');
                 this.handleEnemyEscape(enemy);
             }
         });
@@ -655,16 +632,7 @@ export class MainScene extends Phaser.Scene {
             }
         }
         
-        // 简单的调试信息（只在按键时显示）
-        const keysPressed = [];
-        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) keysPressed.push('左');
-        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) keysPressed.push('右');
-        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) keysPressed.push('上');
-        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) keysPressed.push('下');
-        
-        if (keysPressed.length > 0) {
-            console.log(`🎮 移动: ${keysPressed.join(',')} | 位置: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)}) | 速度: (${this.player.body.velocity.x.toFixed(0)}, ${this.player.body.velocity.y.toFixed(0)})`);
-        }
+
     }
     
 
@@ -781,7 +749,7 @@ export class MainScene extends Phaser.Scene {
             this.currentHealth = 0;
         }
         
-        console.log(`MainScene: 玩家受到${data.type}伤害 ${damage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
+
         
         // 🔊 播放受伤音效
         AudioManager.play('hurt');
@@ -818,7 +786,7 @@ export class MainScene extends Phaser.Scene {
             this.currentHealth = 0;
         }
       
-        console.log(`MainScene: 玩家被撞击扣血 ${collisionDamage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
+
       
         // 🔊 播放受伤音效
         AudioManager.play('hurt');
@@ -853,7 +821,7 @@ export class MainScene extends Phaser.Scene {
         const enemyPos = `(${enemy.x.toFixed(0)}, ${enemy.y.toFixed(0)})`;
         const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y);
         
-        console.log(`🎯 子弹击中敌人: ${bullet.weaponType} | 子弹位置: ${bulletPos} | 敌人位置: ${enemyPos} | 距离: ${distance.toFixed(1)} | 敌人: ${enemyName}`);
+
 
         // 🔊 播放击中音效
         AudioManager.play('hit');
@@ -862,11 +830,9 @@ export class MainScene extends Phaser.Scene {
 
         // 🔧 特殊武器处理（导弹、核弹）
         if (bullet.weaponType === '导弹') {
-            console.log('💥 MainScene: 执行导弹爆炸');
             this.executeMissileExplosion(bullet, enemy);
             // 导弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else if (bullet.weaponType === '核弹') {
-            console.log('☢️ MainScene: 执行核弹爆炸');
             this.executeNuclearStrike(bullet, enemy);
             // 核弹爆炸后，自身也应被回收，但不要在这里立即返回
         } else {
@@ -908,13 +874,12 @@ export class MainScene extends Phaser.Scene {
             console.log(`💪 敌人存活: ${enemyName} | 剩余血量: ${enemy.health || '未知'}`);
         }
 
-        console.log(`✅ MainScene: 使用${bullet.weaponType}攻击完成`);
+
     }
 
     gameOver() {
         if (this.isGameOver) return; // 防止重复调用
       
-        console.log('MainScene: 游戏结束 - 血量耗尽');
         this.isGameOver = true;
         
         // 📊 记录游戏结束统计
@@ -999,7 +964,6 @@ export class MainScene extends Phaser.Scene {
     }
 
     startEnemySpawner() {
-        console.log('MainScene: 启动敌人生成器');
         // 定期生成敌人
         this.enemySpawner = this.time.addEvent({
             delay: 2000,
@@ -1007,20 +971,15 @@ export class MainScene extends Phaser.Scene {
             callbackScope: this,
             loop: true
         });
-        console.log('MainScene: 敌人生成器已创建');
     }
 
     shoot(angle = null) {
-        console.log(`🎯 射击触发: 角度=${angle}, 游戏状态=${this.isGameOver}, 暂停=${this.scene.isPaused()}`);
-        
         if (this.isGameOver || this.scene.isPaused()) {
-            console.log('❌ 射击被阻止：游戏结束或暂停');
             return; // 游戏状态检查
         }
         
         // 🆕 检查子弹是否足够
         if (!this.currentWeapon.hasAmmo()) {
-            console.log('❌ 射击被阻止：子弹不足');
             this.showNoBulletsMessage();
             return;
         }
@@ -1030,22 +989,16 @@ export class MainScene extends Phaser.Scene {
         const adjustedFireRate = this.currentWeapon.fireRate / fireRateMultiplier;
         const now = this.time.now;
         if (now - this.lastShootTime < adjustedFireRate) {
-            console.log('MainScene: 射击冷却中');
             return; // 冷却时间未到
         }
         
         if (!this.player || !this.player.active) {
-            console.log('MainScene: 玩家不存在或未激活');
             return;
         }
-        
-        console.log(`✅ 射击条件满足，开始射击: 武器=${this.currentWeapon.name}, 子弹数=${this.currentWeapon.bulletCount}`);
         
         // 🆕 消耗子弹
         this.currentWeapon.consumeAmmo();
         this.lastShootTime = this.time.now;
-        
-        console.log(`MainScene: 消耗1发${this.currentWeapon.name}子弹，剩余${this.currentWeapon.bulletCount}发`);
         
         // 🆕 执行连发射击，传递射击角度
         this.executeBurstFire(angle);
@@ -1063,13 +1016,6 @@ export class MainScene extends Phaser.Scene {
             const mouseX = this.input.activePointer.worldX;
             const mouseY = this.input.activePointer.worldY;
             angle = Phaser.Math.Angle.Between(startX, startY, mouseX, mouseY);
-            
-            const angleDegrees = Phaser.Math.RadToDeg(angle);
-            const distance = Phaser.Math.Distance.Between(startX, startY, mouseX, mouseY);
-            console.log(`🎯 计算射击角度: 玩家位置(${startX.toFixed(0)}, ${startY.toFixed(0)}) | 鼠标位置(${mouseX.toFixed(0)}, ${mouseY.toFixed(0)}) | 角度: ${angleDegrees.toFixed(1)}° | 距离: ${distance.toFixed(0)}`);
-        } else {
-            const angleDegrees = Phaser.Math.RadToDeg(angle);
-            console.log(`🎯 使用预设角度: ${angleDegrees.toFixed(1)}°`);
         }
         
         // 🆕 加特林扇形散弹
@@ -1088,8 +1034,6 @@ export class MainScene extends Phaser.Scene {
                 }
             }
             
-            console.log(`MainScene: 发射${weapon.name}，同时扇形散弹${bulletCount}发，角度范围${spreadAngle * 180 / Math.PI}度`);
-        } else {
             // 其他武器的普通连发
             // 发射第一发
             this.fireSingleBullet(startX, startY, angle, weapon);
@@ -1103,8 +1047,6 @@ export class MainScene extends Phaser.Scene {
                         }
                     }, null, this);
             }
-            
-            console.log(`MainScene: 发射${weapon.name}，连发${weapon.burstCount}发`);
         }
     }
     
@@ -1571,8 +1513,6 @@ export class MainScene extends Phaser.Scene {
     // 处理重新开始游戏
     handleRestart() {
         if (this.isGameOver || this.isLevelCompleted) {
-            console.log('MainScene: 重新开始游戏');
-            
             // 🆕 清理游戏结束界面UI
             if (this.gameOverUI) {
                 if (this.gameOverUI.background) this.gameOverUI.background.destroy();
@@ -1592,7 +1532,6 @@ export class MainScene extends Phaser.Scene {
             
             // 🆕 延迟一帧后重新开始场景，确保状态完全重置
             this.time.delayedCall(100, () => {
-                console.log('🔄 执行场景重启');
                 this.scene.restart({ 
                     player: this.selectedPlayer, 
                     level: this.currentLevelIndex 
@@ -1616,15 +1555,12 @@ export class MainScene extends Phaser.Scene {
         if (this.isLevelCompleted) return;
       
         this.isLevelCompleted = true;
-        console.log(`MainScene: 关卡 ${this.currentLevel.name} 完成！原因: ${reason}`);
-      
         this.levelEndTime = this.time.now;
         this.levelComplete = true;
         
         // 🆕 横版卷轴：BOSS战时锁定摄像机
         if (reason.includes('BOSS') || reason.includes('终点')) {
             this.cameras.main.stopFollow();
-            console.log('🔒 摄像机已锁定，BOSS战开始');
         }
       
         // 停止敌人生成
@@ -1648,8 +1584,6 @@ export class MainScene extends Phaser.Scene {
     
     // 🆕 下一关
     nextLevel() {
-        console.log('MainScene: 进入下一关');
-        
         const nextLevelIndex = this.currentLevelIndex + 1;
         if (nextLevelIndex < LEVELS_CONFIG.length) {
             // 如果场景被暂停，先恢复
@@ -1662,8 +1596,6 @@ export class MainScene extends Phaser.Scene {
                 player: this.selectedPlayer, 
                 level: nextLevelIndex 
             });
-        } else {
-            console.log('MainScene: 已完成所有关卡！');
         }
     }
 
@@ -1672,7 +1604,6 @@ export class MainScene extends Phaser.Scene {
         // 从LEVELS_CONFIG加载关卡配置
         if (this.currentLevelIndex >= 0 && this.currentLevelIndex < LEVELS_CONFIG.length) {
             this.currentLevel = LEVELS_CONFIG[this.currentLevelIndex];
-            console.log(`🎵 加载关卡 ${this.currentLevelIndex + 1}: ${this.currentLevel.name}`);
             
             // 🆕 播放背景音乐
             if (this.currentLevel.music) {
@@ -1698,7 +1629,6 @@ export class MainScene extends Phaser.Scene {
 
     // 🆕 显示关卡开场动画
     showLevelIntro() {
-        console.log('MainScene: 显示关卡介绍:', this.currentLevel.name);
         
         // 创建关卡介绍背景（确保在最顶层）
         const introBg = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.9)
@@ -1808,8 +1738,6 @@ export class MainScene extends Phaser.Scene {
                     levelTarget.destroy();
                     startHint.destroy();
                     countdownText.destroy();
-                    console.log('MainScene: 关卡介绍结束，游戏开始');
-                    
                     // 🆕 启动敌人生成器
                     this.startEnemySpawner();
                     
@@ -1999,7 +1927,7 @@ export class MainScene extends Phaser.Scene {
         this.cameras.main.setLerp(0.1, 0.1); // 平滑跟随
         this.cameras.main.setDeadzone(200, 100); // 死区设置
   
-        console.log('🎮 横版卷轴玩家创建完成，类型:', characterType);
+
     }
 
     startLevelEnemySpawner() {
@@ -2049,9 +1977,11 @@ export class MainScene extends Phaser.Scene {
         const enemyConfig = this.selectEnemyType();
         if (!enemyConfig) return;
       
+        // 🆕 严格约束敌人生成位置在游戏画面最右边
+        const camera = this.cameras.main;
+        const screenWidth = camera.width; // 1280
+        const spawnX = camera.scrollX + screenWidth + 50; // 在屏幕右侧50像素处生成
         const y = Phaser.Math.Between(50, 670);
-        // 🆕 横版卷轴：在摄像机右侧生成敌人
-        const spawnX = this.cameras.main.scrollX + 900;
       
         // 从对象池获取敌人
         const enemy = this.enemies.get();
@@ -2059,8 +1989,6 @@ export class MainScene extends Phaser.Scene {
             // 使用配置激活敌人
             enemy.spawn(spawnX, y, enemyConfig);
             this.currentEnemyCount++;
-            
-            console.log(`MainScene: 横版卷轴敌人生成成功，类型: ${enemyConfig.name}，位置: (${enemy.x}, ${enemy.y})，当前敌人数量: ${this.currentEnemyCount}/${this.maxEnemies}`);
         } else {
             console.error('MainScene: 无法从对象池获取敌人对象');
         }
@@ -2096,7 +2024,7 @@ export class MainScene extends Phaser.Scene {
         const playerPos = `(${player.x.toFixed(0)}, ${player.y.toFixed(0)})`;
         const distance = Phaser.Math.Distance.Between(bullet.x, bullet.y, player.x, player.y);
         
-        console.log(`🎯 敌人子弹击中玩家: 子弹位置: ${bulletPos} | 玩家位置: ${playerPos} | 距离: ${distance.toFixed(1)} | 伤害: ${bullet.damage || 15}`);
+
       
         bullet.kill(); // 使用kill()回收对象池，而不是destroy()
       
@@ -2109,7 +2037,7 @@ export class MainScene extends Phaser.Scene {
             this.currentHealth = 0;
         }
       
-        console.log(`💥 玩家受伤: 血量: ${oldHealth} → ${this.currentHealth} | 伤害: ${bulletDamage} | 剩余血量: ${this.currentHealth}/${this.maxHealth}`);
+
       
         // 显示受伤效果
         this.showDamageEffect(bulletDamage, 'bullet');
@@ -2128,15 +2056,12 @@ export class MainScene extends Phaser.Scene {
         });
       
         if (this.currentHealth <= 0) {
-            console.log(`💀 玩家死亡: 血量耗尽`);
             this.gameOver();
         }
     }
 
     // 🔧 新增敌人死亡处理方法
     handleEnemyDeath(deathData) {
-        console.log(`MainScene: 敌人死亡事件 - ${deathData.enemyName}, 得分: ${deathData.score}, 击杀方式: ${deathData.killedBy}`);
-      
         // 增加分数和击杀数
         this.score += deathData.score;
         this.killCount++;
@@ -2176,9 +2101,7 @@ export class MainScene extends Phaser.Scene {
         // 健壮BOSS判定
         if (this.isBossEnemy(deathData)) {
             this.bossDefeated = true; // 🆕 设置BOSS击败标志
-            console.log('🎉 BOSS已被击败！');
         }
-        console.log(`MainScene: 敌人死亡处理完成 - 击杀数: ${this.killCount}/${this.levelCompleteKills}, 当前分数: ${this.score}`);
     }
   
     // 🔧 修改敌人逃脱处理
@@ -2191,8 +2114,6 @@ export class MainScene extends Phaser.Scene {
         
         const enemyName = escapeData.enemyName || '未知敌人';
         const damage = escapeData.damage || 10; // 默认扣血10点
-        
-        console.log(`MainScene: 敌人逃脱事件 - ${enemyName}`);
       
         // 扣除血量
         this.currentHealth -= damage;
@@ -2201,8 +2122,6 @@ export class MainScene extends Phaser.Scene {
         if (this.currentHealth < 0) {
             this.currentHealth = 0;
         }
-      
-        console.log(`MainScene: 敌人逃脱扣血 ${damage}，当前血量: ${this.currentHealth}/${this.maxHealth}`);
       
         // 减少敌人计数
         this.currentEnemyCount--;
@@ -2464,12 +2383,10 @@ export class MainScene extends Phaser.Scene {
 
     createBubblesEffect() {
         // 气泡效果实现
-        console.log('MainScene: 创建气泡效果');
     }
 
     createStarsEffect() {
         // 星空效果实现
-        console.log('MainScene: 创建星空效果');
     }
 
     collectPowerUp(player, powerUp) {
@@ -2481,8 +2398,6 @@ export class MainScene extends Phaser.Scene {
 
 
     switchLevel(levelType) {
-        console.log(`🌍 切换到 ${levelType} 关卡`);
-        
         // 🆕 更新障碍物系统关卡
         if (this.obstacleManager) {
             this.obstacleManager.setLevel(levelType);
@@ -2540,7 +2455,7 @@ export class MainScene extends Phaser.Scene {
                     );
                 }
                 
-                console.log('🪨 障碍物碰撞检测设置完成');
+
             }
         });
     }
@@ -2591,7 +2506,6 @@ export class MainScene extends Phaser.Scene {
         bullet.destroy();
       
         if (destroyed) {
-            console.log(`💥 障碍物被摧毁: ${obstacle.name}`);
             // 通知障碍物管理器
             if (this.obstacleManager) {
                 this.obstacleManager.onObstacleDestroyed(obstacle);
@@ -2716,9 +2630,11 @@ export class MainScene extends Phaser.Scene {
             }
         });
         
-        // 生成BOSS在关底最右边
+        // 🆕 生成BOSS在游戏画面最右边
+        const camera = this.cameras.main;
+        const screenWidth = camera.width; // 1280
+        const spawnX = camera.scrollX + screenWidth + 100; // BOSS在屏幕右侧100像素处生成
         const y = Phaser.Math.Between(200, 520); // BOSS在屏幕中央区域生成
-        const spawnX = 3900; // 🆕 BOSS在关底最右边生成（距离右边界100像素）
         
         const boss = this.enemies.get();
         if (boss) {
@@ -2735,8 +2651,6 @@ export class MainScene extends Phaser.Scene {
             if (AudioManager) {
                 AudioManager.play('bossAppear');
             }
-            
-            console.log(`🎉 BOSS出现！类型: ${bossConfig.name}，位置: (${boss.x}, ${boss.y})`);
         } else {
             console.error('MainScene: 无法从对象池获取BOSS对象');
         }
@@ -2790,18 +2704,8 @@ export class MainScene extends Phaser.Scene {
 
     // 🆕 创建视觉效果系统 - 使用Graphics替代粒子系统
     createParticleSystems() {
-        console.log('✨ 创建Graphics视觉效果系统...');
-        
         // 初始化效果标志
         this.effectsEnabled = true;
-        
-        console.log('✨ Graphics视觉效果系统创建完成');
-        
-        // 🧪 测试视觉效果系统
-        this.time.delayedCall(2000, () => {
-            this.createExplosionEffect(400, 300);
-            console.log('🧪 测试视觉效果系统...');
-        });
     }
     
     // 🆕 创建爆炸视觉效果
@@ -2950,11 +2854,9 @@ export class MainScene extends Phaser.Scene {
         this.showPhysicsBounds = !this.showPhysicsBounds;
         
         if (this.showPhysicsBounds) {
-            console.log('🔍 启用物理体调试显示 - 按F1键关闭');
             this.physicsDebugGraphics = this.add.graphics();
             this.physicsDebugGraphics.setDepth(1000);
         } else {
-            console.log('🔍 关闭物理体调试显示');
             if (this.physicsDebugGraphics) {
                 this.physicsDebugGraphics.destroy();
                 this.physicsDebugGraphics = null;
@@ -3067,5 +2969,4 @@ export class MainScene extends Phaser.Scene {
     }
 }
 
-console.log('✅ MainScene.js ES6模块已加载'); 
-console.log('✅ MainScene.js ES6模块已加载'); 
+ 
